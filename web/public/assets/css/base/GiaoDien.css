@@ -1,0 +1,113 @@
+/**
+ * Tên file: GiaoDien.css
+ * Công dụng: Style giao diện chung (Profile, Card...).
+ * Chức năng: 
+ * - Style avatar profile.
+ * - Hiệu ứng Skeleton Loading.
+ * - Style thẻ Card chung.
+ */
+/* Profile page extracted styles */
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid transparent;
+}
+
+/* Role-based avatar border colors */
+.avatar-border-admin {
+    border-color: #fbbf24 !important;
+}
+
+.avatar-border-user {
+    border-color: #000000 !important;
+}
+
+/* Skeleton Loading */
+.skeleton {
+    background: #fff;
+    border-radius: 1rem;
+    overflow: hidden;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-image {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    height: 12rem;
+    width: 100%;
+}
+
+.skeleton-title {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    height: 1.5rem;
+    border-radius: 0.25rem;
+}
+
+.skeleton-text {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    height: 1rem;
+    border-radius: 0.25rem;
+}
+
+.skeleton-button {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    height: 2.5rem;
+    width: 8rem;
+    border-radius: 9999px;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* Animation Delays */
+.delay-0 {
+    animation-delay: 0ms;
+}
+
+.delay-200 {
+    animation-delay: 200ms;
+}
+
+.delay-400 {
+    animation-delay: 400ms;
+}
+
+.delay-600 {
+    animation-delay: 600ms;
+}
+
+/* Card Styles */
+.card-style {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}

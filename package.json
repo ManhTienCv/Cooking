@@ -1,0 +1,15 @@
+{
+  "name": "cook-root",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm run full",
+    "start": "npm run full",
+    "fe": "npm --prefix web run dev",
+    "be": "npm --prefix api run dev",
+    "full": "npm --prefix api exec concurrently -- -n BE,FE -c blue,green \"npm --prefix api run dev\" \"npm --prefix web run dev\"",
+    "install:all": "npm --prefix api install && npm --prefix web install",
+    "build:all": "npm --prefix web run build && npm --prefix api run build",
+    "ci": "npm --prefix api run typecheck && npm --prefix web run typecheck && npm --prefix web run lint"
+  }
+}

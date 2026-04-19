@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Khám phá Ẩm thực Việt Nam - Hướng dẫn nấu ăn chi tiết" />
+    <title>CookingBoy - Trang chủ | Khám phá Ẩm thực Việt Nam</title>
+    
+    <link rel="icon" type="image/svg+xml" href="/assets/images/favicon.svg" />
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <!-- Custom CSS from old UI -->
+    <link rel="stylesheet" href="/assets/css/UI/navbar.css">
+    <link rel="stylesheet" href="/assets/css/UI/pageLoader.css">
+    <link rel="stylesheet" href="/assets/css/UI/animations.css">
+    <link rel="stylesheet" href="/assets/css/base/TienIch.css">
+    <link rel="stylesheet" href="/assets/css/base/GiaoDien.css">
+    <link rel="stylesheet" href="/assets/css/UI/BlackwhiteAuth.css">
+    <link rel="stylesheet" href="/assets/css/pages/home.css">
+
+    <style>
+      html, body { 
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; 
+      }
+      html { scroll-behavior: auto; }
+    </style>
+  </head>
+  <body class="bg-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- External Scripts from old UI -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      // Automatically load Lucide icons if not running in React effect
+      document.addEventListener("DOMContentLoaded", function() {
+        if (window.lucide) window.lucide.createIcons();
+      });
+    </script>
+    <script src="/assets/js/UI/vanilla-tilt.js"></script>
+  </body>
+</html>

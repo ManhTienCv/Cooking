@@ -1,0 +1,323 @@
+/**
+ * Tên file: Animations.css (Base)
+ * Công dụng: Thư viện Animation cơ bản.
+ * Chức năng: 
+ * - Định nghĩa keyframes (fadeInUp, fadeInLeft...).
+ * - Style cho các class tiện ích animation (delay, stagger...).
+ */
+html {
+  scroll-behavior: smooth;
+}
+
+.btn-enhanced {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  transform-style: preserve-3d;
+}
+
+.btn-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-enhanced:hover::before {
+  left: 100%;
+}
+
+.btn-enhanced:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.btn-enhanced:active {
+  transform: translateY(0);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.input-enhanced {
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.fade-in-left {
+  animation: fadeInLeft 0.6s ease-out;
+}
+
+.fade-in-right {
+  animation: fadeInRight 0.6s ease-out;
+}
+
+.stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.stagger-4 {
+  animation-delay: 0.4s;
+}
+
+.stagger-5 {
+  animation-delay: 0.5s;
+}
+
+.modal-backdrop {
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  transition: all 0.3s cubic-bezier(.22, .61, .36, 1);
+  transform-origin: top center;
+  opacity: 0;
+  transform: translateY(-24px) scale(0.98);
+}
+
+.modal-content.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.card-hover {
+  transition: all 0.3s ease;
+  transform-style: preserve-3d;
+}
+
+.card-hover:hover {
+  transform: translateY(-8px) rotateX(5deg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.notification-popup {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(.22, .61, .36, 1);
+  opacity: 0;
+  transform: translateY(-24px) scale(0.98);
+}
+
+.notification-popup.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.parallax {
+  transform-style: preserve-3d;
+}
+
+.parallax-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(50px);
+  transition: all 0.8s ease;
+}
+
+.scroll-reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-item {
+    transform: translateX(-20px);
+    opacity: 0;
+    transition: all 0.3s ease;
+  }
+
+  .mobile-menu-item.show {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  .mobile-menu-item:nth-child(1) {
+    transition-delay: 0.1s;
+  }
+
+  .mobile-menu-item:nth-child(2) {
+    transition-delay: 0.15s;
+  }
+
+  .mobile-menu-item:nth-child(3) {
+    transition-delay: 0.2s;
+  }
+
+  .mobile-menu-item:nth-child(4) {
+    transition-delay: 0.25s;
+  }
+
+  .mobile-menu-item:nth-child(5) {
+    transition-delay: 0.3s;
+  }
+
+  .mobile-menu-item:nth-child(6) {
+    transition-delay: 0.35s;
+  }
+
+  .mobile-menu-item:nth-child(7) {
+    transition-delay: 0.4s;
+  }
+}
+
+.focus-enhanced:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.5);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.25);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* Skeleton Loading (Merged from GiaoDien.css) */
+.skeleton {
+  background: #fff;
+  border-radius: 1rem;
+  overflow: hidden;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-image {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  height: 12rem;
+  width: 100%;
+}
+
+.skeleton-title {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  height: 1.5rem;
+  border-radius: 0.25rem;
+}
+
+.skeleton-text {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  height: 1rem;
+  border-radius: 0.25rem;
+}
+
+.skeleton-button {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  height: 2.5rem;
+  width: 8rem;
+  border-radius: 9999px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Animation Delays (Merged from GiaoDien.css) */
+.delay-0 {
+  animation-delay: 0ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-400 {
+  animation-delay: 400ms;
+}
+
+.delay-600 {
+  animation-delay: 600ms;
+}

@@ -1,0 +1,112 @@
+# =============================================================================
+# Cook — Nginx production (HTTPS + HSTS + CSP + rate limit đăng nhập)
+# =============================================================================
+# Thay cook.example.com và đường dẫn SSL / static / upstream cho đúng server.
+#
+# BƯỚC 1 — Thêm các dòng `limit_req_zone` dưới đây MỘT LẦN vào khối `http { }`
+#         (ví dụ /etc/nginx/nginx.conf hoặc file trong conf.d/*.conf):
+#
+#   limit_req_zone $binary_remote_addr zone=cook_login:10m rate=10r/m;
+#   limit_req_zone $binary_remote_addr zone=cook_api:10m rate=200r/m;
+#
+# BƯỚC 2 — Nội dung từ "server {" đầu tiên trở xuống đặt vào
+#         /etc/nginx/sites-available/cookapp rồi:
+#         sudo ln -sf /etc/nginx/sites-available/cookapp /etc/nginx/sites-enabled/
+#         sudo nginx -t && sudo systemctl reload nginx
+#
+# Certbot (ví dụ):
+#   sudo certbot --nginx -d cook.example.com -d www.cook.example.com
+# =============================================================================
+
+# ----- HTTP → HTTPS -----
+server {
+  listen 80;
+  listen [::]:80;
+  server_name cook.example.com www.cook.example.com;
+
+  location /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+  }
+
+  location / {
+    return 301 https://$host$request_uri;
+  }
+}
+
+# ----- HTTPS (SPA + API reverse proxy) -----
+server {
+  listen 443 ssl http2;
+  listen [::]:443 ssl http2;
+  server_name cook.example.com www.cook.example.com;
+
+  # --- TLS (đường dẫn sau khi certbot cấp chứng chỉ) ---
+  ssl_certificate     /etc/letsencrypt/live/cook.example.com/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/cook.example.com/privkey.pem;
+  ssl_session_timeout 1d;
+  ssl_session_cache shared:SSL:50m;
+  ssl_session_tickets off;
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers off;
+
+  # --- Gốc file tĩnh Vite build (npm --prefix web run build) ---
+  root /var/www/cookapp/web/dist;
+  index index.html;
+
+  # --- Upstream Node API (PORT mặc định 3001) ---
+  set $cook_api_upstream http://127.0.0.1:3001;
+
+  # --- HSTS (chỉ bật khi HTTPS thật + đã chắc chắn không còn HTTP production) ---
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-Frame-Options "SAMEORIGIN" always;
+  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+  add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+  # CSP cho HTML/SPA (khớp web/vite.config.ts preview; chỉnh connect-src nếu gọi API host khác)
+  set $csp "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none'; script-src 'self' https://www.google.com https://www.gstatic.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self'; frame-src https://www.google.com";
+  add_header Content-Security-Policy $csp always;
+
+  # --- Brute-force thêm tầng nginx (song song với express-rate-limit trong API) ---
+  location = /api/auth/login {
+    limit_req zone=cook_login burst=8 nodelay;
+    limit_req_status 429;
+    proxy_pass $cook_api_upstream;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location = /api/admin/login {
+    limit_req zone=cook_login burst=8 nodelay;
+    limit_req_status 429;
+    proxy_pass $cook_api_upstream;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /api/ {
+    limit_req zone=cook_api burst=100 nodelay;
+    limit_req_status 429;
+    proxy_pass $cook_api_upstream;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  access_log /var/log/nginx/cookapp.access.log;
+  error_log  /var/log/nginx/cookapp.error.log warn;
+}
+
+# =============================================================================

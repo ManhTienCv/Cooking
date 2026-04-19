@@ -1,0 +1,100 @@
+/**
+ * Tên file: TienIch.css
+ * Công dụng: Các class tiện ích CSS (Utilities).
+ * Chức năng: 
+ * - Typography (h1-h6).
+ * - Toast notification styles.
+ * - Pulse animation.
+ */
+/* Mạnh Tiến */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-weight: 400 !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 700 !important;
+}
+
+.font-bold,
+.font-semibold,
+.font-medium {
+  font-weight: 700 !important;
+}
+
+/* Toast Notifications */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 8px 14px;
+  background: #1f2937;
+  color: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  max-width: 200px;
+  word-wrap: break-word;
+  white-space: nowrap;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.toast--success {
+  background: #10b981;
+  color: white;
+}
+
+.toast--error {
+  background: #ef4444;
+  color: white;
+}
+
+.toast--info {
+  background: #3b82f6;
+  color: white;
+}
+
+.toast--warning {
+  background: #f59e0b;
+  color: white;
+}
+
+/* Pulse animation for interactive icons */
+@keyframes pulseScale {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.18);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.pulse-once {
+  animation: pulseScale 0.35s ease-out;
+}

@@ -1,0 +1,340 @@
+/**
+ * Tên file: navbar.css
+ * Công dụng: Tùy biến giao diện Navbar.
+ * Chức năng: 
+ * - Style cho Navbar (Desktop & Mobile).
+ * - Hiệu ứng hover link, active state.
+ * - Style cho nút Menu trên mobile.
+ */
+:root {
+  --brand-dark: #000000;
+  --brand-light: #ffffff;
+  --brand-accent: #facc15;
+  --transition-fast: 0.2s ease-out;
+  --transition-normal: 0.3s ease-out;
+  --transition-slow: 0.5s ease-out;
+}
+
+.navbar {
+  transition: all var(--transition-normal);
+  -webkit-backdrop-filter: blur(20px) saturate(150%) brightness(110%);
+  backdrop-filter: blur(20px) saturate(150%) brightness(110%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.navbar--dark {
+  background: rgba(255, 255, 255, 0.75);
+  -webkit-backdrop-filter: blur(25px) saturate(175%) brightness(100%);
+  backdrop-filter: blur(25px) saturate(175%) brightness(100%);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.01);
+}
+
+.navbar--dark #brandText,
+.navbar--dark .nav-link,
+.navbar--dark #userNameText {
+  color: var(--brand-dark) !important;
+}
+
+.navbar--dark .nav-link:hover {
+  color: var(--brand-accent) !important;
+}
+
+.navbar--light {
+  background: rgba(255, 255, 255, 0.78);
+  -webkit-backdrop-filter: blur(30px) saturate(180%) brightness(100%);
+  backdrop-filter: blur(30px) saturate(180%) brightness(100%);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.navbar--light #brandText,
+.navbar--light .nav-link,
+.navbar--light #userNameText {
+  color: var(--brand-dark) !important;
+}
+
+.navbar--light .nav-link:hover {
+  color: var(--brand-accent) !important;
+}
+
+.navbar--dark #loginBtn,
+.navbar--light #loginBtn {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #000000 !important;
+}
+
+.navbar--dark #loginBtn:hover,
+.navbar--light #loginBtn:hover {
+  background-color: #374151 !important;
+  border-color: #374151 !important;
+}
+
+.navbar--dark #registerBtn,
+.navbar--light #registerBtn,
+.navbar--dark #logoutBtn,
+.navbar--light #logoutBtn {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #d1d5db !important;
+}
+
+.navbar--dark #registerBtn:hover,
+.navbar--light #registerBtn:hover,
+.navbar--dark #logoutBtn:hover,
+.navbar--light #logoutBtn:hover {
+  background-color: #f3f4f6 !important;
+  border-color: #9ca3af !important;
+}
+
+.navbar--dark a .bg-black {
+  background-color: #000000 !important;
+  border: 2px solid #000000 !important;
+  transition: all var(--transition-fast);
+}
+
+.navbar--dark a .bg-black i {
+  color: #ffffff !important;
+}
+
+.navbar--dark a:hover .bg-black {
+  background-color: #374151 !important;
+  border-color: #374151 !important;
+  transform: scale(1.05);
+}
+
+.navbar--light a .bg-black {
+  background-color: #000000 !important;
+  border: 2px solid #000000 !important;
+  transition: all var(--transition-fast);
+}
+
+.navbar--light a .bg-black i {
+  color: #ffffff !important;
+}
+
+.navbar--light a:hover .bg-black {
+  background-color: #374151 !important;
+  border-color: #374151 !important;
+  transform: scale(1.05);
+}
+
+.logo-circle {
+  background-color: #000000 !important;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.logo-circle:hover {
+  transform: scale(1.1);
+}
+
+.logo-circle i {
+  color: #ffffff !important;
+  font-size: 20px;
+}
+
+.navbar--light a .bg-black {
+  background-color: var(--brand-dark) !important;
+  border: 2px solid var(--brand-dark);
+}
+
+.navbar--light a .bg-black i {
+  color: var(--brand-light) !important;
+}
+
+.navbar--light #brandText {
+  color: var(--brand-dark) !important;
+}
+
+.navbar--light #loginBtn {
+  background-color: var(--brand-dark) !important;
+  color: var(--brand-light) !important;
+  border: 2px solid var(--brand-dark);
+}
+
+#mobileMenu {
+  background: rgba(255, 255, 255, 0.9);
+  -webkit-backdrop-filter: blur(25px) saturate(180%) brightness(110%);
+  backdrop-filter: blur(25px) saturate(180%) brightness(110%);
+  border-radius: 24px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+  transform-origin: top center;
+  max-height: 0;
+  opacity: 0;
+}
+
+#mobileMenu.menu-open {
+  max-height: 500px !important;
+  opacity: 1 !important;
+}
+
+/* Mobile menu overlay */
+#mobileMenuOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 40;
+  /* below navbar (z-50) but above page */
+}
+
+#mobileMenuOverlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Animate mobile-menu-item appearance */
+.mobile-menu-item {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.3s ease, transform 0.35s cubic-bezier(.22, .61, .36, 1);
+}
+
+.mobile-menu-item.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#mobileMenu.menu-closed {
+  max-height: 0 !important;
+  opacity: 0 !important;
+}
+
+#mobileMenu a,
+#mobileMenu button {
+  color: #4b5563;
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+#mobileMenu a.active {
+  color: #facc15 !important;
+  background-color: rgba(250, 204, 21, 0.1) !important;
+  font-weight: 600;
+}
+
+#mobileMenu a:hover,
+#mobileMenu button:hover {
+  color: #000000;
+  background-color: rgba(249, 250, 251, 0.8);
+}
+
+#mobileMenu a.bg-gray-100,
+#mobileMenu a[class*="text-black"] {
+  color: #000000;
+  background-color: #f3f4f6;
+}
+
+.nav-link {
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 4px;
+  width: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: #facc15;
+  transition: width var(--transition-fast);
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+.nav-link.active::after {
+  width: 100%;
+}
+
+#loginBtn,
+#logoutBtn {
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-fast);
+}
+
+#loginBtn::before,
+#logoutBtn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left var(--transition-normal);
+}
+
+#loginBtn:hover::before,
+#logoutBtn:hover::before {
+  left: 100%;
+}
+
+#loginBtn:hover,
+#logoutBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0%;
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand-accent), #fbbf24);
+  z-index: 9999;
+  transition: width 0.1s ease-out;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+
+.nav-link {
+  position: relative;
+  display: inline-block;
+}
+
+/* Gạch chân vàng luôn hiển thị cho trang đang active */
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: var(--brand-accent);
+  border-radius: 2px;
+}
+
+/* Mobile menu active state */
+.mobile-menu-item.active {
+  background-color: rgba(250, 204, 21, 0.1);
+  color: var(--brand-dark);
+  font-weight: 600;
+  border-left: 4px solid var(--brand-accent);
+  padding-left: calc(0.75rem - 4px);
+}

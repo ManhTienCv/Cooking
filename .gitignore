@@ -1,0 +1,86 @@
+# Dependencies
+node_modules/
+vendor/
+
+# --- Bảo mật: không đẩy biến môi trường & bí mật lên Git ---
+# Mọi file .env thật (giữ .env.example trong repo làm mẫu)
+.env
+.env.*
+!.env.example
+!**/.env.example
+!*.env.example
+
+# NPM auth / token cục bộ (nếu có)
+.npmrc.local
+
+# Khóa, chứng chỉ, keystore
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.jks
+id_rsa
+id_ed25519
+id_ecdsa
+*.pub
+
+# Thư mục chứa secret tùy chỉnh
+secrets/
+.secrets/
+
+# File token / credential dạng text (đặt tên thường gặp)
+*credentials*.json
+*service-account*.json
+google-services.json
+GoogleService-Info.plist
+
+# Dump / DB cục bộ (KHÔNG ignore database/*.sql trong repo — chỉ file dump tải về)
+*.dump
+*.sql.gz
+*.sqlite
+*.sqlite3
+pgdata/
+
+# Cache runtime API (Gemini, v.v.)
+api/cache/
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE settings
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
+
+# Build directories
+dist/
+build/
+
+# Test / coverage
+coverage/
+.nyc_output/
+
+# Uploads (optional, depending on if you want to track user uploads)
+frontend/uploads/
+
+# Vendored agent skills (not part of the Cook app; large third-party tree)
+.agent-skillwebs/
+
+# Backup / temp
+*.bak
+*.tmp
+*~
+
+# Security (legacy comments)
+# backend/config.php
+# # backend/Database.php
+# backend/config/mail.php
+# backend/logs/*
+# !backend/logs/.gitkeep

@@ -1,0 +1,37 @@
+/**
+ * Tên file: animations.css
+ * Công dụng: Các hiệu ứng chuyển động UI.
+ * Chức năng: 
+ * - Style cho các animation (FadeIn, SlideUp...).
+ * - Sử dụng cho các thành phần tương tác.
+ */
+/* 3D Scroll Reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px) scale(0.95);
+  transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: opacity, transform;
+}
+
+.reveal.reveal-active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Staggered Card Animation */
+.stagger-card {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  will-change: opacity, transform;
+}
+
+.stagger-card.active {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+/* Ensure inner elements fill the wrapper */
+.stagger-card>* {
+  height: 100%;
+}

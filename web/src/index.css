@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+html {
+    scroll-behavior: auto;
+}
+
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+}
+
+/* Trang bọc Framer Motion — 3D nhẹ, giảm răng cưa khi chuyển route */
+.motion-page-root {
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* Custom modern scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.02);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.15);
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0,0,0,0.3);
+}
+
+/* Base custom animations */
+@keyframes shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+.animate-shimmer {
+    animation: shimmer 2s infinite linear;
+}
+
+/* 3D Scroll Reveal — hơi nhanh hơn để khớp nhịp chuyển trang */
+.reveal {
+  opacity: 0;
+  transform: perspective(1000px) translate3d(0, 40px, -80px) rotateX(14deg);
+  transition: opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1), transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal.reveal-active {
+  opacity: 1;
+  transform: perspective(1000px) translate3d(0, 0, 0) rotateX(0deg);
+}
+
+/* Floating Blobs Background */
+.floating-blobs {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -1;
+    pointer-events: none;
+}
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.45;
+    background-size: 200% 200%;
+    animation: float 22s infinite alternate ease-in-out, gradient-drift 14s ease-in-out infinite;
+}
+.blob-1 {
+    top: -10%;
+    left: -10%;
+    width: 500px;
+    height: 500px;
+    background-image: linear-gradient(135deg, #fbbf24, #f59e0b, #60a5fa, #a78bfa);
+    animation-delay: 0s, 0s;
+}
+.blob-2 {
+    bottom: -10%;
+    right: -10%;
+    width: 600px;
+    height: 600px;
+    background-image: linear-gradient(225deg, #c084fc, #818cf8, #38bdf8, #f472b6);
+    animation-delay: -4s, -3s;
+}
+.blob-3 {
+    top: 40%;
+    left: 40%;
+    width: 400px;
+    height: 400px;
+    background-image: linear-gradient(90deg, #fcd34d, #fb923c, #e879f9, #fcd34d);
+    animation-delay: -8s, -6s;
+}
+@keyframes float {
+    0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+    100% { transform: translate(40px, 36px) rotate(8deg) scale(1.04); }
+}
+@keyframes gradient-drift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* Chữ gradient động (hero) */
+.text-gradient-live {
+    background-image: linear-gradient(90deg, #fbbf24, #f97316, #fde047, #fbbf24);
+    background-size: 220% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: gradient-text-shift 5s ease-in-out infinite;
+}
+@keyframes gradient-text-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* Stagger Animation Helper */
+.stagger-card {
+    opacity: 0;
+    transform: translateY(28px) scale(0.985);
+    transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1), transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.stagger-card.active {
+    opacity: 1 !important;
+    transform: translateY(0) scale(1) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .blob {
+        animation: none;
+        opacity: 0.22;
+    }
+    .text-gradient-live {
+        animation: none;
+        background-position: 50% 50%;
+    }
+    .reveal,
+    .reveal.reveal-active {
+        transition-duration: 0.01ms !important;
+    }
+    .stagger-card,
+    .stagger-card.active {
+        transition-duration: 0.01ms !important;
+    }
+}

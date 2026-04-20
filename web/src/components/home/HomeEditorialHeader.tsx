@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Reveal, RevealStaggerItem } from '../motion/ScrollReveal';
-import { ChevronRight } from 'lucide-react';
+
 
 const FEATURED_TALL_CATEGORIES = [
   { name: 'BỮA TỐI', image: '/assets/images/monchinh.jpg' },

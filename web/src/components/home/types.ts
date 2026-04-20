@@ -1,5 +1,5 @@
 export interface FeaturedRecipe {
-  description: any;
+  description?: string | null;
   id: number;
   title: string;
   category_name?: string;

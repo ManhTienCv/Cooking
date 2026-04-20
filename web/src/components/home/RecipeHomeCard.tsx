@@ -3,19 +3,6 @@ import { Clock, ChefHat, Star, ArrowRight } from 'lucide-react';
 import type { FeaturedRecipe } from './types';
 
 export default function RecipeHomeCard({ recipe }: { recipe: FeaturedRecipe }) {
-  const getDifficultyBadgeClass = (difficulty: string) => {
-    switch (difficulty) {
-      case 'Dễ':
-        return 'bg-green-100 text-green-800';
-      case 'Trung bình':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Khó':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   return (
     <div
       className="bg-white overflow-hidden group border-b sm:border border-gray-100 pb-6 sm:pb-0 sm:rounded-sm transition-all duration-300"

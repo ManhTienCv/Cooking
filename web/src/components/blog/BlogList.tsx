@@ -50,12 +50,12 @@ export default function BlogList({ isLoading, posts, onClearFilter }: BlogListPr
         <RevealStaggerItem key={post.id} index={idx} stagger={0.055} maxStaggerIndex={12} className="h-full">
           <Link
             to={`/blog/detail/${post.id}`}
-            className="bg-white rounded-2xl p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-100 flex flex-col h-full block"
+            className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-100 dark:border-slate-700 flex flex-col h-full block"
           >
-            <div className="text-sm text-yellow-600 font-semibold mb-2">{post.category_name}</div>
-            <h3 className="text-xl font-bold mb-3 hover:text-yellow-600 transition-colors">{post.title}</h3>
-            <p className="text-gray-600 text-sm line-clamp-3 mb-4">{post.excerpt}</p>
-            <div className="text-xs text-gray-400 mt-auto">
+            <div className="text-sm text-yellow-600 dark:text-yellow-500 font-semibold mb-2">{post.category_name}</div>
+            <h3 className="text-xl font-bold mb-3 dark:text-white hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors">{post.title}</h3>
+            <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-3 mb-4">{post.excerpt}</p>
+            <div className="text-xs text-gray-400 dark:text-gray-500 mt-auto">
               By {post.author_name} - {post.created_at}
             </div>
           </Link>

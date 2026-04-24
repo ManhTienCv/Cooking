@@ -259,3 +259,56 @@ adminRouter.delete('/feedback/:id', requireAdmin, requireCsrf, async (req, res) 
   await pool.query('DELETE FROM feedback WHERE id = $1', [Number(req.params.id)]);
   res.json({ success: true });
 });
+
+adminRouter.get('/comments', requireAdmin, async (_req, res) => {
+  const r = await pool.query(`
+    SELECT c.id, c.content, c.created_at, u.full_name AS author_name, p.title AS post_title
+    FROM blog_comments c
+    LEFT JOIN users u ON c.author_id = u.id
+    LEFT JOIN blog_posts p ON c.post_id = p.id
+    ORDER BY c.created_at DESC
+    LIMIT 300
+  `);
+  res.json({ comments: r.rows });
+});
+
+adminRouter.delete('/comments/:id', requireAdmin, requireCsrf, async (req, res) => {
+  await pool.query('DELETE FROM blog_comments WHERE id = $1', [Number(req.params.id)]);
+  res.json({ success: true });
+});
+
+adminRouter.get('/categories/:type', requireAdmin, async (req, res) => {
+  const type = req.params.type;
+  if (type !== 'recipe' && type !== 'blog') return res.status(400).json({ success: false });
+  const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
+  const r = await pool.query(`SELECT id, name FROM ${table} ORDER BY name ASC`);
+  res.json({ categories: r.rows });
+});
+
+adminRouter.post('/categories/:type', requireAdmin, requireCsrf, async (req, res) => {
+  const type = req.params.type;
+  if (type !== 'recipe' && type !== 'blog') return res.status(400).json({ success: false });
+  const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
+  const name = String(req.body?.name ?? '').trim();
+  if (!name) return res.status(400).json({ success: false, message: 'Name is required' });
+  await pool.query(`INSERT INTO ${table} (name) VALUES ($1)`, [name]);
+  res.json({ success: true });
+});
+
+adminRouter.put('/categories/:type/:id', requireAdmin, requireCsrf, async (req, res) => {
+  const type = req.params.type;
+  if (type !== 'recipe' && type !== 'blog') return res.status(400).json({ success: false });
+  const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
+  const name = String(req.body?.name ?? '').trim();
+  if (!name) return res.status(400).json({ success: false, message: 'Name is required' });
+  await pool.query(`UPDATE ${table} SET name = $1 WHERE id = $2`, [name, Number(req.params.id)]);
+  res.json({ success: true });
+});
+
+adminRouter.delete('/categories/:type/:id', requireAdmin, requireCsrf, async (req, res) => {
+  const type = req.params.type;
+  if (type !== 'recipe' && type !== 'blog') return res.status(400).json({ success: false });
+  const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
+  await pool.query(`DELETE FROM ${table} WHERE id = $1`, [Number(req.params.id)]);
+  res.json({ success: true });
+});

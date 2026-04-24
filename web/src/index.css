@@ -5,6 +5,9 @@
   --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
 }
 
+@custom-variant dark (&:is(.dark *));
+
+
 html {
     scroll-behavior: auto;
 }

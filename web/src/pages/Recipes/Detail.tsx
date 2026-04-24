@@ -98,7 +98,7 @@ export default function RecipeDetail() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen pt-16 bg-gradient-to-br from-blue-50 to-indigo-50">
+      <main className="min-h-screen pt-16 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
         <div className="relative h-96 overflow-hidden">
           <Skeleton className="w-full h-full rounded-none" />
         </div>
@@ -121,10 +121,10 @@ export default function RecipeDetail() {
 
   if (!recipe) {
     return (
-      <main className="min-h-screen pt-32 pb-20 bg-gradient-to-br from-blue-50 to-indigo-50 flex flex-col items-center justify-center text-center">
-        <ChefHat className="h-24 w-24 text-gray-300 mb-6 drop-shadow-md" />
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">Không tìm thấy công thức</h2>
-        <p className="text-gray-500 mb-8 max-w-md">Công thức này có thể đã bị xóa hoặc đường dẫn không chính xác.</p>
+      <main className="min-h-screen pt-32 pb-20 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 flex flex-col items-center justify-center text-center transition-colors duration-300">
+        <ChefHat className="h-24 w-24 text-gray-300 dark:text-slate-600 mb-6 drop-shadow-md" />
+        <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">Không tìm thấy công thức</h2>
+        <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md">Công thức này có thể đã bị xóa hoặc đường dẫn không chính xác.</p>
         <Link
           to="/recipes"
           className="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800 transition-colors inline-flex items-center space-x-2 font-medium"
@@ -141,7 +141,7 @@ export default function RecipeDetail() {
   const ingredientLines = splitLines(recipe.ingredients);
 
   return (
-    <main className="min-h-screen pt-16 bg-gradient-to-br from-blue-50 to-indigo-50">
+    <main className="min-h-screen pt-16 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
       <div className="relative h-96 overflow-hidden">
         {recipe.image_url ? (
           <img src={recipe.image_url} alt={recipe.title} className="w-full h-full object-cover" />
@@ -204,19 +204,19 @@ export default function RecipeDetail() {
           <div className="lg:col-span-2 space-y-8">
             {recipe.description && (
               <Reveal y={18}>
-                <div className="bg-white rounded-2xl p-6 shadow-lg">
-                  <h2 className="text-2xl font-serif font-bold text-black mb-4">Mô tả</h2>
-                  <p className="text-gray-700 leading-relaxed">{recipe.description}</p>
+                <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700">
+                  <h2 className="text-2xl font-serif font-bold text-black dark:text-white mb-4">Mô tả</h2>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{recipe.description}</p>
                 </div>
               </Reveal>
             )}
 
             <Reveal y={20}>
-              <div className="bg-white rounded-2xl p-6 shadow-lg">
-                <h2 className="text-2xl font-serif font-bold text-black mb-6">Hướng dẫn nấu ăn</h2>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700">
+                <h2 className="text-2xl font-serif font-bold text-black dark:text-white mb-6">Hướng dẫn nấu ăn</h2>
                 <div className="space-y-4">
                   {instructionLines.length === 0 ? (
-                    <p className="text-gray-500 text-sm">Chưa có hướng dẫn.</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">Chưa có hướng dẫn.</p>
                   ) : (
                     instructionLines.map((instruction, index) => (
                       <RevealStaggerItem key={index} index={index} stagger={0.04} maxStaggerIndex={14}>
@@ -225,7 +225,7 @@ export default function RecipeDetail() {
                             {index + 1}
                           </div>
                           <div className="flex-1 pt-2">
-                            <p className="text-gray-700">{instruction}</p>
+                            <p className="text-gray-700 dark:text-gray-300">{instruction}</p>
                           </div>
                         </div>
                       </RevealStaggerItem>
@@ -238,17 +238,17 @@ export default function RecipeDetail() {
 
           <div className="space-y-6">
             <Reveal y={18} delay={0.05}>
-              <div className="bg-white rounded-2xl p-6 shadow-lg">
-                <h2 className="text-2xl font-serif font-bold text-black mb-4">Nguyên liệu</h2>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700">
+                <h2 className="text-2xl font-serif font-bold text-black dark:text-white mb-4">Nguyên liệu</h2>
                 <ul className="space-y-2">
                   {ingredientLines.length === 0 ? (
-                    <li className="text-gray-500 text-sm">Chưa có danh sách nguyên liệu.</li>
+                    <li className="text-gray-500 dark:text-gray-400 text-sm">Chưa có danh sách nguyên liệu.</li>
                   ) : (
                     ingredientLines.map((ingredient, index) => (
                       <RevealStaggerItem key={index} index={index} stagger={0.035} maxStaggerIndex={16}>
                         <li className="flex items-start space-x-2">
-                          <Check className="h-5 w-5 text-green-700 flex-shrink-0 mt-0.5" />
-                          <span className="text-gray-700">{ingredient}</span>
+                          <Check className="h-5 w-5 text-green-700 dark:text-green-500 flex-shrink-0 mt-0.5" />
+                          <span className="text-gray-700 dark:text-gray-300">{ingredient}</span>
                         </li>
                       </RevealStaggerItem>
                     ))
@@ -258,8 +258,8 @@ export default function RecipeDetail() {
             </Reveal>
 
             <Reveal y={18} delay={0.08}>
-              <div className="bg-white rounded-2xl p-6 shadow-lg">
-              <h3 className="text-lg font-bold text-black mb-4">Tác giả</h3>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700">
+              <h3 className="text-lg font-bold text-black dark:text-white mb-4">Tác giả</h3>
               <div className="flex items-center space-x-3">
                 {recipe.author_avatar ? (
                   <img
@@ -268,39 +268,39 @@ export default function RecipeDetail() {
                     className="w-12 h-12 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
-                    <User className="h-6 w-6 text-gray-600" />
+                  <div className="w-12 h-12 rounded-full bg-gray-300 dark:bg-slate-700 flex items-center justify-center">
+                    <User className="h-6 w-6 text-gray-600 dark:text-gray-400" />
                   </div>
                 )}
                 <div>
-                  <p className="font-semibold text-black">{recipe.author_name ?? '—'}</p>
-                  <p className="text-sm text-gray-500">Người đóng góp</p>
+                  <p className="font-semibold text-black dark:text-white">{recipe.author_name ?? '—'}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Người đóng góp</p>
                 </div>
               </div>
               </div>
             </Reveal>
 
             <Reveal y={18} delay={0.1}>
-              <div className="bg-white rounded-2xl p-6 shadow-lg">
-              <h3 className="text-lg font-bold text-black mb-4">Thông tin</h3>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700">
+              <h3 className="text-lg font-bold text-black dark:text-white mb-4">Thông tin</h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Danh mục:</span>
-                  <span className="font-semibold text-black">{recipe.category_name ?? '—'}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Danh mục:</span>
+                  <span className="font-semibold text-black dark:text-white">{recipe.category_name ?? '—'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Độ khó:</span>
-                  <span className="font-semibold text-black">{diff}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Độ khó:</span>
+                  <span className="font-semibold text-black dark:text-white">{diff}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Thời gian:</span>
-                  <span className="font-semibold text-black">
+                  <span className="text-gray-600 dark:text-gray-400">Thời gian:</span>
+                  <span className="font-semibold text-black dark:text-white">
                     {recipe.cooking_time != null ? `${recipe.cooking_time} phút` : '—'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Ngày đăng:</span>
-                  <span className="font-semibold text-black">{recipe.created_at ?? '—'}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Ngày đăng:</span>
+                  <span className="font-semibold text-black dark:text-white">{recipe.created_at ?? '—'}</span>
                 </div>
               </div>
               </div>

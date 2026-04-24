@@ -129,16 +129,16 @@ export default function Blog() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-      <div className="bg-white/60 backdrop-blur-md shadow-sm border-b border-white/20">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
+      <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md shadow-sm border-b border-white/20 dark:border-slate-800/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <Reveal className="text-center" y={18}>
-            <h1 className="text-4xl md:text-5xl font-serif italic font-black text-black mb-4">Diễn đàn Ẩm Thực</h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <h1 className="text-4xl md:text-5xl font-serif italic font-black text-black dark:text-white mb-4">Diễn đàn Ẩm Thực</h1>
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Chia sẻ kiến thức, mẹo vặt và câu chuyện thú vị về ẩm thực Việt Nam
             </p>
-            <p className="text-lg text-gray-500 mt-2">
-              Hiện có <strong className="text-black">{posts.length}</strong> bài viết
+            <p className="text-lg text-gray-500 dark:text-gray-400 mt-2">
+              Hiện có <strong className="text-black dark:text-white">{posts.length}</strong> bài viết
             </p>
           </Reveal>
         </div>
@@ -172,7 +172,7 @@ export default function Blog() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Tìm kiếm bài viết..."
-              className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-full focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300 bg-white"
+              className="w-full pl-10 pr-10 py-3 border border-gray-200 dark:border-slate-700 rounded-full focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300 bg-white dark:bg-slate-800 text-black dark:text-white"
             />
             {searchQuery && (
               <button
@@ -214,6 +214,6 @@ export default function Blog() {
           await loadPosts();
         }}
       />
-    </main>
+    </div>
   );
 }

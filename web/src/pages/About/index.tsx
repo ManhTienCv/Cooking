@@ -11,14 +11,14 @@ export default function About() {
   ];
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
       <section className="relative py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <HeroEnter className="text-center">
-            <h1 className="text-5xl md:text-6xl font-serif italic font-black mb-6 text-black">
+            <h1 className="text-5xl md:text-6xl font-serif italic font-black mb-6 text-black dark:text-white">
               Về <span className="text-gradient-live">CookingBoy</span>
             </h1>
-            <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
               Nơi kết nối những người yêu thích nấu ăn, chia sẻ công thức và lan tỏa tình yêu ẩm thực Việt Nam
             </p>
           </HeroEnter>
@@ -33,12 +33,12 @@ export default function About() {
               return (
                 <RevealStaggerItem key={item.label} index={idx} stagger={0.07}>
                   <div className="text-center group">
-                    <div className="bg-white/60 backdrop-blur-md p-6 rounded-2xl shadow-lg group-hover:shadow-xl transition-shadow duration-300 border border-white/20">
-                      <div className="bg-black p-4 rounded-full w-16 h-16 mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                        <Icon className="h-8 w-8 text-white mx-auto" />
+                    <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-6 rounded-2xl shadow-lg group-hover:shadow-xl transition-shadow duration-300 border border-white/20 dark:border-slate-700/20">
+                      <div className="bg-black dark:bg-white p-4 rounded-full w-16 h-16 mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                        <Icon className="h-8 w-8 text-white dark:text-black mx-auto" />
                       </div>
-                      <div className="text-3xl font-bold text-black mb-2">{item.value}</div>
-                      <div className="text-gray-600">{item.label}</div>
+                      <div className="text-3xl font-bold text-black dark:text-white mb-2">{item.value}</div>
+                      <div className="text-gray-600 dark:text-gray-400">{item.label}</div>
                     </div>
                   </div>
                 </RevealStaggerItem>
@@ -52,8 +52,8 @@ export default function About() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <Reveal className="text-left" y={24}>
-              <h2 className="text-4xl font-bold text-black mb-6">Câu Chuyện Của Chúng Tôi</h2>
-              <div className="space-y-4 text-gray-700 text-lg leading-relaxed">
+              <h2 className="text-4xl font-bold text-black dark:text-white mb-6">Câu Chuyện Của Chúng Tôi</h2>
+              <div className="space-y-4 text-gray-700 dark:text-gray-300 text-lg leading-relaxed">
                 <p>
                   CookingBoy được sinh ra từ tình yêu với ẩm thực Việt Nam và mong muốn chia sẻ những công thức nấu ăn truyền thống quý báu với thế hệ trẻ.
                 </p>
@@ -81,14 +81,14 @@ export default function About() {
       <section id="team-section" className="py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Reveal className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-black mb-4">Đội Ngũ Của Chúng Tôi</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <h2 className="text-4xl font-bold text-black dark:text-white mb-4">Đội Ngũ Của Chúng Tôi</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Những đầu bếp tài năng và đam mê, luôn sẵn sàng chia sẻ kiến thức
             </p>
           </Reveal>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <RevealStaggerItem index={0} stagger={0.08}>
-              <div className="bg-white/60 backdrop-blur-md rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transform hover:-translate-y-2 transition-all duration-500 group border border-white/20">
+              <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transform hover:-translate-y-2 transition-all duration-500 group border border-white/20 dark:border-slate-700/20">
                 <div className="relative overflow-hidden">
                   <img
                     src="/assets/images/chef1.jpg"
@@ -99,9 +99,9 @@ export default function About() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
                 <div className="p-6 text-center">
-                  <h3 className="text-xl font-bold text-black mb-1">Nguyễn Minh Đức</h3>
-                  <p className="text-yellow-600 font-medium mb-3">Chef A</p>
-                  <p className="text-gray-600 text-sm leading-relaxed">Chuyên gia về Cooking</p>
+                  <h3 className="text-xl font-bold text-black dark:text-white mb-1">Nguyễn Minh Đức</h3>
+                  <p className="text-yellow-600 dark:text-yellow-500 font-medium mb-3">Chef A</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Chuyên gia về Cooking</p>
                 </div>
               </div>
             </RevealStaggerItem>
@@ -112,12 +112,12 @@ export default function About() {
       <section id="mission-section" className="py-32">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <Reveal y={28}>
-            <div className="bg-white/60 backdrop-blur-md rounded-3xl p-12 shadow-xl border border-white/20">
-              <h2 className="text-4xl md:text-5xl font-serif italic font-black text-black mb-6">Sứ Mệnh Của Chúng Tôi</h2>
-              <p className="text-xl text-gray-600 mb-8 leading-relaxed">
+            <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-3xl p-12 shadow-xl border border-white/20 dark:border-slate-700/20">
+              <h2 className="text-4xl md:text-5xl font-serif italic font-black text-black dark:text-white mb-6">Sứ Mệnh Của Chúng Tôi</h2>
+              <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
                 Bảo tồn và phát triển nền ẩm thực Việt Nam, đồng thời tạo ra một cộng đồng những người yêu thích nấu ăn có thể học hỏi, chia sẻ và cùng nhau sáng tạo những món ăn ngon miệng.
               </p>
-              <div className="bg-black text-white px-8 py-4 rounded-full font-semibold text-lg inline-block shadow-lg">
+              <div className="bg-black dark:bg-white text-white dark:text-black px-8 py-4 rounded-full font-semibold text-lg inline-block shadow-lg">
                 Cùng nhau nấu ăn, cùng nhau yêu thương
               </div>
             </div>

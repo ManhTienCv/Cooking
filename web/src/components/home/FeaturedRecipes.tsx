@@ -46,8 +46,8 @@ export default function FeaturedRecipes() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <Reveal className="text-center mb-16">
-          <h2 className="text-5xl font-serif text-black mb-4">Công Thức Nổi Bật</h2>
-          <p className="text-xl text-gray-500 max-w-3xl mx-auto font-medium">
+          <h2 className="text-5xl font-serif text-black dark:text-white mb-4">Công Thức Nổi Bật</h2>
+          <p className="text-xl text-gray-500 dark:text-gray-400 max-w-3xl mx-auto font-medium">
             Những món ăn được yêu thích nhất với hướng dẫn chi tiết từng bước
           </p>
         </Reveal>
@@ -89,18 +89,18 @@ export default function FeaturedRecipes() {
                           )}
                         </div>
                         <div>
-                          <span className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">
+                          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block">
                             Ngôi sao hôm nay
                           </span>
-                          <h3 className="text-3xl md:text-4xl font-serif font-bold text-black mb-4 group-hover:text-gray-600 transition-colors">
+                          <h3 className="text-3xl md:text-4xl font-serif font-bold text-black dark:text-white mb-4 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
                             {mainRecipe.title}
                           </h3>
                           {mainRecipe.description && (
-                            <p className="text-gray-700 md:text-lg max-w-3xl mb-6">
+                            <p className="text-gray-700 dark:text-gray-300 md:text-lg max-w-3xl mb-6">
                               {mainRecipe.description.length > 200 ? `${mainRecipe.description.substring(0, 200)}...` : mainRecipe.description}
                             </p>
                           )}
-                          <span className="text-xs uppercase tracking-widest font-bold text-black">ĐỌC TIẾP</span>
+                          <span className="text-xs uppercase tracking-widest font-bold text-black dark:text-white">ĐỌC TIẾP</span>
                         </div>
                       </Link>
                     </div>
@@ -122,18 +122,18 @@ export default function FeaturedRecipes() {
           {/* Cột phải: Sidebar (Khoảng 1/3) */}
           <div className="lg:w-1/3">
             <Reveal y={30} className="sticky top-24">
-              <div className="bg-white shadow-sm border border-gray-100 p-8 rounded-sm">
-                <h4 className="font-black text-lg text-gray-800 uppercase tracking-wider mb-6 text-center border-b border-gray-200 pb-4">
+              <div className="bg-white dark:bg-slate-900 shadow-sm border border-gray-100 dark:border-slate-800 p-8 rounded-sm">
+                <h4 className="font-black text-lg text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-6 text-center border-b border-gray-200 dark:border-slate-800 pb-4">
                   Bộ Sưu Tập Công Thức
                 </h4>
                 <ul className="space-y-4">
                   {STATIC_COLLECTIONS.map((col, i) => (
-                    <li key={i} className="flex justify-between items-center group cursor-pointer border-b border-gray-100 pb-4 last:border-0">
+                    <li key={i} className="flex justify-between items-center group cursor-pointer border-b border-gray-100 dark:border-slate-800 pb-4 last:border-0">
                       <div className="flex space-x-3 items-center">
-                        <span className="w-5 h-5 rounded-full bg-gray-800 text-white text-[10px] font-bold flex flex-shrink-0 items-center justify-center group-hover:bg-gray-600 transition-colors">
+                        <span className="w-5 h-5 rounded-full bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 text-[10px] font-bold flex flex-shrink-0 items-center justify-center group-hover:bg-gray-600 dark:group-hover:bg-gray-400 transition-colors">
                           {i + 1}
                         </span>
-                        <span className="text-sm text-gray-700 group-hover:text-black">
+                        <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-black dark:group-hover:text-white">
                           {col.text}
                         </span>
                       </div>

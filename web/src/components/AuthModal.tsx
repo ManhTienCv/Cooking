@@ -243,11 +243,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
         <div className="blackwhite-form-container blackwhite-sign-up">
           {registerStep === 1 ? (
             <form
-              className="h-full flex flex-col items-center justify-center p-8 bg-white"
+              className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900"
               onSubmit={handleRegisterRequestOtp}
             >
-              <h1 className="text-2xl font-bold mb-2">Tạo Tài Khoản</h1>
-              <span className="text-gray-500 text-xs mb-4">Nhập thông tin rồi nhận mã OTP qua email</span>
+              <h1 className="text-2xl font-bold mb-2 text-black dark:text-white">Tạo Tài Khoản</h1>
+              <span className="text-gray-500 dark:text-gray-400 text-xs mb-4">Nhập thông tin rồi nhận mã OTP qua email</span>
               {authError && isActive && (
                 <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
               )}
@@ -257,14 +257,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                 placeholder="Họ tên"
                 required
                 minLength={3}
-                className="bg-gray-100 border border-gray-200 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white transition-all text-sm font-medium"
+                className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
               />
               <input
                 name="email"
                 type="email"
                 placeholder="Email"
                 required
-                className="bg-gray-100 border border-gray-200 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white transition-all text-sm font-medium"
+                className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
               />
               <input
                 name="password"
@@ -272,11 +272,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                 placeholder="Mật khẩu (ít nhất 8 ký tự)"
                 required
                 minLength={8}
-                className="bg-gray-100 border border-gray-200 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white transition-all text-sm font-medium"
+                className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
               />
-              <p className="text-sm text-gray-600 mt-2 mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 mb-4">
                 Đã có tài khoản?{' '}
-                <a href="#" onClick={handleFocusSignIn} className="font-semibold text-black underline">
+                <a href="#" onClick={handleFocusSignIn} className="font-semibold text-black dark:text-white underline">
                   Đăng nhập
                 </a>
               </p>
@@ -290,12 +290,12 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
             </form>
           ) : (
             <form
-              className="h-full flex flex-col items-center justify-center p-8 bg-white"
+              className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900"
               onSubmit={handleRegisterVerify}
             >
-              <h1 className="text-2xl font-bold mb-2">Nhập mã OTP</h1>
-              <span className="text-gray-500 text-xs mb-2 text-center">
-                Đã gửi mã tới <strong>{pendingEmail}</strong>
+              <h1 className="text-2xl font-bold mb-2 text-black dark:text-white">Nhập mã OTP</h1>
+              <span className="text-gray-500 dark:text-gray-400 text-xs mb-2 text-center">
+                Đã gửi mã tới <strong className="text-black dark:text-white">{pendingEmail}</strong>
               </span>
               {authError && isActive && (
                 <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
@@ -308,7 +308,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                 maxLength={6}
                 placeholder="Mã 6 số"
                 required
-                className="bg-gray-100 border border-gray-200 rounded-lg w-full p-3 mb-4 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white transition-all text-sm tracking-widest text-center font-bold"
+                className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-4 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm tracking-widest text-center font-bold text-black dark:text-white"
               />
               <button
                 type="submit"
@@ -319,7 +319,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               </button>
               <button
                 type="button"
-                className="mt-3 text-sm text-gray-600 underline"
+                className="mt-3 text-sm text-gray-600 dark:text-gray-400 underline"
                 onClick={() => {
                   setRegisterStep(1);
                   setAuthError(null);
@@ -333,9 +333,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
 
         {/* Login Form */}
         <div className="blackwhite-form-container blackwhite-sign-in" style={{ display: view === 'main' ? 'block' : 'none' }}>
-          <form className="h-full flex flex-col items-center justify-center p-8 bg-white" onSubmit={handleLogin}>
-            <h1 className="text-2xl font-bold mb-2">Đăng Nhập</h1>
-            <span className="text-gray-500 text-xs mb-4">hoặc sử dụng email và mật khẩu</span>
+          <form className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900" onSubmit={handleLogin}>
+            <h1 className="text-2xl font-bold mb-2 text-black dark:text-white">Đăng Nhập</h1>
+            <span className="text-gray-500 dark:text-gray-400 text-xs mb-4">hoặc sử dụng email và mật khẩu</span>
             {!isActive && authSuccess && (
               <p className="text-green-700 text-xs mb-2 w-full text-center">{authSuccess}</p>
             )}
@@ -347,22 +347,22 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               type="email"
               placeholder="Email"
               required
-              className="bg-gray-100 border border-gray-200 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white transition-all text-sm font-medium"
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
             />
             <input
               name="password"
               type="password"
               placeholder="Mật khẩu"
               required
-              className="bg-gray-100 border border-gray-200 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white transition-all text-sm font-medium"
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
             />
             <RecaptchaCook visible={captchaRequired} recaptchaRef={recaptchaRef} />
-            <a href="#" onClick={handleShowForgot} className="text-xs text-gray-400 hover:text-black mb-4">
+            <a href="#" onClick={handleShowForgot} className="text-xs text-gray-400 hover:text-black dark:hover:text-white mb-4">
               Quên mật khẩu?
             </a>
-            <p className="text-sm text-gray-600 mt-2 mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 mb-4">
               Chưa có tài khoản?{' '}
-              <a href="#" onClick={handleFocusSignUp} className="font-semibold text-black underline">
+              <a href="#" onClick={handleFocusSignUp} className="font-semibold text-black dark:text-white underline">
                 Đăng ký
               </a>
             </p>
@@ -391,9 +391,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
             justifyContent: 'center',
           }}
         >
-          <form className="h-full flex flex-col items-center justify-center p-8 bg-white w-full" onSubmit={handleForgotSendOtp}>
-            <h1 className="text-2xl font-bold mb-2">Quên Mật Khẩu</h1>
-            <span className="text-gray-500 text-xs mb-4 text-center">Chỉ email đã đăng ký mới nhận được mã</span>
+          <form className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900 w-full" onSubmit={handleForgotSendOtp}>
+            <h1 className="text-2xl font-bold mb-2 text-black dark:text-white">Quên Mật Khẩu</h1>
+            <span className="text-gray-500 dark:text-gray-400 text-xs mb-4 text-center">Chỉ email đã đăng ký mới nhận được mã</span>
             {authError && view === 'forgot' && (
               <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
             )}
@@ -402,7 +402,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               type="email"
               placeholder="Email đã đăng ký"
               required
-              className="bg-gray-100 border border-gray-200 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white transition-all text-sm font-medium"
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
             />
             <button
               type="submit"
@@ -411,8 +411,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
             >
               {authLoading ? '…' : 'Gửi mã OTP'}
             </button>
-            <p className="text-sm text-gray-600 mt-4">
-              <a href="#" onClick={handleBackToLogin} className="font-semibold text-black underline">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-4">
+              <a href="#" onClick={handleBackToLogin} className="font-semibold text-black dark:text-white underline">
                 Quay lại Đăng nhập
               </a>
             </p>
@@ -434,10 +434,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
             justifyContent: 'center',
           }}
         >
-          <form className="h-full flex flex-col items-center justify-center p-8 bg-white w-full" onSubmit={handleResetPassword}>
-            <h1 className="text-2xl font-bold mb-2">Đặt Lại Mật Khẩu</h1>
-            <span className="text-gray-500 text-xs mb-2 text-center">
-              Mã đã gửi tới <strong>{forgotEmail}</strong>
+          <form className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900 w-full" onSubmit={handleResetPassword}>
+            <h1 className="text-2xl font-bold mb-2 text-black dark:text-white">Đặt Lại Mật Khẩu</h1>
+            <span className="text-gray-500 dark:text-gray-400 text-xs mb-2 text-center">
+              Mã đã gửi tới <strong className="text-black dark:text-white">{forgotEmail}</strong>
             </span>
             {authError && view === 'reset' && (
               <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
@@ -450,7 +450,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               maxLength={6}
               placeholder="Mã OTP (6 số)"
               required
-              className="bg-gray-100 border border-gray-200 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white transition-all text-sm font-medium"
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
             />
             <input
               name="new_password"
@@ -458,7 +458,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               placeholder="Mật khẩu mới (≥8 ký tự)"
               required
               minLength={8}
-              className="bg-gray-100 border border-gray-200 rounded-lg w-full p-3 mb-6 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white transition-all text-sm font-medium"
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-6 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
             />
             <button
               type="submit"
@@ -467,8 +467,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
             >
               {authLoading ? '…' : 'Đổi mật khẩu'}
             </button>
-            <p className="text-sm text-gray-600 mt-4">
-              <a href="#" onClick={handleBackToLogin} className="font-semibold text-black underline">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-4">
+              <a href="#" onClick={handleBackToLogin} className="font-semibold text-black dark:text-white underline">
                 Quay lại Đăng nhập
               </a>
             </p>

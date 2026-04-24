@@ -8,11 +8,11 @@ export default function HomeCategories() {
   }, []);
 
   return (
-    <section className="py-20 bg-white/40 backdrop-blur-sm border-t border-b border-white/60 categories-container">
+    <section className="py-20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm border-t border-b border-white/60 dark:border-slate-800/60 transition-colors duration-300 categories-container">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <Reveal className="text-center mb-16">
-          <h2 className="text-5xl font-serif text-black mb-4">Các Danh Mục Chính</h2>
-          <p className="text-xl text-gray-500 max-w-3xl mx-auto font-medium">
+          <h2 className="text-5xl font-serif text-black dark:text-white mb-4">Các Danh Mục Chính</h2>
+          <p className="text-xl text-gray-500 dark:text-gray-400 max-w-3xl mx-auto font-medium">
             Khám phá nguồn cảm hứng nấu nướng thông qua các lựa chọn phổ biến nhất.
           </p>
         </Reveal>

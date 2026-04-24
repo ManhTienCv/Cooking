@@ -1,6 +1,7 @@
 import { useLayoutEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { Toaster } from 'react-hot-toast';
 
 import Layout from './components/Layout';
 import { scrollWindowToTop } from './lib/scroll';
@@ -13,8 +14,16 @@ import BlogDetail from './pages/Blog/Detail';
 import Health from './pages/Health';
 import HealthDetail from './pages/Health/Detail';
 import Profile from './pages/Profile';
-import AdminPage from './pages/Admin';
 import AdminLogin from './pages/Admin/Login';
+import AdminLayout from './pages/Admin/Layout';
+import DashboardTab from './pages/Admin/tabs/DashboardTab';
+import ApprovalsTab from './pages/Admin/tabs/ApprovalsTab';
+import UsersTab from './pages/Admin/tabs/UsersTab';
+import RecipesTab from './pages/Admin/tabs/RecipesTab';
+import BlogsTab from './pages/Admin/tabs/BlogsTab';
+import FeedbackTab from './pages/Admin/tabs/FeedbackTab';
+import CommentsTab from './pages/Admin/tabs/CommentsTab';
+import CategoriesTab from './pages/Admin/tabs/CategoriesTab';
 
 const EASE_PAGE = [0.22, 1, 0.36, 1] as const;
 
@@ -30,10 +39,23 @@ export default function App() {
 
   if (isAdminRoute) {
     return (
-      <Routes location={location}>
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin" element={<AdminPage />} />
+      <>
+        <Toaster position="top-right" />
+        <Routes location={location}>
+          <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardTab />} />
+          <Route path="approvals" element={<ApprovalsTab />} />
+          <Route path="users" element={<UsersTab />} />
+          <Route path="recipes" element={<RecipesTab />} />
+          <Route path="blogs" element={<BlogsTab />} />
+          <Route path="comments" element={<CommentsTab />} />
+          <Route path="categories" element={<CategoriesTab />} />
+          <Route path="feedback" element={<FeedbackTab />} />
+        </Route>
       </Routes>
+      </>
     );
   }
 
@@ -42,6 +64,7 @@ export default function App() {
 
   return (
     <Layout>
+      <Toaster position="top-right" />
       {/*
         Grid: mọi trang con cùng ô → chồng lên nhau khi sync.
         Trang mới fade in đè trang cũ → không còn khoảng trống như mode="wait".

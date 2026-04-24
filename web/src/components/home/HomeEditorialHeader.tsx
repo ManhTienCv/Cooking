@@ -27,13 +27,13 @@ export default function HomeEditorialHeader() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Typographic Top */}
-        <Reveal className="text-center py-20 mb-12 border-b border-gray-100 flex flex-col items-center justify-center">
+        <Reveal className="text-center py-20 mb-12 border-b border-gray-100 dark:border-slate-800 flex flex-col items-center justify-center">
           {/* Dòng này đã được tăng size lên text-base và md:text-xl */}
           <span className="text-base md:text-xl font-bold text-gray-400 uppercase tracking-[0.3em] mb-6">
             Công thức nấu ăn đơn giản dành cho
           </span>
 
-          <h1 className="font-serif italic text-5xl md:text-7xl text-gray-900 leading-[1.1] tracking-tight">
+          <h1 className="font-serif italic text-5xl md:text-7xl text-gray-900 dark:text-white leading-[1.1] tracking-tight">
             cuộc sống đời thực mỗi ngày.
           </h1>
         </Reveal>
@@ -52,7 +52,7 @@ export default function HomeEditorialHeader() {
                   />
                 </div>
                 <div className="absolute inset-x-0 bottom-0 flex justify-center translate-y-1/2 z-10 px-4">
-                  <div className="bg-white/95 backdrop-blur font-serif text-sm tracking-widest font-bold uppercase py-3 px-6 shadow-md text-black border border-gray-200 min-w-[70%] text-center group-hover:text-gray-700 transition-colors">
+                  <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur font-serif text-sm tracking-widest font-bold uppercase py-3 px-6 shadow-md text-black dark:text-white border border-gray-200 dark:border-slate-800 min-w-[70%] text-center group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors">
                     {cat.name}
                   </div>
                 </div>
@@ -67,10 +67,10 @@ export default function HomeEditorialHeader() {
             {CIRCLE_CATEGORIES.map((cat, idx) => (
               <RevealStaggerItem key={idx} index={idx} stagger={0.05} y={15} className="flex flex-col items-center group w-24">
                 <Link to={`/recipes?category=${encodeURIComponent(cat.name)}`} className="flex flex-col items-center">
-                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-transparent group-hover:border-black transition-colors duration-300 p-1 mb-3">
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-transparent group-hover:border-black dark:group-hover:border-white transition-colors duration-300 p-1 mb-3">
                     <img src={cat.image} alt={cat.name} className="w-full h-full object-cover rounded-full group-hover:scale-110 transition-transform duration-500" />
                   </div>
-                  <span className="text-xs font-bold uppercase text-center text-gray-800 tracking-wider h-10 group-hover:text-black">
+                  <span className="text-xs font-bold uppercase text-center text-gray-800 dark:text-gray-300 tracking-wider h-10 group-hover:text-black dark:group-hover:text-white">
                     {cat.name}
                   </span>
                 </Link>

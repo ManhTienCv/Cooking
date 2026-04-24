@@ -11,11 +11,11 @@ declare global {
 
 export default function Home() {
   return (
-    <main className="bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen">
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 min-h-screen transition-colors duration-300">
       <HomeEditorialHeader />
       <FeaturedRecipes />
       <HomeCategories />
       <HomeCallToAction />
-    </main>
+    </div>
   );
 }

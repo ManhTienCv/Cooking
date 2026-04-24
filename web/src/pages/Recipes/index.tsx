@@ -113,13 +113,13 @@ export default function Recipes() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-      <div className="bg-white/60 backdrop-blur-md border-b border-white/20">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
+      <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border-b border-white/20 dark:border-slate-800/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Reveal y={16}>
-            <h1 className="text-4xl font-serif italic font-bold text-black mb-4">Công Thức Nấu Ăn</h1>
-            <p className="text-gray-600 text-lg">
-              Khám phá <strong className="text-black">{recipes.length}</strong> công thức nấu ăn đa dạng
+            <h1 className="text-4xl font-serif italic font-bold text-black dark:text-white mb-4">Công Thức Nấu Ăn</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-lg">
+              Khám phá <strong className="text-black dark:text-white">{recipes.length}</strong> công thức nấu ăn đa dạng
             </p>
           </Reveal>
         </div>
@@ -146,7 +146,7 @@ export default function Recipes() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Tìm kiếm công thức..." 
-              className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-full focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300 bg-white" 
+              className="w-full pl-10 pr-10 py-3 border border-gray-200 dark:border-slate-700 rounded-full focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300 bg-white dark:bg-slate-800 text-black dark:text-white" 
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors">
@@ -184,6 +184,6 @@ export default function Recipes() {
           setIsModalOpen(true);
         }}
       />
-    </main>
+    </div>
   );
 }

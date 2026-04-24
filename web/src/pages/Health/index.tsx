@@ -96,12 +96,12 @@ export default function Health() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-      <div className="bg-white/60 backdrop-blur-md shadow-sm border-b border-white/20">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
+      <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md shadow-sm border-b border-white/20 dark:border-slate-800/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <Reveal className="text-center" y={20}>
-            <h1 className="text-4xl md:text-5xl font-serif italic font-bold text-black mb-4">Quản lý Sức khỏe và Lập kế hoạch</h1>
-            <p className="text-xl text-gray-600 font-serif max-w-2xl mx-auto">
+            <h1 className="text-4xl md:text-5xl font-serif italic font-bold text-black dark:text-white mb-4">Quản lý Sức khỏe và Lập kế hoạch</h1>
+            <p className="text-xl text-gray-600 dark:text-gray-400 font-serif max-w-2xl mx-auto">
               Lập kế hoạch bữa ăn, theo dõi dinh dưỡng và quản lý sức khỏe một cách thông minh
             </p>
           </Reveal>
@@ -111,15 +111,15 @@ export default function Health() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <HealthFeatures />
 
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-md mb-12 border border-white/20 overflow-hidden">
+        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-2xl shadow-md mb-12 border border-white/20 dark:border-slate-700/20 overflow-hidden">
           <HealthTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
           <div className="p-6 min-h-[300px]">
             {activeTab === 'plans' && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-2xl font-serif font-bold text-black">Kế hoạch bữa ăn</h3>
-                  <button onClick={() => void openCreatePlanModal()} className="bg-black text-white px-5 py-2.5 rounded-full font-semibold hover:bg-gray-800 transition-colors inline-flex items-center space-x-2 text-sm">
+                  <h3 className="text-2xl font-serif font-bold text-black dark:text-white">Kế hoạch bữa ăn</h3>
+                  <button onClick={() => void openCreatePlanModal()} className="bg-black dark:bg-white text-white dark:text-black px-5 py-2.5 rounded-full font-semibold hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors inline-flex items-center space-x-2 text-sm">
                     <Plus className="w-4 h-4"/>
                     <span>Tạo kế hoạch mới</span>
                   </button>
@@ -129,33 +129,33 @@ export default function Health() {
             )}
             {activeTab === 'shopping' && (
               <div className="text-center py-12">
-                <ShoppingBag className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-2xl font-bold mb-2">Danh sách trống</h3>
-                <p className="text-gray-500">Danh sách mua sắm sẽ được tự động tạo khi bạn có kế hoạch bữa ăn.</p>
+                <ShoppingBag className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-slate-600" />
+                <h3 className="text-2xl font-bold mb-2 dark:text-white">Danh sách trống</h3>
+                <p className="text-gray-500 dark:text-gray-400">Danh sách mua sắm sẽ được tự động tạo khi bạn có kế hoạch bữa ăn.</p>
               </div>
             )}
             {activeTab === 'nutrition' && (
               <div className="text-center py-12">
-                <Activity className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-2xl font-bold mb-2">Biểu đồ dinh dưỡng</h3>
-                <p className="text-gray-500">Thêm công thức vào kế hoạch để xem phân tích dinh dưỡng tại đây.</p>
+                <Activity className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-slate-600" />
+                <h3 className="text-2xl font-bold mb-2 dark:text-white">Biểu đồ dinh dưỡng</h3>
+                <p className="text-gray-500 dark:text-gray-400">Thêm công thức vào kế hoạch để xem phân tích dinh dưỡng tại đây.</p>
               </div>
             )}
           </div>
         </div>
 
         <Reveal y={24}>
-          <div className="bg-white/60 backdrop-blur-md text-black rounded-2xl shadow-md p-8 md:p-12 text-center border border-white/20">
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md text-black dark:text-white rounded-2xl shadow-md p-8 md:p-12 text-center border border-white/20 dark:border-slate-700/20">
             <HeartPulse className="w-16 h-16 mx-auto mb-6 text-red-500 animate-pulse" />
             <h2 className="text-3xl font-serif font-bold mb-4">Bắt đầu hành trình sức khỏe của bạn ngay hôm nay</h2>
-            <p className="text-gray-600 mb-8 max-w-xl mx-auto">
+            <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-xl mx-auto">
               Trải nghiệm sự tiện lợi của việc lập kế hoạch bữa ăn và để chúng tôi giúp bạn đạt được mục tiêu sức khỏe.
             </p>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-              <button onClick={() => void openCreatePlanModal()} className="w-full sm:w-auto bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800 transition-colors font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 duration-300">
+              <button onClick={() => void openCreatePlanModal()} className="w-full sm:w-auto bg-black dark:bg-white text-white dark:text-black px-8 py-3 rounded-full hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 duration-300">
                 Tạo kế hoạch ngay
               </button>
-              <Link to="/about" className="w-full sm:w-auto px-8 py-3 rounded-full bg-white text-black border border-gray-200 hover:bg-gray-50 transition-all duration-300 font-medium shadow-sm hover:shadow-md inline-flex items-center justify-center">
+              <Link to="/about" className="w-full sm:w-auto px-8 py-3 rounded-full bg-white dark:bg-slate-800 text-black dark:text-white border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all duration-300 font-medium shadow-sm hover:shadow-md inline-flex items-center justify-center">
                 Tìm hiểu về chúng tôi <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
             </div>
@@ -173,6 +173,6 @@ export default function Health() {
         defaultDates={defaultDates}
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onSuccess={loadPlans} />
-    </main>
+    </div>
   );
 }

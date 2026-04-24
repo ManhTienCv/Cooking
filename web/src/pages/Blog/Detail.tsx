@@ -108,13 +108,13 @@ export default function BlogDetail() {
   });
 
   return (
-    <main className="min-h-screen pt-16 bg-gradient-to-br from-blue-50 to-indigo-50">
-      <div className="bg-white/60 backdrop-blur-md shadow-sm border-b border-white/20">
+    <main className="min-h-screen pt-16 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
+      <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md shadow-sm border-b border-white/20 dark:border-slate-800/20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Reveal y={12}>
             <Link
               to="/blog"
-              className="inline-flex items-center space-x-2 text-gray-600 hover:text-black transition-colors duration-300"
+              className="inline-flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors duration-300"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>Quay lại danh sách</span>
@@ -124,9 +124,9 @@ export default function BlogDetail() {
       </div>
 
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg overflow-hidden border border-gray-100 dark:border-slate-700">
           <Reveal y={16}>
-          <div className="p-8 border-b border-gray-200">
+          <div className="p-8 border-b border-gray-200 dark:border-slate-700">
             <div className="flex items-center space-x-4 text-sm text-gray-500 mb-4">
               <div className="flex items-center space-x-1">
                 <Calendar className="h-4 w-4" />
@@ -142,7 +142,7 @@ export default function BlogDetail() {
               </div>
             </div>
 
-            <h1 className="text-3xl md:text-4xl font-serif font-black text-black mb-4">{post.title}</h1>
+            <h1 className="text-3xl md:text-4xl font-serif font-black text-black dark:text-white mb-4">{post.title}</h1>
           </div>
           </Reveal>
 
@@ -151,7 +151,7 @@ export default function BlogDetail() {
             {post.image_url ? (
               <img src={post.image_url} alt={post.title} className="w-full h-64 md:h-96 object-cover" />
             ) : (
-              <div className="w-full h-64 md:h-96 bg-gray-100 flex items-center justify-center text-gray-400">
+              <div className="w-full h-64 md:h-96 bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-400 dark:text-gray-500">
                 <FileText className="h-20 w-20" />
               </div>
             )}
@@ -164,27 +164,27 @@ export default function BlogDetail() {
           </Reveal>
 
           <Reveal y={16} delay={0.08}>
-          <div className="p-8 prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: html }} />
+          <div className="p-8 prose prose-lg dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: html }} />
           </Reveal>
 
           <Reveal y={14} delay={0.06}>
-          <div className="px-8 py-4 border-t border-gray-200">
+          <div className="px-8 py-4 border-t border-gray-200 dark:border-slate-700">
             <div className="flex items-center space-x-6">
               <button
                 onClick={() => {
                   if (!isAuthenticated) setIsAuthOpen(true);
                   else setIsLiked(!isLiked);
                 }}
-                className={`flex items-center space-x-2 transition-colors duration-300 ${isLiked ? 'text-red-500' : 'text-gray-600 hover:text-red-500'}`}
+                className={`flex items-center space-x-2 transition-colors duration-300 ${isLiked ? 'text-red-500' : 'text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400'}`}
               >
                 <Heart className={`h-5 w-5 ${isLiked ? 'fill-current' : ''}`} />
                 <span>{likeBase + (isLiked ? 1 : 0)} Thích</span>
               </button>
-              <a href="#comments" className="flex items-center space-x-2 text-gray-600 hover:text-blue-500 transition-colors duration-300">
+              <a href="#comments" className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors duration-300">
                 <MessageCircle className="h-5 w-5" />
                 <span>{comments.length} Bình luận</span>
               </a>
-              <button className="flex items-center space-x-2 text-gray-600 hover:text-green-500 transition-colors duration-300">
+              <button className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400 transition-colors duration-300">
                 <Share2 className="h-5 w-5" />
                 <span>Chia sẻ</span>
               </button>
@@ -193,41 +193,41 @@ export default function BlogDetail() {
           </Reveal>
 
           <Reveal y={16}>
-          <div className="p-8 border-t border-gray-200 bg-gray-50">
-            <h3 className="text-lg font-semibold text-black mb-4">Về tác giả</h3>
+          <div className="p-8 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
+            <h3 className="text-lg font-semibold text-black dark:text-white mb-4">Về tác giả</h3>
             <div className="flex items-center space-x-4">
               {post.author_avatar ? (
                 <img src={post.author_avatar} alt={post.author_name ?? ''} className="w-16 h-16 rounded-full object-cover" />
               ) : (
-                <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
-                  <User className="h-8 w-8 text-gray-500" />
+                <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center">
+                  <User className="h-8 w-8 text-gray-500 dark:text-gray-400" />
                 </div>
               )}
               <div>
-                <h4 className="font-bold text-black">{post.author_name ?? '—'}</h4>
-                <p className="text-sm text-gray-600">{post.author_email ?? ''}</p>
+                <h4 className="font-bold text-black dark:text-white">{post.author_name ?? '—'}</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{post.author_email ?? ''}</p>
               </div>
             </div>
           </div>
           </Reveal>
 
           <Reveal y={18}>
-          <div id="comments" className="p-8 border-t border-gray-200">
-            <h3 className="text-2xl font-bold text-black mb-6">Bình luận ({comments.length})</h3>
+          <div id="comments" className="p-8 border-t border-gray-200 dark:border-slate-700">
+            <h3 className="text-2xl font-bold text-black dark:text-white mb-6">Bình luận ({comments.length})</h3>
 
             {isAuthenticated ? (
               <form className="mb-8" onSubmit={(e) => e.preventDefault()}>
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                      <User className="h-6 w-6 text-gray-500" />
+                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center">
+                      <User className="h-6 w-6 text-gray-500 dark:text-gray-400" />
                     </div>
                   </div>
                   <div className="flex-grow">
                     <textarea
                       rows={3}
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-black focus:ring-0 transition-all duration-300"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-black dark:text-white rounded-lg focus:border-black dark:focus:border-white focus:ring-0 transition-all duration-300"
                       placeholder="Viết bình luận của bạn..."
                     ></textarea>
                     <div className="mt-2 flex justify-end">
@@ -242,8 +242,8 @@ export default function BlogDetail() {
                 </div>
               </form>
             ) : (
-              <div className="bg-gray-50 rounded-lg p-6 text-center mb-8">
-                <p className="text-gray-600">
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-6 text-center mb-8">
+                <p className="text-gray-600 dark:text-gray-300">
                   Vui lòng{' '}
                   <button
                     type="button"
@@ -264,14 +264,14 @@ export default function BlogDetail() {
                     <img src={comment.avatar_url} alt="Avatar" className="w-10 h-10 rounded-full object-cover" />
                   </div>
                   <div className="flex-grow">
-                    <div className="bg-gray-50 rounded-2xl px-4 py-3 relative">
+                    <div className="bg-gray-50 dark:bg-slate-700/50 rounded-2xl px-4 py-3 relative">
                       <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-bold text-sm text-black">{comment.full_name}</h4>
+                        <h4 className="font-bold text-sm text-black dark:text-white">{comment.full_name}</h4>
                         <div className="flex items-center space-x-2">
-                          <span className="text-xs text-gray-500">2 ngày trước</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">2 ngày trước</span>
                         </div>
                       </div>
-                      <p className="text-gray-700 text-sm">{comment.content}</p>
+                      <p className="text-gray-700 dark:text-gray-300 text-sm">{comment.content}</p>
                     </div>
                   </div>
                 </div>
@@ -284,8 +284,8 @@ export default function BlogDetail() {
 
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Reveal y={20}>
-          <h2 className="text-2xl font-bold text-black mb-6">Bài viết liên quan</h2>
-          <div className="text-center py-8 text-gray-500">Chưa có bài viết liên quan.</div>
+          <h2 className="text-2xl font-bold text-black dark:text-white mb-6">Bài viết liên quan</h2>
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">Chưa có bài viết liên quan.</div>
         </Reveal>
       </section>
 

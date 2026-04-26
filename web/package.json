@@ -11,7 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.2.2",
+    "@tailwindcss/vite": "^4.2.4",
     "dompurify": "^3.4.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",

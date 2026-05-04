@@ -308,7 +308,7 @@ blogRouter.put('/posts/:id', requireAuth, requireCsrf, async (req, res) => {
 
 blogRouter.delete('/posts/:id', requireAuth, requireCsrf, async (req, res) => {
   const id = Number(req.params.id);
-  const userId = req.session.userId;
+  const userId = req.session.userId ?? null;
   if (!id) return res.status(400).json({ error: 'Invalid id' });
   const post = await blogRepo.getPostById(id, userId);
   if (!post || post.author_id !== userId) return res.status(403).json({ error: 'Forbidden' });

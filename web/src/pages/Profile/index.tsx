@@ -146,7 +146,7 @@ export default function Profile() {
     try {
       await apiFetch(`/api/recipes/${id}`, { method: 'DELETE' });
       void loadTabData('recipes');
-    } catch (e) {
+    } catch {
       alert('Không thể xóa công thức');
     }
   };
@@ -156,7 +156,7 @@ export default function Profile() {
     try {
       await apiFetch(`/api/blog/posts/${id}`, { method: 'DELETE' });
       void loadTabData('posts');
-    } catch (e) {
+    } catch {
       alert('Không thể xóa bài viết');
     }
   };

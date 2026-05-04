@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Utensils, Trash2, Sunrise, Sun, Moon, Plus, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Trash2, Sunrise, Sun, Moon, Plus, X } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { apiJson, apiFetch } from '../../lib/api';
 import { HeroEnter, Reveal, RevealStaggerItem } from '../../components/motion/ScrollReveal';
@@ -98,7 +98,7 @@ export default function HealthDetail() {
         const recipesRes = await apiFetch('/api/recipes?limit=4');
         const recipesJson = await recipesRes.json();
         if (recipesJson.data) setSuggestions(recipesJson.data);
-      } catch (e) {}
+      } catch { /* ignore */ }
     } catch {
       setPlan(null);
     } finally {
@@ -134,7 +134,7 @@ export default function HealthDetail() {
       await apiFetch(`/api/health/plans/${id}`, { method: 'DELETE' });
       toast.success('Đã xóa kế hoạch');
       navigate('/health');
-    } catch (e) {
+    } catch {
       toast.error('Lỗi khi xóa kế hoạch');
     }
   };
@@ -168,7 +168,7 @@ export default function HealthDetail() {
       } else {
         toast.error('Lỗi khi thêm món');
       }
-    } catch (e) {
+    } catch {
       toast.error('Lỗi khi thêm món');
     }
   };
@@ -192,7 +192,7 @@ export default function HealthDetail() {
       } else {
         toast.error('Lỗi khi xóa món');
       }
-    } catch (e) {
+    } catch {
       toast.error('Lỗi khi xóa món');
     }
   };
@@ -209,7 +209,7 @@ export default function HealthDetail() {
         setShoppingName('');
         setShoppingQty('');
       }
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   const handleToggleShoppingItem = async (itemId: number) => {
@@ -219,7 +219,7 @@ export default function HealthDetail() {
         body: JSON.stringify({ action: 'toggle_shopping_item', plan_id: Number(id), item_id: itemId })
       });
       if (res.success && res.shoppingList) setShoppingList(res.shoppingList);
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   const handleDeleteShoppingItem = async (itemId: number) => {
@@ -229,7 +229,7 @@ export default function HealthDetail() {
         body: JSON.stringify({ action: 'remove_shopping_item', plan_id: Number(id), item_id: itemId })
       });
       if (res.success && res.shoppingList) setShoppingList(res.shoppingList);
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   if (isLoading) {
@@ -260,7 +260,7 @@ export default function HealthDetail() {
     );
   }
 
-  const renderMealBox = (dateStr: string, displayDate: string, mealType: string, title: string, Icon: any, bgClass: string, textClass: string, btnClass: string) => {
+  const renderMealBox = (dateStr: string, displayDate: string, mealType: string, title: string, Icon: React.ElementType, bgClass: string, textClass: string, btnClass: string) => {
     const meals = mealPlan[dateStr]?.[mealType] || [];
     return (
       <div className={`${bgClass} rounded-lg p-4`}>

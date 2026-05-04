@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { Clock, User, Eye, ArrowLeft, Bookmark, BookmarkCheck, ChefHat, Flame, Drumstick, Wheat, Droplets, Timer, Lock } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { apiFetch, apiJson } from '../../lib/api';
@@ -36,7 +36,6 @@ function extractMinutes(step: string): number | null {
 
 export default function RecipeDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [isSaved, setIsSaved] = useState(false);
   const [recipe, setRecipe] = useState<RecipeRow | null>(null);
   const [isLoading, setIsLoading] = useState(true);

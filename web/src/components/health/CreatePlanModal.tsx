@@ -10,36 +10,10 @@ interface CreatePlanModalProps {
   defaultDates: { today: string; nextWeek: string };
 }
 
-function parsePositiveNumber(raw: string): number | null {
-  const cleaned = raw.trim().replace(',', '.');
-  const n = Number(cleaned);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return n;
-}
-
-function parseHeightToCm(raw: string): number | null {
-  const value = raw.trim().toLowerCase();
-  if (!value) return null;
-
-  const meterMatch = value.match(/^(\d(?:\.\d+)?)\s*m\s*(\d{1,2})?$/i);
-  if (meterMatch) {
-    const m = Number(meterMatch[1]);
-    const cmTail = Number(meterMatch[2] ?? '0');
-    if (Number.isFinite(m) && Number.isFinite(cmTail)) {
-      return Math.round(m * 100 + cmTail);
-    }
-  }
-
-  const n = Number(value.replace(/[^0-9.]/g, ''));
-  if (!Number.isFinite(n) || n <= 0) return null;
-  if (n <= 3) return Math.round(n * 100);
-  return Math.round(n);
-}
 
 export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDates }: CreatePlanModalProps) {
   const [isSubmittingPlan, setIsSubmittingPlan] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
-  const [isCalorieLoading, setIsCalorieLoading] = useState(false);
   const [calorieNotes, setCalorieNotes] = useState('');
 
   const [planForm, setPlanForm] = useState(() => ({
@@ -125,55 +99,6 @@ export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDat
       setCalorieNotes('');
     } finally {
       setIsSubmittingPlan(false);
-    }
-  };
-
-  const handleSuggestCalories = async () => {
-    setPlanError(null);
-    setCalorieNotes('');
-
-    const age = parsePositiveNumber(planForm.age);
-    const heightCm = parseHeightToCm(planForm.heightCm);
-    const weightKg = parsePositiveNumber(planForm.weightKg);
-    if (!age || !heightCm || !weightKg) {
-      setPlanError('Vui lòng nhập đủ tuổi, chiều cao và cân nặng hợp lệ (ví dụ chiều cao: 168 hoặc 1m68).');
-      return;
-    }
-
-    setIsCalorieLoading(true);
-    try {
-      const result = await apiJson<{
-        success: boolean;
-        data?: {
-          target_calories?: number;
-          notes?: string;
-          source?: string;
-        };
-      }>('/api/health/ai/calorie-target', {
-        method: 'POST',
-        body: JSON.stringify({
-          age,
-          height_cm: heightCm,
-          weight_kg: weightKg,
-          gender: planForm.gender,
-          activity_level: planForm.activityLevel,
-          goal: planForm.goal,
-          diet_type: planForm.dietType,
-        }),
-      });
-
-      const suggested = Number(result.data?.target_calories ?? 0);
-      if (suggested > 0) {
-        setPlanForm((prev) => ({ ...prev, targetCalories: String(suggested) }));
-        const sourceLabel = result.data?.source === 'gemini' ? 'Gemini' : 'Fallback';
-        setCalorieNotes(`${result.data?.notes ?? 'Đã tính xong.'} (${sourceLabel})`);
-      } else {
-        setPlanError('Không nhận được gợi ý calo hợp lệ.');
-      }
-    } catch (err) {
-      setPlanError(err instanceof Error ? err.message : 'Không thể gợi ý calo.');
-    } finally {
-      setIsCalorieLoading(false);
     }
   };
 

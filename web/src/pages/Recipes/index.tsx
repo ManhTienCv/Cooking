@@ -27,7 +27,7 @@ const LEGACY_RECIPE_CATEGORIES = [
   'Tráng miệng',
 ];
 
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 6;
 
 const normalizeCategory = (value: string) =>
   value

@@ -12,7 +12,43 @@ function cachePathSync(prompt: string): string {
   return resolve(CACHE_DIR, `${createHash('md5').update(prompt).digest('hex')}.json`);
 }
 
-export async function generateContent(prompt: string, forceRefresh = false): Promise<Record<string, unknown> | unknown[] | null> {
+/* ──────────────────────────────────────────────────────────────
+ *  Multi-provider AI — thử lần lượt các provider miễn phí.
+ *  Khi 1 provider hết quota (429) hoặc lỗi, tự chuyển sang cái tiếp theo.
+ *  Thứ tự ưu tiên: Gemini → Groq → OpenRouter free → null
+ * ────────────────────────────────────────────────────────────── */
+
+type AiProvider = {
+  name: string;
+  call: (prompt: string, timeoutMs: number) => Promise<string | null>;
+};
+
+/** Danh sách providers – được nối vào runtime dựa trên env keys khả dụng. */
+function getProviders(): AiProvider[] {
+  const list: AiProvider[] = [];
+
+  // 1. Google Gemini (AI_API_KEY)
+  if (env.aiApiKey) list.push({ name: 'Gemini', call: callGemini });
+
+  // 2. Groq — Llama models, rất nhanh, free 30 req/min
+  const groqKey = process.env.GROQ_API_KEY ?? '';
+  if (groqKey) list.push({ name: 'Groq', call: callGroq });
+
+  // 3. OpenRouter — free models (meta-llama, mistral, etc.)
+  const orKey = process.env.OPENROUTER_API_KEY ?? '';
+  if (orKey) list.push({ name: 'OpenRouter', call: callOpenRouter });
+
+  return list;
+}
+
+/* ──────── Public API ──────── */
+
+export async function generateContent(
+  prompt: string,
+  forceRefresh = false,
+  timeoutMs = 30_000
+): Promise<Record<string, unknown> | unknown[] | null> {
+  // Check cache
   const file = cachePathSync(prompt);
   if (!forceRefresh && existsSync(file)) {
     try {
@@ -21,63 +57,127 @@ export async function generateContent(prompt: string, forceRefresh = false): Pro
       if (data.payload && Date.now() / 1000 - data.timestamp < CACHE_DURATION_SEC) {
         return data.payload as Record<string, unknown>;
       }
-    } catch {
-      /* ignore */
+    } catch { /* ignore corrupt cache */ }
+  }
+
+  // Try each provider in order
+  const providers = getProviders();
+  for (const provider of providers) {
+    try {
+      const text = await provider.call(prompt, timeoutMs);
+      if (text) {
+        const parsed = parseAiJson(text);
+        if (parsed) {
+          writeFileSync(file, JSON.stringify({ timestamp: Math.floor(Date.now() / 1000), payload: parsed }));
+          return parsed;
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[AI] ${provider.name} failed:`, msg);
     }
   }
 
-  const result = await callGemini(prompt);
-  if (result) {
-    writeFileSync(file, JSON.stringify({ timestamp: Math.floor(Date.now() / 1000), payload: result }));
+  if (providers.length === 0) {
+    console.error('[AI] No API keys configured. Set AI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY in .env');
   }
-  return result;
+  return null;
 }
 
-async function callGemini(prompt: string): Promise<Record<string, unknown> | unknown[] | null> {
-  const apiKey = env.aiApiKey;
-  if (!apiKey) return null;
+/* ──────── Provider: Google Gemini ──────── */
 
-  const url =
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2 },
-      }),
-      signal: AbortSignal.timeout(12_000),
-    });
+async function callGemini(prompt: string, timeoutMs: number): Promise<string | null> {
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.aiApiKey },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.2 },
+    }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
 
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => '');
-      console.error('[AI] Gemini API Error:', res.status, res.statusText, errBody.slice(0, 300));
-      return null;
-    }
-    
-    const json = (await res.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) {
-      console.error('[AI] Gemini API returned no text:', JSON.stringify(json).slice(0, 200));
-      return null;
-    }
-
-    return parseAiJson(text);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('[AI] Gemini fetch exception:', msg);
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '');
+    console.error('[AI:Gemini]', res.status, errBody.slice(0, 200));
     return null;
   }
+
+  const json = (await res.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  };
+  return json.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
 }
 
+/* ──────── Provider: Groq (Llama 3) ──────── */
+
+async function callGroq(prompt: string, timeoutMs: number): Promise<string | null> {
+  const apiKey = process.env.GROQ_API_KEY ?? '';
+  const url = 'https://api.groq.com/openai/v1/chat/completions';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.2,
+      max_tokens: 4096,
+    }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '');
+    console.error('[AI:Groq]', res.status, errBody.slice(0, 200));
+    return null;
+  }
+
+  const json = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+  return json.choices?.[0]?.message?.content ?? null;
+}
+
+/* ──────── Provider: OpenRouter (Free models) ──────── */
+
+async function callOpenRouter(prompt: string, timeoutMs: number): Promise<string | null> {
+  const apiKey = process.env.OPENROUTER_API_KEY ?? '';
+  const url = 'https://openrouter.ai/api/v1/chat/completions';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'google/gemma-4-31b-it:free',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.2,
+      max_tokens: 4096,
+    }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '');
+    console.error('[AI:OpenRouter]', res.status, errBody.slice(0, 200));
+    return null;
+  }
+
+  const json = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+  return json.choices?.[0]?.message?.content ?? null;
+}
+
+/* ──────── JSON Parser ──────── */
+
 /**
- * Parse JSON từ output AI – xử lý nhiều dạng markdown/code fence mà Gemini thường trả về.
+ * Parse JSON từ output AI – xử lý nhiều dạng markdown/code fence mà AI thường trả về.
  */
 function parseAiJson(raw: string): Record<string, unknown> | unknown[] | null {
   let cleaned = raw.trim();

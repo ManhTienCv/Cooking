@@ -1,4 +1,4 @@
-﻿import type { Pool } from 'pg';
+import type { Pool } from 'pg';
 import * as healthRepo from '../repos/healthRepo.js';
 import type { PlanMealRecipeInput } from '../repos/healthRepo.js';
 import { generateContent } from './aiService.js';
@@ -93,6 +93,139 @@ export class MealPlanHandler {
     return { success: true, message: 'Deleted.', shoppingList: await this.getShoppingList() };
   }
 
+  /**
+   * Tự động sinh thực đơn 7 ngày bằng Gemini AI dựa trên mục tiêu calo và chế độ ăn.
+   */
+  async autoGenerateMeals(
+    startDate: string,
+    days: number,
+    targetCalories: number,
+    dietType: string
+  ): Promise<{ success: boolean; message: string }> {
+    const dietInstructions = getDietInstructions(dietType);
+    const prompt = `You are a Vietnamese nutritionist. Create a ${days}-day meal plan.
+
+REQUIREMENTS:
+- Target: ~${targetCalories} kcal/day (distribute: breakfast ~25%, lunch ~40%, dinner ~35%)
+- Diet type: "${dietType}" — ${dietInstructions}
+- Each day has 3 meals: breakfast, lunch, dinner (1 main dish each)
+- Use REAL Vietnamese dish names (e.g. Phở bò, Bún chả, Cơm tấm, Gỏi cuốn...)
+- Each dish must have realistic calories, protein, carbs, fat values
+- Vary dishes across days — no repeating the same dish
+- Total daily calories should be close to ${targetCalories} (±10%)
+
+Return ONLY a JSON array, no markdown:
+[{"day":0,"meals":{"breakfast":[{"name":"Phở bò","calories":450,"protein":25,"carbs":50,"fat":12}],"lunch":[{"name":"Cơm tấm","calories":650,"protein":30,"carbs":70,"fat":20}],"dinner":[{"name":"Canh chua","calories":350,"protein":28,"carbs":15,"fat":8}]}}]
+"day" is 0-indexed. No explanations, no markdown.`;
+
+    try {
+      const result = await generateContent(prompt, true, 30_000);
+      if (Array.isArray(result) && result.length > 0) {
+        const saved = await this.saveMealsFromAiResult(result, startDate, days);
+        if (saved > 0) return { success: true, message: `AI đã tạo ${saved} món ăn cho ${days} ngày.` };
+      }
+    } catch (err) {
+      console.error('[AutoGenerate] AI failed, using fallback:', err instanceof Error ? err.message : err);
+    }
+
+    // Fallback: dùng thực đơn mẫu khi AI không khả dụng
+    console.log('[AutoGenerate] Using fallback meal templates');
+    const saved = await this.saveFallbackMeals(startDate, days, targetCalories, dietType);
+    return { success: true, message: `Đã tạo ${saved} món ăn mẫu cho ${days} ngày (AI tạm thời không khả dụng).` };
+  }
+
+  private async saveMealsFromAiResult(result: unknown[], startDate: string, days: number): Promise<number> {
+    const parts = startDate.split('-');
+    const baseDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    let addedCount = 0;
+
+    for (const dayData of result as { day: number; meals: Record<string, { name: string; calories?: number; protein?: number; carbs?: number; fat?: number }[]> }[]) {
+      const offset = Number(dayData.day ?? 0);
+      if (offset >= days) continue;
+      const current = new Date(baseDate);
+      current.setDate(current.getDate() + offset);
+      const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
+
+      for (const [mealType, dishes] of Object.entries(dayData.meals ?? {})) {
+        for (const dish of dishes) {
+          if (!dish.name) continue;
+          const recipe: PlanMealRecipeInput = {
+            id: '', name: dish.name, note: '', isCustom: false,
+            nutrition: { calories: Number(dish.calories ?? 400), protein: Number(dish.protein ?? 15), carbs: Number(dish.carbs ?? 40), fat: Number(dish.fat ?? 10) },
+          };
+          await healthRepo.addMeal(this.pool, this.planId, dateStr, mealType, recipe);
+          addedCount++;
+        }
+      }
+    }
+    return addedCount;
+  }
+
+  private async saveFallbackMeals(startDate: string, days: number, targetCalories: number, dietType: string): Promise<number> {
+    const breakfastPool = [
+      { name: 'Phở bò', cal: 450, p: 25, c: 55, f: 12 },
+      { name: 'Bún bò Huế', cal: 480, p: 28, c: 50, f: 14 },
+      { name: 'Bánh mì trứng ốp la', cal: 380, p: 18, c: 45, f: 15 },
+      { name: 'Cháo gà', cal: 320, p: 20, c: 40, f: 8 },
+      { name: 'Xôi gà', cal: 420, p: 22, c: 55, f: 10 },
+      { name: 'Bún riêu cua', cal: 400, p: 22, c: 48, f: 12 },
+      { name: 'Hủ tiếu Nam Vang', cal: 450, p: 25, c: 52, f: 13 },
+      { name: 'Bánh cuốn Thanh Trì', cal: 350, p: 16, c: 42, f: 10 },
+    ];
+    const lunchPool = [
+      { name: 'Cơm tấm sườn bì chả', cal: 650, p: 32, c: 70, f: 22 },
+      { name: 'Cơm gà xối mỡ', cal: 600, p: 30, c: 65, f: 20 },
+      { name: 'Bún chả Hà Nội', cal: 550, p: 28, c: 55, f: 18 },
+      { name: 'Cơm rang dưa bò', cal: 580, p: 26, c: 65, f: 18 },
+      { name: 'Mì Quảng', cal: 520, p: 25, c: 58, f: 15 },
+      { name: 'Cơm chiên dương châu', cal: 560, p: 22, c: 68, f: 16 },
+      { name: 'Bánh xèo nhân tôm thịt', cal: 500, p: 24, c: 45, f: 22 },
+      { name: 'Bún thịt nướng', cal: 530, p: 27, c: 58, f: 16 },
+    ];
+    const dinnerPool = [
+      { name: 'Canh chua cá lóc', cal: 350, p: 28, c: 20, f: 10 },
+      { name: 'Gà kho gừng + rau luộc', cal: 400, p: 30, c: 25, f: 12 },
+      { name: 'Cá kho tộ + canh rau', cal: 380, p: 27, c: 22, f: 14 },
+      { name: 'Thịt ba chỉ kho trứng', cal: 450, p: 25, c: 15, f: 28 },
+      { name: 'Đậu hũ sốt cà chua', cal: 300, p: 18, c: 25, f: 12 },
+      { name: 'Lẩu thái hải sản', cal: 420, p: 32, c: 28, f: 14 },
+      { name: 'Sườn xào chua ngọt', cal: 430, p: 24, c: 30, f: 18 },
+      { name: 'Tôm rim + canh bí đao', cal: 370, p: 26, c: 22, f: 12 },
+    ];
+
+    // Adjust portions based on target calories
+    const ratio = targetCalories / 2000;
+
+    const parts = startDate.split('-');
+    const baseDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    let addedCount = 0;
+
+    for (let i = 0; i < days; i++) {
+      const current = new Date(baseDate);
+      current.setDate(current.getDate() + i);
+      const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
+
+      const bf = breakfastPool[i % breakfastPool.length];
+      const lc = lunchPool[i % lunchPool.length];
+      const dn = dinnerPool[i % dinnerPool.length];
+
+      for (const [mealType, dish] of [['breakfast', bf], ['lunch', lc], ['dinner', dn]] as const) {
+        const recipe: PlanMealRecipeInput = {
+          id: '', name: dish.name, note: '', isCustom: false,
+          nutrition: {
+            calories: Math.round(dish.cal * ratio),
+            protein: Math.round(dish.p * ratio),
+            carbs: Math.round(dish.c * ratio),
+            fat: Math.round(dish.f * ratio),
+          },
+        };
+        await healthRepo.addMeal(this.pool, this.planId, dateStr, mealType, recipe);
+        addedCount++;
+      }
+    }
+    return addedCount;
+  }
+
   private async estimateNutrition(recipeName: string): Promise<{ calories: number; protein: number; carbs: number; fat: number }> {
     const prompt = `Estimate nutritional values for 1 serving of the dish '${recipeName}'. Return ONLY a JSON object with these integer keys: calories, protein, carbs, fat. Do not include markdown formatting or explanations.`;
     const apiResult = await generateContent(prompt);
@@ -135,4 +268,27 @@ function estimateNutritionFallback(recipeName: string): { calories: number; prot
     nutrition[k] = Math.max(0, nutrition[k]);
   }
   return nutrition;
+}
+
+/**
+ * Hướng dẫn chi tiết cho AI theo từng chế độ ăn — giúp AI tạo thực đơn phù hợp.
+ */
+function getDietInstructions(dietType: string): string {
+  const map: Record<string, string> = {
+    'Cân bằng':
+      'Balanced diet. Mix of protein, carbs, and healthy fats. Include diverse Vietnamese dishes with rice, noodles, meat, seafood, and vegetables.',
+    'Giảm cân':
+      'Weight loss diet. Lower calories, high fiber, lean protein. Prefer light dishes: cháo, gỏi, salad, canh rau, thịt nạc hấp. Avoid fried foods and heavy sauces. Keep portions moderate.',
+    'Tăng cân':
+      'Weight gain diet. Higher calories with nutrient-dense foods. Include cơm nhiều, thịt kho, trứng chiên, xôi, bánh mì. Extra snacks. Protein + carbs focus.',
+    'Chay':
+      'Vegetarian/Vegan diet. NO meat, NO seafood, NO fish sauce. Use tofu, tempeh, mushrooms, beans, vegetables. Vietnamese vegetarian dishes only (cơm chay, canh rau, đậu hũ kho).',
+    'Keto':
+      'Keto diet. Very low carb (<10%), high fat (>60%), moderate protein. NO rice, NO noodles, NO bread. Focus on fatty meats, eggs, avocado, coconut-based dishes.',
+    'Low-carb':
+      'Low-carb diet. Minimize rice, noodles, bread. Focus on protein-rich dishes (grilled meat, fish, eggs) and vegetables. Carbs < 30% of calories.',
+    'High-protein':
+      'High-protein diet. Prioritize meat, fish, eggs, tofu in every meal. Protein > 35% of calories. Include dishes like gà nướng, bò lúc lắc, cá kho, trứng chiên, ức gà hấp.',
+  };
+  return map[dietType] ?? map['Cân bằng']!;
 }

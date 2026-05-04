@@ -1,9 +1,10 @@
-﻿import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Clock, User, Eye, ArrowLeft, Bookmark, BookmarkCheck, ChefHat, Flame, Drumstick, Wheat, Droplets, Timer } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Clock, User, Eye, ArrowLeft, Bookmark, BookmarkCheck, ChefHat, Flame, Drumstick, Wheat, Droplets, Timer, Lock } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { apiFetch, apiJson } from '../../lib/api';
 import ImageWithFallback from '../../lib/ImageWithFallback';
+import AuthModal from '../../components/AuthModal';
 import { HeroEnter, Reveal, RevealStaggerItem } from '../../components/motion/ScrollReveal';
 
 interface RecipeRow {
@@ -35,9 +36,12 @@ function extractMinutes(step: string): number | null {
 
 export default function RecipeDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [isSaved, setIsSaved] = useState(false);
   const [recipe, setRecipe] = useState<RecipeRow | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   // Ingredient checklist
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
@@ -48,6 +52,17 @@ export default function RecipeDetail() {
   const loadRecipe = useCallback(async () => {
     if (!id) return;
     setIsLoading(true);
+
+    // Check auth
+    try {
+      const me = await apiJson<{ authenticated: boolean }>('/api/auth/me');
+      setIsAuthenticated(Boolean(me.authenticated));
+      if (!me.authenticated) { setIsLoading(false); return; }
+    } catch {
+      setIsAuthenticated(false);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const data = await apiJson<{ recipe: RecipeRow; isSaved?: boolean }>(`/api/recipes/${id}`);
@@ -121,6 +136,22 @@ export default function RecipeDetail() {
     );
   }
 
+  // Auth gate — must login to view recipe details
+  if (isAuthenticated === false) {
+    return (
+      <main className="min-h-screen pt-16 pb-20 bg-gradient-to-br from-gray-50 to-white dark:from-slate-950 dark:to-slate-900 flex flex-col items-center justify-center text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-10 max-w-md mx-auto border border-gray-100 dark:border-slate-700">
+          <Lock className="h-16 w-16 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-black dark:text-white mb-2">Cần đăng nhập</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">Bạn cần đăng nhập để xem chi tiết công thức nấu ăn.</p>
+          <button onClick={() => setIsAuthOpen(true)} className="bg-black dark:bg-white text-white dark:text-black px-8 py-3 rounded-full hover:opacity-80 transition-opacity font-semibold mb-3 w-full">Đăng nhập</button>
+          <Link to="/recipes" className="text-sm text-gray-500 hover:text-black dark:hover:text-white transition-colors">← Quay lại danh sách</Link>
+        </div>
+        <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onSuccess={loadRecipe} />
+      </main>
+    );
+  }
+
   if (!recipe) {
     return (
       <main className="min-h-screen pt-16 pb-20 bg-gradient-to-br from-gray-50 to-white dark:from-slate-950 dark:to-slate-900 flex flex-col items-center justify-center text-center">
@@ -176,12 +207,12 @@ export default function RecipeDetail() {
 
         {/* Top actions */}
         <div className="absolute top-4 left-4 z-50">
-          <Link to="/recipes" className="bg-white/15 backdrop-blur-md text-white px-4 py-2 rounded-full hover:bg-white/25 transition-colors flex items-center text-sm">
+          <Link to="/recipes" className="bg-white/80 backdrop-blur-md text-black px-4 py-2 rounded-full hover:bg-white transition-colors flex items-center text-sm font-medium shadow-sm">
             <ArrowLeft className="h-4 w-4 mr-1.5" /> Quay lại
           </Link>
         </div>
         <div className="absolute top-4 right-4 z-50">
-          <button onClick={() => void handleSaveToggle()} className="bg-white/15 backdrop-blur-md text-white px-4 py-2 rounded-full hover:bg-white/25 transition-colors flex items-center gap-2 text-sm cursor-pointer">
+          <button onClick={() => void handleSaveToggle()} className="bg-white/80 backdrop-blur-md text-black px-4 py-2 rounded-full hover:bg-white transition-colors flex items-center gap-2 text-sm font-medium shadow-sm cursor-pointer">
             {isSaved ? <BookmarkCheck className="h-4 w-4 fill-current text-amber-400" /> : <Bookmark className="h-4 w-4" />}
             <span>{isSaved ? 'Đã lưu' : 'Lưu'}</span>
           </button>

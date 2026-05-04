@@ -1,4 +1,4 @@
-﻿import { pool } from '../db/pool.js';
+import { pool } from '../db/pool.js';
 
 import { DEFAULT_BLOG_CATEGORIES } from '../data/defaultCategories.js';
 
@@ -216,4 +216,35 @@ export async function countPostsByAuthor(authorId: number): Promise<number> {
     [authorId]
   );
   return Number(rows[0]?.total ?? 0);
+}
+
+export async function deletePost(id: number): Promise<void> {
+  await pool.query('DELETE FROM blog_posts WHERE id = $1', [id]);
+}
+
+export async function updatePost(
+  id: number,
+  authorId: number,
+  data: { title?: string; content?: string; excerpt?: string | null; imageUrl?: string | null; categoryId?: number }
+): Promise<boolean> {
+  const sets: string[] = [];
+  const params: (string | number | null)[] = [];
+  let idx = 1;
+
+  if (data.title !== undefined) { sets.push(`title = $${idx++}`); params.push(data.title); }
+  if (data.content !== undefined) { sets.push(`content = $${idx++}`); params.push(data.content); }
+  if (data.excerpt !== undefined) { sets.push(`excerpt = $${idx++}`); params.push(data.excerpt); }
+  if (data.imageUrl !== undefined) { sets.push(`image_url = $${idx++}`); params.push(data.imageUrl); }
+  if (data.categoryId !== undefined && data.categoryId > 0) { sets.push(`category_id = $${idx++}`); params.push(data.categoryId); }
+
+  if (sets.length === 0) return false;
+
+  sets.push(`updated_at = NOW()`);
+  params.push(id, authorId);
+
+  const r = await pool.query(
+    `UPDATE blog_posts SET ${sets.join(', ')} WHERE id = $${idx++} AND author_id = $${idx}`,
+    params
+  );
+  return (r.rowCount ?? 0) > 0;
 }

@@ -1,7 +1,7 @@
-﻿import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, User, Tag, Heart, MessageCircle, Share2, FileText, Send, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Calendar, User, Tag, Heart, MessageCircle, Share2, FileText, Send, Copy, Check, Lock } from 'lucide-react';
 import AuthModal from '../../components/AuthModal';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { apiJson } from '../../lib/api';
@@ -24,6 +24,7 @@ interface BlogPost {
 
 interface Comment {
   id: number;
+  user_id?: number;
   full_name: string;
   avatar_url: string | null;
   content: string;
@@ -60,6 +61,12 @@ export default function BlogDetail() {
   const [commentText, setCommentText] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
   const commentRef = useRef<HTMLTextAreaElement>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+
+  // Edit comment
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editCommentText, setEditCommentText] = useState('');
+  const [editCommentLoading, setEditCommentLoading] = useState(false);
 
   // Share
   const [copied, setCopied] = useState(false);
@@ -73,10 +80,17 @@ export default function BlogDetail() {
 
     // Fetch auth status immediately regardless of mock or real post
     try {
-      const me = await apiJson<{ authenticated: boolean }>('/api/auth/me');
+      const me = await apiJson<{ authenticated: boolean; user?: { id: number } }>('/api/auth/me');
       setIsAuthenticated(Boolean(me.authenticated));
+      if (me.authenticated && me.user) {
+        setCurrentUserId(me.user.id);
+      }
+      if (!me.authenticated) { setIsLoading(false); return; }
     } catch {
       setIsAuthenticated(false);
+      setCurrentUserId(null);
+      setIsLoading(false);
+      return;
     }
 
     try {
@@ -162,6 +176,41 @@ export default function BlogDetail() {
     finally { setCommentLoading(false); }
   };
 
+  // Edit comment
+  const handleStartEditComment = (c: Comment) => {
+    setEditingCommentId(c.id);
+    setEditCommentText(c.content);
+  };
+
+  const handleSaveEditComment = async (commentId: number) => {
+    if (!editCommentText.trim() || editCommentLoading) return;
+    setEditCommentLoading(true);
+    try {
+      const data = await apiJson<{ success: boolean; comment: Comment }>(`/api/blog/posts/${id}/comments/${commentId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ content: editCommentText })
+      });
+      if (data.success && data.comment) {
+        setComments(prev => prev.map(c => c.id === commentId ? { ...c, content: data.comment.content } : c));
+        setEditingCommentId(null);
+      }
+    } catch {
+      alert('Không thể sửa bình luận.');
+    } finally {
+      setEditCommentLoading(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bình luận này?')) return;
+    try {
+      await apiJson(`/api/blog/posts/${id}/comments/${commentId}`, { method: 'DELETE' });
+      setComments(prev => prev.filter(c => c.id !== commentId));
+    } catch {
+      alert('Không thể xóa bình luận.');
+    }
+  };
+
   // Share
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -190,6 +239,22 @@ export default function BlogDetail() {
             </div>
           </div>
         </div>
+      </main>
+    );
+  }
+
+  // Auth gate — must login to view blog details
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-screen pt-16 pb-20 bg-gradient-to-br from-gray-50 to-white dark:from-slate-950 dark:to-slate-900 flex flex-col items-center justify-center text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-10 max-w-md mx-auto border border-gray-100 dark:border-slate-700">
+          <Lock className="h-16 w-16 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-black dark:text-white mb-2">Cần đăng nhập</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">Bạn cần đăng nhập để xem chi tiết bài viết.</p>
+          <button onClick={() => setIsAuthOpen(true)} className="bg-black dark:bg-white text-white dark:text-black px-8 py-3 rounded-full hover:opacity-80 transition-opacity font-semibold mb-3 w-full">Đăng nhập</button>
+          <Link to="/blog" className="text-sm text-gray-500 hover:text-black dark:hover:text-white transition-colors">← Quay lại trang Blog</Link>
+        </div>
+        <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onSuccess={load} />
       </main>
     );
   }
@@ -259,7 +324,7 @@ export default function BlogDetail() {
             <div className="relative overflow-hidden">
               {/* Back Button overlay */}
               <div className="absolute top-4 left-4 z-10">
-                <Link to="/blog" className="bg-white/15 backdrop-blur-md text-white px-4 py-2 rounded-full hover:bg-white/25 transition-colors flex items-center text-sm">
+                <Link to="/blog" className="bg-white/80 backdrop-blur-md text-black px-4 py-2 rounded-full hover:bg-white transition-colors flex items-center text-sm font-medium shadow-sm">
                   <ArrowLeft className="h-4 w-4 mr-1.5" /> Quay lại
                 </Link>
               </div>
@@ -412,8 +477,36 @@ export default function BlogDetail() {
                           <span className="font-semibold text-xs text-black dark:text-white">{c.full_name}</span>
                           <span className="text-[10px] text-gray-400 dark:text-gray-500">{timeAgo(c.created_at)}</span>
                         </div>
-                        <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">{c.content}</p>
+                        {editingCommentId === c.id ? (
+                          <div className="mt-2">
+                            <textarea
+                              className="w-full text-sm p-2 border border-amber-300 dark:border-amber-600 rounded focus:outline-none focus:ring-1 focus:ring-amber-400 bg-transparent dark:text-white"
+                              rows={2}
+                              value={editCommentText}
+                              onChange={e => setEditCommentText(e.target.value)}
+                              disabled={editCommentLoading}
+                            />
+                            <div className="flex justify-end gap-2 mt-2">
+                              <button onClick={() => setEditingCommentId(null)} className="text-xs px-3 py-1 rounded bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-500 transition-colors">Hủy</button>
+                              <button onClick={() => handleSaveEditComment(c.id)} disabled={editCommentLoading} className="text-xs px-3 py-1 rounded bg-amber-500 text-black hover:bg-amber-600 transition-colors disabled:opacity-50">Lưu</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{c.content}</p>
+                        )}
                       </div>
+                      
+                      {/* Comment Actions (Edit/Delete) */}
+                      {!editingCommentId && currentUserId && c.user_id === currentUserId && (
+                        <div className="flex gap-3 mt-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => handleStartEditComment(c)} className="text-[11px] font-medium text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400">
+                            Sửa
+                          </button>
+                          <button onClick={() => handleDeleteComment(c.id)} className="text-[11px] font-medium text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400">
+                            Xóa
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

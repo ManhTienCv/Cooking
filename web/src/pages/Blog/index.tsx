@@ -11,7 +11,7 @@ import BlogList from '../../components/blog/BlogList';
 import CreatePostModal from '../../components/blog/CreatePostModal';
 import Pagination from '../../components/ui/Pagination';
 
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 6;
 
 export default function Blog() {
   const [searchQuery, setSearchQuery] = useState('');

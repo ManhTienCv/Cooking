@@ -332,3 +332,7 @@ export async function searchRecipesByIngredients(ingredients: string[], limit: n
     total: parseTotal(countResult.rows[0]?.total) 
   };
 }
+
+export async function deleteRecipe(id: number): Promise<void> {
+  await pool.query('DELETE FROM recipes WHERE id = ', [id]);
+}

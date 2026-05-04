@@ -6,11 +6,11 @@ import ImageWithFallback from '../../lib/ImageWithFallback';
 export default function RecipeHomeCard({ recipe }: { recipe: FeaturedRecipe }) {
   const getDiffBadge = (d?: string) => {
     const map: Record<string, string> = {
-      'Dễ': 'bg-emerald-500/90 text-white ring-1 ring-emerald-300/60 shadow-sm dark:bg-emerald-400/20 dark:text-emerald-100 dark:ring-emerald-300/30',
-      'Trung bình': 'bg-amber-500/90 text-white ring-1 ring-amber-300/60 shadow-sm dark:bg-amber-400/20 dark:text-amber-100 dark:ring-amber-300/30',
-      'Khó': 'bg-rose-500/90 text-white ring-1 ring-rose-300/60 shadow-sm dark:bg-rose-400/20 dark:text-rose-100 dark:ring-rose-300/30',
+      'Dễ': 'bg-emerald-500 text-white ring-1 ring-emerald-300/80 shadow-md dark:bg-emerald-500 dark:text-white dark:ring-emerald-300/50',
+      'Trung bình': 'bg-amber-500 text-white ring-1 ring-amber-300/80 shadow-md dark:bg-amber-500 dark:text-white dark:ring-amber-300/50',
+      'Khó': 'bg-rose-500 text-white ring-1 ring-rose-300/80 shadow-md dark:bg-rose-500 dark:text-white dark:ring-rose-300/50',
     };
-    return map[d ?? ''] ?? 'bg-slate-500/80 text-white ring-1 ring-slate-300/60 shadow-sm dark:bg-slate-400/20 dark:text-slate-100 dark:ring-slate-300/30';
+    return map[d ?? ''] ?? 'bg-slate-600 text-white ring-1 ring-slate-300/80 shadow-md dark:bg-slate-600 dark:text-white dark:ring-slate-300/50';
   };
 
   const diffLabel = recipe.difficulty || 'Trung bình';
@@ -32,13 +32,13 @@ export default function RecipeHomeCard({ recipe }: { recipe: FeaturedRecipe }) {
               Nổi bật
             </span>
           )}
-          <span className="inline-flex items-center rounded-full bg-black/75 px-3 h-7 text-xs font-semibold text-white backdrop-blur dark:bg-white/15">
+          <span className="inline-flex items-center rounded-full bg-black/85 px-3 h-7 text-xs font-bold text-white backdrop-blur-sm shadow-md dark:bg-black/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
             {recipe.category_name || 'Món chính'}
           </span>
         </div>
 
         <div className="absolute right-4 top-4">
-          <span className={`${getDiffBadge(diffLabel)} inline-flex items-center h-7 px-3 text-xs font-bold uppercase tracking-wider backdrop-blur-sm rounded-full badge-grain`}>
+          <span className={`${getDiffBadge(diffLabel)} inline-flex items-center h-7 px-3 text-xs font-bold uppercase tracking-wider backdrop-blur-sm rounded-full drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]`}>
             {diffLabel}
           </span>
         </div>

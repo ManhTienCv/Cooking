@@ -138,12 +138,30 @@ healthRouter.get('/plans/:id', requireAuth, async (req, res) => {
 
 healthRouter.post('/plans', requireAuth, requireCsrf, async (req, res) => {
   const userId = req.session.userId!;
-  const id = await healthRepo.createPlan(pool, userId, req.body ?? {});
+  const body = req.body ?? {} as Record<string, unknown>;
+  const id = await healthRepo.createPlan(pool, userId, body);
   if (!id) {
     res.status(400).json({ success: false, message: 'Không thể tạo kế hoạch.' });
     return;
   }
-  res.json({ success: true, id });
+
+  // Auto-generate meals with AI if target_calories is set
+  const targetCalories = Number(body.target_calories ?? 0);
+  let aiMessage = '';
+  if (targetCalories >= 1000) {
+    const startDate = String(body.start_date ?? '');
+    const endDate = String(body.end_date ?? '');
+    const dietType = String(body.diet_type ?? 'Cân bằng');
+    const dayCount = Math.max(1, Math.min(14,
+      Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (24 * 60 * 60 * 1000)) + 1
+    ));
+
+    const handler = new MealPlanHandler(pool, userId, id);
+    const result = await handler.autoGenerateMeals(startDate, dayCount, targetCalories, dietType);
+    aiMessage = result.message;
+  }
+
+  res.json({ success: true, id, aiMessage });
 });
 
 healthRouter.delete('/plans/:id', requireAuth, requireCsrf, async (req, res) => {
@@ -220,9 +238,11 @@ healthRouter.post('/meal-plan', requireAuth, requireCsrf, async (req, res) => {
         return;
       }
       case 'get_meal_plan': {
+        const mealPlan = await handler.getMealPlan();
         res.json({
           success: true,
-          mealPlan: await handler.getMealPlan(),
+          mealPlan,
+          nutritionTotals: healthRepo.getNutritionTotalsFromMeals(mealPlan),
         });
         return;
       }

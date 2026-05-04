@@ -151,3 +151,13 @@ recipesRouter.post('/:id/view', requireCsrf, async (req, res) => {
   const incremented = await recipeRepo.incrementViews(id, userId);
   res.json({ ok: true, incremented });
 });
+
+recipesRouter.delete('/:id', requireAuth, requireCsrf, async (req, res) => {
+  const id = Number(req.params.id);
+  const userId = req.session.userId;
+  if (!id) return res.status(400).json({ error: 'Invalid id' });
+  const recipe = await recipeRepo.getRecipeById(id, userId);
+  if (!recipe || recipe.author_id !== userId) return res.status(403).json({ error: 'Forbidden' });
+  await recipeRepo.deleteRecipe(id);
+  res.json({ success: true });
+});

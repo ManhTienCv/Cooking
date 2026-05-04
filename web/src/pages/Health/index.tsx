@@ -53,7 +53,7 @@ export default function Health() {
           id: p.id,
           name: p.name,
           description: p.description,
-          dateRange: p.start_date && p.end_date ? `${String(p.start_date)} → ${String(p.end_date)}` : '',
+          dateRange: p.start_date && p.end_date ? `${String(p.start_date).slice(0, 10)} → ${String(p.end_date).slice(0, 10)}` : '',
           tag: String(p.diet_type ?? ''),
         }))
       );

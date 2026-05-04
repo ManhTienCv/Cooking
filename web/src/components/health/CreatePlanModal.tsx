@@ -86,8 +86,12 @@ export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDat
     );
 
     setIsSubmittingPlan(true);
+    const hasCalories = planForm.targetCalories && Number(planForm.targetCalories) >= 1000;
+    if (hasCalories) {
+      setCalorieNotes('🤖 AI đang tạo thực đơn phù hợp với mục tiêu calo... Vui lòng đợi 10-15 giây.');
+    }
     try {
-      await apiJson('/api/health/plans', {
+      await apiJson<{ success: boolean; id: number; aiMessage?: string }>('/api/health/plans', {
         method: 'POST',
         body: JSON.stringify({
           name: planForm.name.trim(),
@@ -114,9 +118,11 @@ export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDat
           activityLevel: 'light',
           goal: 'maintain',
       });
+      setCalorieNotes('');
       await onSuccess();
     } catch (err) {
       setPlanError(err instanceof Error ? err.message : 'Không thể tạo kế hoạch.');
+      setCalorieNotes('');
     } finally {
       setIsSubmittingPlan(false);
     }
@@ -185,25 +191,25 @@ export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDat
           <form className="space-y-4" onSubmit={handleCreatePlan}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Tên kế hoạch</label>
-              <input type="text" value={planForm.name} onChange={(e) => setPlanForm((prev) => ({ ...prev, name: e.target.value }))} required className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all" placeholder="Ví dụ: Kế hoạch tuần này" />
+              <input type="text" value={planForm.name} onChange={(e) => setPlanForm((prev) => ({ ...prev, name: e.target.value }))} required className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-black focus:ring-2 focus:ring-black/20 transition-all" placeholder="Ví dụ: Kế hoạch tuần này" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Mô tả</label>
-              <textarea value={planForm.description} onChange={(e) => setPlanForm((prev) => ({ ...prev, description: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all" rows={3} placeholder="Mô tả về kế hoạch của bạn"></textarea>
+              <textarea value={planForm.description} onChange={(e) => setPlanForm((prev) => ({ ...prev, description: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-black focus:ring-2 focus:ring-black/20 transition-all" rows={3} placeholder="Mô tả về kế hoạch của bạn"></textarea>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Ngày bắt đầu</label>
-                <input type="date" value={planForm.startDate} onChange={(e) => setPlanForm((prev) => ({ ...prev, startDate: e.target.value }))} required className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all" />
+                <input type="date" value={planForm.startDate} onChange={(e) => setPlanForm((prev) => ({ ...prev, startDate: e.target.value }))} required className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-black focus:ring-2 focus:ring-black/20 transition-all" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Ngày kết thúc</label>
-                <input type="date" value={planForm.endDate} onChange={(e) => setPlanForm((prev) => ({ ...prev, endDate: e.target.value }))} required className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all" />
+                <input type="date" value={planForm.endDate} onChange={(e) => setPlanForm((prev) => ({ ...prev, endDate: e.target.value }))} required className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-black focus:ring-2 focus:ring-black/20 transition-all" />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Chế độ ăn</label>
-              <select value={planForm.dietType} onChange={(e) => setPlanForm((prev) => ({ ...prev, dietType: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all" required>
+              <select value={planForm.dietType} onChange={(e) => setPlanForm((prev) => ({ ...prev, dietType: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-black focus:ring-2 focus:ring-black/20 transition-all" required>
                 <option value="">-- Chọn chế độ ăn --</option>
                 <option value="Cân bằng">Cân bằng</option>
                 <option value="Giảm cân">Giảm cân</option>
@@ -216,42 +222,16 @@ export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDat
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Mục tiêu Calo (kcal/ngày)</label>
-              <input type="number" min={1000} max={6000} value={planForm.targetCalories} onChange={(e) => setPlanForm((prev) => ({ ...prev, targetCalories: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all" placeholder="Ví dụ: 2000" />
-              <p className="text-xs text-gray-500 mt-1">Lượng calo tối thiểu khuyến nghị là 1000 kcal để đảm bảo sức khỏe.</p>
+              <input type="number" min={1000} max={6000} value={planForm.targetCalories} onChange={(e) => setPlanForm((prev) => ({ ...prev, targetCalories: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-black focus:ring-2 focus:ring-black/20 transition-all" placeholder="Ví dụ: 2000" />
+              <p className="text-xs text-gray-500 mt-1">Nhập mục tiêu calo để AI tự động tạo thực đơn phù hợp. Tối thiểu 1000 kcal.</p>
             </div>
 
-            <div className="rounded-xl border border-gray-200 p-4 bg-gray-50">
-              <h4 className="font-semibold text-sm text-black mb-3">Gợi ý calo bằng Gemini AI</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input type="number" min={10} value={planForm.age} onChange={(e) => setPlanForm((prev) => ({ ...prev, age: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Tuổi" />
-                <select value={planForm.gender} onChange={(e) => setPlanForm((prev) => ({ ...prev, gender: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                  <option value="female">Nữ</option>
-                  <option value="male">Nam</option>
-                </select>
-                <input type="text" value={planForm.heightCm} onChange={(e) => setPlanForm((prev) => ({ ...prev, heightCm: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Chiều cao (168 hoặc 1m68)" />
-                <input type="number" min={20} value={planForm.weightKg} onChange={(e) => setPlanForm((prev) => ({ ...prev, weightKg: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Cân nặng (kg)" />
-                <select value={planForm.activityLevel} onChange={(e) => setPlanForm((prev) => ({ ...prev, activityLevel: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                  <option value="sedentary">Ít vận động</option>
-                  <option value="light">Vận động nhẹ</option>
-                  <option value="moderate">Vận động vừa</option>
-                  <option value="active">Vận động nhiều</option>
-                  <option value="very_active">Rất vận động</option>
-                </select>
-                <select value={planForm.goal} onChange={(e) => setPlanForm((prev) => ({ ...prev, goal: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                  <option value="lose">Giảm cân</option>
-                  <option value="maintain">Giữ cân</option>
-                  <option value="gain">Tăng cân</option>
-                </select>
-              </div>
-              <button type="button" onClick={handleSuggestCalories} disabled={isCalorieLoading} className="mt-3 px-4 py-2 rounded-full border border-black text-black hover:bg-black hover:text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed">{isCalorieLoading ? 'Đang tính...' : 'Gợi ý calo bằng AI'}</button>
-              {calorieNotes && <p className="text-xs text-gray-600 mt-2">{calorieNotes}</p>}
-            </div>
-
+            {calorieNotes && <p className="text-sm text-blue-600 bg-blue-50 px-4 py-3 rounded-xl animate-pulse">{calorieNotes}</p>}
             {planError && <p className="text-sm text-red-600">{planError}</p>}
             <div className="pt-4">
               <div className="flex justify-end space-x-3">
-                <button type="button" onClick={onClose} className="px-6 py-3 border border-gray-300 rounded-full font-semibold hover:bg-gray-50 transition-colors">Hủy</button>
-                <button type="submit" disabled={isSubmittingPlan} className="bg-black text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">{isSubmittingPlan ? 'Đang tạo...' : 'Tạo kế hoạch'}</button>
+                <button type="button" onClick={onClose} disabled={isSubmittingPlan} className="px-6 py-3 border border-gray-300 rounded-full font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50">Hủy</button>
+                <button type="submit" disabled={isSubmittingPlan} className="bg-black text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">{isSubmittingPlan ? '🤖 Đang tạo...' : 'Tạo kế hoạch'}</button>
               </div>
             </div>
           </form>

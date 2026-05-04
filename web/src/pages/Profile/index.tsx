@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Activity, BookOpen, Bookmark, CheckCircle, PenTool, Settings, X } from 'lucide-react';
+import { Activity, BookOpen, Bookmark, CheckCircle, PenTool, Settings, X, Edit, Trash2 } from 'lucide-react';
 import { apiFetch, apiJson, resetCsrfCache } from '../../lib/api';
 import { notifyAuthChanged } from '../../lib/authEvents';
 import { Reveal } from '../../components/motion/ScrollReveal';
 import Pagination from '../../components/ui/Pagination';
 
 import type { ProfileUser, ProfileStats, ProfileRecipe, ProfilePost, ProfilePlan } from '../../components/profile/types';
+import type { BlogCategory } from '../../components/blog/types';
 import ProfileHeader from '../../components/profile/ProfileHeader';
 import ProfileSidebar from '../../components/profile/ProfileSidebar';
 import ProfileSettingsForm from '../../components/profile/ProfileSettingsForm';
+import EditPostModal from '../../components/blog/EditPostModal';
 
 const PROFILE_PAGE_SIZE = 6;
 type PagedTab = 'recipes' | 'posts' | 'saved';
@@ -31,6 +33,10 @@ export default function Profile() {
 
   const [pageByTab, setPageByTab] = useState<Record<PagedTab, number>>({ recipes: 1, posts: 1, saved: 1 });
   const [totalByTab, setTotalByTab] = useState<Record<PagedTab, number>>({ recipes: 0, posts: 0, saved: 0 });
+
+  // Edit post modal
+  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [blogCategories, setBlogCategories] = useState<BlogCategory[]>([]);
 
   const loadTabData = useCallback(async (tab: string) => {
     const getPageQuery = (pagedTab: PagedTab) => {
@@ -110,6 +116,10 @@ export default function Profile() {
 
   useEffect(() => {
     void loadMe();
+    // Also fetch blog categories for edit modal
+    apiJson<{ categories: BlogCategory[] }>('/api/blog/categories')
+      .then(d => setBlogCategories(d.categories ?? []))
+      .catch(() => {});
   }, [loadMe]);
 
   useEffect(() => {
@@ -129,6 +139,26 @@ export default function Profile() {
     setUser(null);
     setStats(null);
     navigate('/', { replace: true });
+  };
+
+  const handleDeleteRecipe = async (id: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa công thức này?')) return;
+    try {
+      await apiFetch(`/api/recipes/${id}`, { method: 'DELETE' });
+      void loadTabData('recipes');
+    } catch (e) {
+      alert('Không thể xóa công thức');
+    }
+  };
+
+  const handleDeletePost = async (id: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) return;
+    try {
+      await apiFetch(`/api/blog/posts/${id}`, { method: 'DELETE' });
+      void loadTabData('posts');
+    } catch (e) {
+      alert('Không thể xóa bài viết');
+    }
   };
 
   const handleProfilePageChange = (tab: PagedTab, page: number) => {
@@ -200,12 +230,22 @@ export default function Profile() {
                                   <BookOpen className="h-8 w-8 text-gray-300 dark:text-slate-500" />
                                 </div>
                               )}
-                              <div className="p-4">
-                                <h4 className="line-clamp-1 font-bold text-gray-900 dark:text-white">{r.title}</h4>
+                              <div className="p-4 relative">
+                                <h4 className="line-clamp-1 font-bold text-gray-900 dark:text-white pr-16">{r.title}</h4>
                                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{r.category_name}</p>
-                                <Link to={`/recipes/detail/${r.id}`} className="mt-3 inline-block text-sm font-medium text-yellow-600 hover:text-yellow-700 dark:text-yellow-500 dark:hover:text-yellow-400">
-                                  Xem chi tiết &rarr;
-                                </Link>
+                                <div className="mt-3 flex items-center justify-between">
+                                  <Link to={`/recipes/detail/${r.id}`} className="inline-block text-sm font-medium text-yellow-600 hover:text-yellow-700 dark:text-yellow-500 dark:hover:text-yellow-400">
+                                    Xem chi tiết &rarr;
+                                  </Link>
+                                  <div className="flex space-x-2">
+                                    <button onClick={() => alert("Tính năng sửa đang được cập nhật!")} className="p-1 text-gray-500 hover:text-blue-600 transition-colors" title="Sửa bài">
+                                      <Edit className="h-4 w-4" />
+                                    </button>
+                                    <button onClick={() => handleDeleteRecipe(r.id)} className="p-1 text-gray-500 hover:text-red-600 transition-colors" title="Xóa bài">
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -231,7 +271,17 @@ export default function Profile() {
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                           {myPosts.map((p) => (
                             <div key={p.id} className="rounded-xl border border-gray-200 bg-white p-5 transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-800">
-                              <span className="text-xs font-semibold text-yellow-600 dark:text-yellow-500">{p.category_name}</span>
+                              <div className="flex justify-between items-start">
+                                <span className="text-xs font-semibold text-yellow-600 dark:text-yellow-500">{p.category_name}</span>
+                                <div className="flex space-x-2">
+                                  <button onClick={() => setEditingPostId(p.id)} className="p-1 text-gray-500 hover:text-blue-600 transition-colors" title="Sửa bài">
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button onClick={() => handleDeletePost(p.id)} className="p-1 text-gray-500 hover:text-red-600 transition-colors" title="Xóa bài">
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
                               <h4 className="mt-1 line-clamp-2 text-lg font-bold text-gray-900 dark:text-white">{p.title}</h4>
                               <Link to={`/blog/detail/${p.id}`} className="mt-3 inline-block text-sm font-medium text-yellow-600 hover:text-yellow-700 dark:text-yellow-500 dark:hover:text-yellow-400">
                                 Đọc bài &rarr;
@@ -321,6 +371,16 @@ export default function Profile() {
           </div>
         </div>
       </Reveal>
+
+      {/* Edit Post Modal */}
+      <EditPostModal
+        isOpen={editingPostId !== null}
+        postId={editingPostId ?? 0}
+        onClose={() => setEditingPostId(null)}
+        onSuccess={async () => { await loadTabData('posts'); }}
+        categoryOptions={blogCategories}
+        modalCategoryOptions={blogCategories.map(c => ({ value: String(c.id), label: c.name, id: c.id, name: c.name }))}
+      />
     </div>
   );
 }

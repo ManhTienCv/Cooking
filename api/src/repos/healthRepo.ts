@@ -70,7 +70,15 @@ export async function getPlanMeals(pool: Pool, planId: number): Promise<Record<s
   const meals: Record<string, { breakfast: unknown[]; lunch: unknown[]; dinner: unknown[] }> = {};
 
   for (const row of r.rows as DbRow[]) {
-    const date = String(row.date);
+    // pg returns DATE columns as JS Date objects in local timezone;
+    // use local getters to get YYYY-MM-DD to avoid UTC offset issues
+    let date: string;
+    if (row.date instanceof Date) {
+      const d = row.date;
+      date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    } else {
+      date = String(row.date).slice(0, 10);
+    }
     const type = String(row.meal_type);
     if (!meals[date]) meals[date] = { breakfast: [], lunch: [], dinner: [] };
     const slot = meals[date] as Record<string, unknown[]>;

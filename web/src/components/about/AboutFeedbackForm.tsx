@@ -26,11 +26,12 @@ export default function AboutFeedbackForm() {
       } else {
         setStatus({ type: 'error', message: res.message || 'Đã có lỗi xảy ra. Vui lòng thử lại.' });
       }
-    } catch (err: any) {
-      if (err.status === 429) {
+    } catch (err: unknown) {
+      const error = err as { status?: number; message?: string };
+      if (error.status === 429) {
         setStatus({ type: 'error', message: 'Bạn đang gửi quá nhiều phản hồi. Vui lòng thử lại sau.' });
       } else {
-        setStatus({ type: 'error', message: err.message || 'Đã có lỗi xảy ra khi gửi phản hồi.' });
+        setStatus({ type: 'error', message: error.message || 'Đã có lỗi xảy ra khi gửi phản hồi.' });
       }
     }
   };

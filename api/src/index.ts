@@ -2,6 +2,7 @@ import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import session from 'express-session';
 import cors from 'cors';
+import connectPgSimple from 'connect-pg-simple';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { env } from './env.js';
@@ -12,6 +13,7 @@ import { recipesRouter } from './routes/recipes.js';
 import { blogRouter } from './routes/blog.js';
 import { healthRouter } from './routes/health.js';
 import { adminRouter } from './routes/admin.js';
+import { feedbackRouter } from './routes/feedback.js';
 
 const app = express();
 
@@ -25,8 +27,14 @@ app.use(
 );
 
 app.use(cookieParser());
+const pgSession = connectPgSimple(session);
+
 app.use(
   session({
+    store: new pgSession({
+      pool: pool,
+      tableName: 'session',
+    }),
     secret: env.sessionSecret,
     resave: false,
     saveUninitialized: false,
@@ -78,6 +86,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/blog', blogRouter);
 app.use('/api/health', healthRouter);
 app.use('/api/recipes', recipesRouter);
+app.use('/api/feedback', feedbackRouter);
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (env.nodeEnv === 'production') {

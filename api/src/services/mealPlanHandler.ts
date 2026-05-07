@@ -20,7 +20,14 @@ export class MealPlanHandler {
     mealPlan?: unknown[];
     nutritionTotals?: { calories: number; protein: number; carbs: number; fat: number };
   }> {
-    const withNutrition = { ...recipe, nutrition: await this.estimateNutrition(recipe.name) };
+    let nutrition;
+    try {
+      nutrition = await this.estimateNutrition(recipe.name);
+    } catch (err) {
+      return { success: false, message: err instanceof Error ? err.message : 'Tên món ăn không hợp lệ hoặc không có thật.' };
+    }
+
+    const withNutrition = { ...recipe, nutrition };
     const ok = await healthRepo.addMeal(this.pool, this.planId, date, mealType, withNutrition);
     if (!ok) return { success: false, message: 'Failed to save meal into database.' };
 
@@ -139,9 +146,10 @@ Return ONLY a JSON array, no markdown:
     const baseDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
     let addedCount = 0;
 
-    for (const dayData of result as { day: number; meals: Record<string, { name: string; calories?: number; protein?: number; carbs?: number; fat?: number }[]> }[]) {
-      const offset = Number(dayData.day ?? 0);
-      if (offset >= days) continue;
+    let idx = 0;
+    for (const dayData of result as { meals: Record<string, { name: string; calories?: number; protein?: number; carbs?: number; fat?: number }[]> }[]) {
+      const offset = idx++;
+      if (offset >= days) break;
       const current = new Date(baseDate);
       current.setDate(current.getDate() + offset);
       const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
@@ -227,11 +235,30 @@ Return ONLY a JSON array, no markdown:
   }
 
   private async estimateNutrition(recipeName: string): Promise<{ calories: number; protein: number; carbs: number; fat: number }> {
-    const prompt = `Estimate nutritional values for 1 serving of the dish '${recipeName}'. Return ONLY a JSON object with these integer keys: calories, protein, carbs, fat. Do not include markdown formatting or explanations.`;
+    const prompt = `Evaluate if '${recipeName}' is a real, valid food, dish, or beverage. 
+If it is NOT a valid food/beverage (e.g., gibberish, random letters like 'a', offensive words, or non-food items), return exactly: {"valid": false}.
+If it IS a valid food/beverage, estimate nutritional values for 1 serving and return ONLY a JSON object:
+{"valid": true, "calories": integer, "protein": integer, "carbs": integer, "fat": integer}
+Do not include markdown formatting or explanations.`;
+
     const apiResult = await generateContent(prompt);
-    if (apiResult && typeof apiResult === 'object' && !Array.isArray(apiResult) && 'calories' in apiResult && 'protein' in apiResult && 'carbs' in apiResult && 'fat' in apiResult) {
+    if (apiResult && typeof apiResult === 'object' && !Array.isArray(apiResult)) {
       const o = apiResult as Record<string, unknown>;
-      return { calories: Number(o.calories), protein: Number(o.protein), carbs: Number(o.carbs), fat: Number(o.fat) };
+      if (o.valid === false || o.valid === 'false') {
+        throw new Error('Tên món ăn không hợp lệ hoặc không có thật.');
+      }
+      if (o.valid === true || o.valid === 'true' || ('calories' in o && 'protein' in o)) {
+        return { 
+          calories: Number(o.calories || 0), 
+          protein: Number(o.protein || 0), 
+          carbs: Number(o.carbs || 0), 
+          fat: Number(o.fat || 0) 
+        };
+      }
+    }
+    
+    if (recipeName.trim().length < 2) {
+      throw new Error('Tên món ăn quá ngắn hoặc không hợp lệ.');
     }
     return estimateNutritionFallback(recipeName);
   }

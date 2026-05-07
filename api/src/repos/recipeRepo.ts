@@ -186,18 +186,6 @@ export async function toggleSave(userId: number, recipeId: number): Promise<bool
   return true;
 }
 
-export async function searchRecipesApprovedNoPagination(): Promise<DbRow[]> {
-  const { rows } = await pool.query(
-    `SELECT r.*, r.calories, r.protein, r.carbs, r.fat, c.name AS category_name, u.full_name AS author_name, u.avatar_url AS author_avatar
-     FROM recipes r
-     LEFT JOIN recipe_categories c ON r.category_id = c.id
-     LEFT JOIN users u ON r.author_id = u.id
-     WHERE r.status = 'approved'
-     ORDER BY r.created_at DESC`
-  );
-  return rows;
-}
-
 export async function createRecipe(data: {
   title: string;
   description: string | null;

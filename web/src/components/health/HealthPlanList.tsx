@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Calendar } from 'lucide-react';
+import { Calendar, Trash2 } from 'lucide-react';
 import { Skeleton } from '../ui/Skeleton';
 import { RevealStaggerItem } from '../motion/ScrollReveal';
 import type { HealthPlanCard } from './types';
@@ -7,9 +7,10 @@ import type { HealthPlanCard } from './types';
 interface HealthPlanListProps {
   isLoading: boolean;
   plans: HealthPlanCard[];
+  onDeletePlan?: (id: number) => void;
 }
 
-export default function HealthPlanList({ isLoading, plans }: HealthPlanListProps) {
+export default function HealthPlanList({ isLoading, plans, onDeletePlan }: HealthPlanListProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -43,18 +44,31 @@ export default function HealthPlanList({ isLoading, plans }: HealthPlanListProps
         <RevealStaggerItem key={plan.id} index={idx} stagger={0.055} maxStaggerIndex={9} className="h-full">
           <Link
             to={`/health/detail/${plan.id}`}
-            className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100 flex flex-col group h-full"
+            className="bg-white dark:bg-slate-800 rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100 dark:border-slate-700 flex flex-col group h-full relative"
           >
-            <h4 className="text-xl font-bold text-black group-hover:text-yellow-600 transition-colors mb-2">
+            {onDeletePlan && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDeletePlan(plan.id);
+                }}
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                title="Xóa kế hoạch"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+            <h4 className="text-xl font-bold text-black dark:text-white group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors mb-2 pr-8">
               {plan.name}
             </h4>
-            <p className="text-gray-500 text-sm mb-4">{plan.description}</p>
-            <div className="mt-auto flex items-center justify-between text-sm text-gray-500">
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">{plan.description}</p>
+            <div className="mt-auto flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
               <div className="flex items-center space-x-1">
                 <Calendar className="w-4 h-4" />
                 <span>{plan.dateRange}</span>
               </div>
-              <span className="bg-gray-100 text-black px-2 py-1 rounded text-xs">{plan.tag}</span>
+              <span className="bg-gray-100 dark:bg-slate-700 text-black dark:text-white px-2 py-1 rounded text-xs">{plan.tag}</span>
             </div>
           </Link>
         </RevealStaggerItem>

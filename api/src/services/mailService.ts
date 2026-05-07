@@ -149,3 +149,44 @@ export async function sendOtpEmail(to: string, code: string, purpose: OtpEmailPu
   console.error('SMTP not configured; cannot send OTP in production.');
   return false;
 }
+
+export async function sendFeedbackEmail(to: string, name: string): Promise<boolean> {
+  const brand = env.mailBrand;
+  const subject = `[${brand}] Đã nhận phản hồi`;
+  const text = `Cảm ơn ${name} đã gửi phản hồi cho ${brand}!\n\nChúng tôi đã ghi nhận ý kiến của bạn và sẽ xem xét trong thời gian sớm nhất.\n\nTrân trọng,\nĐội ngũ ${brand}`;
+  const html = `<!DOCTYPE html>
+<html lang="vi">
+<body>
+  <h2>Cảm ơn bạn đã gửi phản hồi!</h2>
+  <p>Chào <strong>${name}</strong>,</p>
+  <p>Chúng tôi đã nhận được phản hồi của bạn và sẽ tiến hành xem xét trong thời gian sớm nhất.</p>
+  <p>Sự đóng góp của bạn giúp <strong>${brand}</strong> ngày càng hoàn thiện hơn.</p>
+  <br>
+  <p>Trân trọng,</p>
+  <p><strong>Đội ngũ ${brand}</strong></p>
+</body>
+</html>`;
+
+  const t = getTransporter();
+  if (t) {
+    try {
+      await t.sendMail({
+        from: env.mailFrom,
+        to,
+        subject,
+        text,
+        html,
+      });
+      return true;
+    } catch (e) {
+      console.error('[SMTP] sendFeedbackEmail FAILED:', e);
+      return false;
+    }
+  }
+  
+  if (env.nodeEnv !== 'production') {
+    console.info(`[dev] Feedback email to ${to}`);
+    return true;
+  }
+  return false;
+}

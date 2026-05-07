@@ -2,7 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { pool } from '../db/pool.js';
 import { env } from '../env.js';
-import { hashPlainPasswordForAdminStorage, isBcryptHash } from '../lib/adminPassword.js';
+import { isBcryptHash } from '../lib/adminPassword.js';
 import { captchaRequiredAfterFailures, clearLoginFailure, recordLoginFailure } from '../lib/loginFailures.js';
 import { verifyRecaptchaV2 } from '../lib/recaptchaVerify.js';
 import { requireCsrf } from '../middleware/csrf.js';
@@ -10,6 +10,7 @@ import { adminLoginRateLimit } from '../middleware/rateLimits.js';
 import { logAuthLogin } from '../lib/auditLog.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { slugify } from '../data/defaultCategories.js';
+import { adminRepo } from '../repos/adminRepo.js';
 
 export const adminRouter = Router();
 
@@ -117,32 +118,13 @@ adminRouter.post('/logout', requireCsrf, (req, res) => {
 });
 
 adminRouter.get('/dashboard', requireAdmin, async (_req, res) => {
-  const [admins, users, recipes, blogs, feedback, pendingRecipes, pendingBlogs] = await Promise.all([
-    pool.query('SELECT COUNT(*)::int AS total FROM quantrivien'),
-    pool.query('SELECT COUNT(*)::int AS total FROM users'),
-    pool.query('SELECT COUNT(*)::int AS total FROM recipes'),
-    pool.query('SELECT COUNT(*)::int AS total FROM blog_posts'),
-    pool.query('SELECT COUNT(*)::int AS total FROM feedback'),
-    pool.query("SELECT COUNT(*)::int AS total FROM recipes WHERE status = 'pending'"),
-    pool.query("SELECT COUNT(*)::int AS total FROM blog_posts WHERE status = 'pending'"),
-  ]);
-
-  res.json({
-    admins: admins.rows[0]?.total ?? 0,
-    users: users.rows[0]?.total ?? 0,
-    recipes: recipes.rows[0]?.total ?? 0,
-    blogs: blogs.rows[0]?.total ?? 0,
-    feedback: feedback.rows[0]?.total ?? 0,
-    pendingRecipes: pendingRecipes.rows[0]?.total ?? 0,
-    pendingBlogs: pendingBlogs.rows[0]?.total ?? 0,
-  });
+  const stats = await adminRepo.getDashboardStats();
+  res.json(stats);
 });
 
 adminRouter.get('/admins', requireAdmin, async (_req, res) => {
-  const r = await pool.query(
-    'SELECT "MaAD" AS id, "HoTen" AS full_name, "Email" AS email, created_at FROM quantrivien ORDER BY "MaAD" ASC'
-  );
-  res.json({ admins: r.rows });
+  const admins = await adminRepo.getAdmins();
+  res.json({ admins });
 });
 
 adminRouter.post('/admins/:id/reset-password', requireAdmin, requireCsrf, async (req, res) => {
@@ -156,125 +138,79 @@ adminRouter.post('/admins/:id/reset-password', requireAdmin, requireCsrf, async 
     res.status(422).json({ success: false, message: 'Password must be at least 8 chars.' });
     return;
   }
-  const hash = await hashPlainPasswordForAdminStorage(newPassword);
-  await pool.query('UPDATE quantrivien SET "MatKhau" = $1 WHERE "MaAD" = $2', [hash, id]);
+  await adminRepo.resetAdminPassword(id, newPassword);
   res.json({ success: true, message: 'Admin password reset successful.' });
 });
 
 adminRouter.get('/users', requireAdmin, async (_req, res) => {
-  const r = await pool.query(
-    'SELECT id, full_name, email, avatar_url, created_at FROM users ORDER BY created_at DESC LIMIT 200'
-  );
-  res.json({ users: r.rows });
+  const users = await adminRepo.getUsers();
+  res.json({ users });
 });
 
 adminRouter.get('/recipes', requireAdmin, async (req, res) => {
   const status = String(req.query.status ?? 'all');
-  const params: string[] = [];
-  let where = '';
-  if (status !== 'all') {
-    params.push(status);
-    where = 'WHERE r.status = $1';
-  }
-  const r = await pool.query(
-    `SELECT r.id, r.title, r.status, r.created_at, c.name AS category_name, u.full_name AS author_name
-     FROM recipes r
-     LEFT JOIN recipe_categories c ON r.category_id = c.id
-     LEFT JOIN users u ON r.author_id = u.id
-     ${where}
-     ORDER BY r.created_at DESC
-     LIMIT 300`,
-    params
-  );
-  res.json({ recipes: r.rows });
+  const recipes = await adminRepo.getRecipes(status);
+  res.json({ recipes });
 });
 
 adminRouter.get('/blogs', requireAdmin, async (req, res) => {
   const status = String(req.query.status ?? 'all');
-  const params: string[] = [];
-  let where = '';
-  if (status !== 'all') {
-    params.push(status);
-    where = 'WHERE p.status = $1';
-  }
-  const r = await pool.query(
-    `SELECT p.id, p.title, p.status, p.created_at, c.name AS category_name, u.full_name AS author_name
-     FROM blog_posts p
-     LEFT JOIN blog_categories c ON p.category_id = c.id
-     LEFT JOIN users u ON p.author_id = u.id
-     ${where}
-     ORDER BY p.created_at DESC
-     LIMIT 300`,
-    params
-  );
-  res.json({ blogs: r.rows });
+  const blogs = await adminRepo.getBlogs(status);
+  res.json({ blogs });
 });
 
 adminRouter.get('/feedback', requireAdmin, async (_req, res) => {
-  const r = await pool.query(
-    `SELECT f.id, f.name, f.email, f.message, f.created_at, u.full_name, u.avatar_url
-     FROM feedback f
-     LEFT JOIN users u ON f.user_id = u.id
-     ORDER BY f.created_at DESC
-     LIMIT 300`
-  );
-  res.json({ feedback: r.rows });
+  const feedback = await adminRepo.getFeedback();
+  res.json({ feedback });
 });
 
 adminRouter.post('/recipes/:id/approve', requireAdmin, requireCsrf, async (req, res) => {
-  await pool.query("UPDATE recipes SET status = 'approved' WHERE id = $1", [Number(req.params.id)]);
+  await adminRepo.updateRecipeStatus(Number(req.params.id), 'approved');
   res.json({ success: true });
 });
 
 adminRouter.post('/recipes/:id/reject', requireAdmin, requireCsrf, async (req, res) => {
-  await pool.query("UPDATE recipes SET status = 'rejected' WHERE id = $1", [Number(req.params.id)]);
+  await adminRepo.updateRecipeStatus(Number(req.params.id), 'rejected');
   res.json({ success: true });
 });
 
 adminRouter.post('/blogs/:id/approve', requireAdmin, requireCsrf, async (req, res) => {
-  await pool.query("UPDATE blog_posts SET status = 'approved' WHERE id = $1", [Number(req.params.id)]);
+  await adminRepo.updateBlogStatus(Number(req.params.id), 'approved');
   res.json({ success: true });
 });
 
 adminRouter.post('/blogs/:id/reject', requireAdmin, requireCsrf, async (req, res) => {
-  await pool.query("UPDATE blog_posts SET status = 'rejected' WHERE id = $1", [Number(req.params.id)]);
+  await adminRepo.updateBlogStatus(Number(req.params.id), 'rejected');
   res.json({ success: true });
 });
 
 adminRouter.delete('/users/:id', requireAdmin, requireCsrf, async (req, res) => {
-  await pool.query('DELETE FROM users WHERE id = $1', [Number(req.params.id)]);
+  await adminRepo.deleteUser(Number(req.params.id));
   res.json({ success: true });
 });
 
 adminRouter.delete('/recipes/:id', requireAdmin, requireCsrf, async (req, res) => {
-  await pool.query('DELETE FROM recipes WHERE id = $1', [Number(req.params.id)]);
+  await adminRepo.deleteRecipe(Number(req.params.id));
   res.json({ success: true });
 });
 
 adminRouter.delete('/blogs/:id', requireAdmin, requireCsrf, async (req, res) => {
-  await pool.query('DELETE FROM blog_posts WHERE id = $1', [Number(req.params.id)]);
+  await adminRepo.deleteBlog(Number(req.params.id));
   res.json({ success: true });
 });
 
 adminRouter.delete('/feedback/:id', requireAdmin, requireCsrf, async (req, res) => {
-  await pool.query('DELETE FROM feedback WHERE id = $1', [Number(req.params.id)]);
+  await adminRepo.deleteFeedback(Number(req.params.id));
   res.json({ success: true });
 });
 
 adminRouter.get('/comments', requireAdmin, async (_req, res) => {
-  const r = await pool.query(`
-    SELECT c.id, c.content, c.created_at, u.full_name AS author_name, p.title AS post_title
-    FROM blog_comments c
-    LEFT JOIN users u ON c.author_id = u.id
-    LEFT JOIN blog_posts p ON c.post_id = p.id
-    ORDER BY c.created_at DESC
-    LIMIT 300
-  `);
-  res.json({ comments: r.rows });
+  const comments = await adminRepo.getComments();
+  res.json({ comments });
 });
 
 adminRouter.delete('/comments/:id', requireAdmin, requireCsrf, async (req, res) => {
-  await pool.query('DELETE FROM blog_comments WHERE id = $1', [Number(req.params.id)]);
+  await adminRepo.deleteComment(Number(req.params.id));
   res.json({ success: true });
 });
 
@@ -282,26 +218,23 @@ adminRouter.get('/categories/:type', requireAdmin, async (req, res) => {
   const type = req.params.type;
   if (type !== 'recipe' && type !== 'blog') return res.status(400).json({ success: false });
   const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
-  const r = await pool.query(`SELECT id, name FROM ${table} ORDER BY name ASC`);
-  res.json({ categories: r.rows });
+  
+  const categories = await adminRepo.getCategories(table);
+  res.json({ categories });
 });
 
 adminRouter.post('/categories/:type', requireAdmin, requireCsrf, async (req, res) => {
   const type = req.params.type;
   if (type !== 'recipe' && type !== 'blog') return res.status(400).json({ success: false });
   const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
+  
   const name = String(req.body?.name ?? '').trim();
   if (!name) return res.status(400).json({ success: false, message: 'Name is required' });
   const slug = slugify(name);
   if (!slug) return res.status(422).json({ success: false, message: 'Invalid category name.' });
-  const r = await pool.query(
-    `INSERT INTO ${table} (name, slug)
-     VALUES ($1, $2)
-     ON CONFLICT (slug) DO NOTHING
-     RETURNING id`,
-    [name, slug]
-  );
-  if (r.rows.length === 0) {
+  
+  const created = await adminRepo.createCategory(table, name, slug);
+  if (!created) {
     res.status(409).json({ success: false, message: 'Category already exists.' });
     return;
   }
@@ -314,11 +247,13 @@ adminRouter.put('/categories/:type/:id', requireAdmin, requireCsrf, async (req, 
   const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
   const id = Number(req.params.id);
   if (!id) return res.status(400).json({ success: false, message: 'Invalid category id.' });
+  
   const name = String(req.body?.name ?? '').trim();
   if (!name) return res.status(400).json({ success: false, message: 'Name is required' });
   const slug = slugify(name);
   if (!slug) return res.status(422).json({ success: false, message: 'Invalid category name.' });
-  await pool.query(`UPDATE ${table} SET name = $1, slug = $2 WHERE id = $3`, [name, slug, id]);
+  
+  await adminRepo.updateCategory(table, id, name, slug);
   res.json({ success: true });
 });
 
@@ -328,6 +263,7 @@ adminRouter.delete('/categories/:type/:id', requireAdmin, requireCsrf, async (re
   const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
   const id = Number(req.params.id);
   if (!id) return res.status(400).json({ success: false, message: 'Invalid category id.' });
-  await pool.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
+  
+  await adminRepo.deleteCategory(table, id);
   res.json({ success: true });
 });

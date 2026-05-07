@@ -62,7 +62,7 @@ export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDat
     setIsSubmittingPlan(true);
     const hasCalories = planForm.targetCalories && Number(planForm.targetCalories) >= 1000;
     if (hasCalories) {
-      setCalorieNotes('🤖 AI đang tạo thực đơn phù hợp với mục tiêu calo... Vui lòng đợi 10-15 giây.');
+      setCalorieNotes('AI đang tạo thực đơn phù hợp với mục tiêu calo... Vui lòng đợi vài giây nhé.');
     }
     try {
       await apiJson<{ success: boolean; id: number; aiMessage?: string }>('/api/health/plans', {
@@ -79,18 +79,18 @@ export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDat
       });
 
       setPlanForm({
-          name: '',
-          description: '',
-          startDate: defaultDates.today,
-          endDate: defaultDates.nextWeek,
-          dietType: '',
-          targetCalories: '',
-          age: '',
-          heightCm: '',
-          weightKg: '',
-          gender: 'female',
-          activityLevel: 'light',
-          goal: 'maintain',
+        name: '',
+        description: '',
+        startDate: defaultDates.today,
+        endDate: defaultDates.nextWeek,
+        dietType: '',
+        targetCalories: '',
+        age: '',
+        heightCm: '',
+        weightKg: '',
+        gender: 'female',
+        activityLevel: 'light',
+        goal: 'maintain',
       });
       setCalorieNotes('');
       await onSuccess();
@@ -111,7 +111,7 @@ export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDat
             <X className="h-6 w-6" />
           </button>
         </div>
-        
+
         <div className="overflow-y-auto flex-1 p-6">
           <form className="space-y-4" onSubmit={handleCreatePlan}>
             <div>
@@ -156,7 +156,7 @@ export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDat
             <div className="pt-4">
               <div className="flex justify-end space-x-3">
                 <button type="button" onClick={onClose} disabled={isSubmittingPlan} className="px-6 py-3 border border-gray-300 rounded-full font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50">Hủy</button>
-                <button type="submit" disabled={isSubmittingPlan} className="bg-black text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">{isSubmittingPlan ? '🤖 Đang tạo...' : 'Tạo kế hoạch'}</button>
+                <button type="submit" disabled={isSubmittingPlan} className="bg-black text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">{isSubmittingPlan ? 'Đang tạo...' : 'Tạo kế hoạch'}</button>
               </div>
             </div>
           </form>

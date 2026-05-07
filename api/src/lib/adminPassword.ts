@@ -19,9 +19,3 @@ export async function hashPlainPasswordForAdminStorage(plain: string): Promise<s
   return hash;
 }
 
-/** Use before any UPDATE that writes to quantrivien."MatKhau". */
-export function assertStoredAdminPasswordIsBcrypt(value: string): void {
-  if (!isBcryptHash(value)) {
-    throw new Error('Refusing to store admin password: value is not a bcrypt hash.');
-  }
-}

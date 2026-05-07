@@ -1,21 +1,38 @@
 import React, { useState } from 'react';
 import { Reveal } from '../motion/ScrollReveal';
+import { apiJson } from '../../lib/api';
 
 export default function AboutFeedbackForm() {
   const [feedback, setFeedback] = useState({ name: '', email: '', message: '' });
   const [status, setStatus] = useState({ type: '', message: '' });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedback.name || !feedback.message) {
       setStatus({ type: 'error', message: 'Vui lòng điền đầy đủ tên và nội dung phản hồi.' });
       return;
     }
-    setTimeout(() => {
-      setStatus({ type: 'success', message: 'Cảm ơn bạn đã gửi phản hồi! Chúng tôi đã ghi nhận ý kiến của bạn.' });
-      setFeedback({ name: '', email: '', message: '' });
-      setTimeout(() => setStatus({ type: '', message: '' }), 3000);
-    }, 500);
+    
+    try {
+      const res = await apiJson<{ success: boolean; message: string }>('/api/feedback', {
+        method: 'POST',
+        body: JSON.stringify(feedback),
+      });
+
+      if (res.success) {
+        setStatus({ type: 'success', message: res.message || 'Cảm ơn bạn đã gửi phản hồi! Chúng tôi đã ghi nhận ý kiến của bạn.' });
+        setFeedback({ name: '', email: '', message: '' });
+        setTimeout(() => setStatus({ type: '', message: '' }), 5000);
+      } else {
+        setStatus({ type: 'error', message: res.message || 'Đã có lỗi xảy ra. Vui lòng thử lại.' });
+      }
+    } catch (err: any) {
+      if (err.status === 429) {
+        setStatus({ type: 'error', message: 'Bạn đang gửi quá nhiều phản hồi. Vui lòng thử lại sau.' });
+      } else {
+        setStatus({ type: 'error', message: err.message || 'Đã có lỗi xảy ra khi gửi phản hồi.' });
+      }
+    }
   };
 
   return (

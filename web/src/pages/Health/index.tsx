@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, ArrowRight, HeartPulse, ShoppingBag } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import AuthModal from '../../components/AuthModal';
 import { apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
@@ -68,6 +69,21 @@ export default function Health() {
     void loadPlans();
   }, [loadPlans]);
 
+  const handleDeletePlan = async (id: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa kế hoạch này?')) return;
+    try {
+      const res = await apiJson<{ success: boolean; message?: string }>(`/api/health/plans/${id}`, { method: 'DELETE' });
+      if (res.success) {
+        toast.success('Đã xóa kế hoạch');
+        await loadPlans();
+      } else {
+        toast.error(res.message || 'Lỗi khi xóa kế hoạch');
+      }
+    } catch {
+      toast.error('Lỗi khi xóa kế hoạch');
+    }
+  };
+
   // Lock scroll when modal is open
   useEffect(() => {
     if (isModalOpen) {
@@ -125,7 +141,7 @@ export default function Health() {
                     <span>Tạo kế hoạch mới</span>
                   </button>
                 </div>
-                <HealthPlanList isLoading={isLoading} plans={plans} />
+                <HealthPlanList isLoading={isLoading} plans={plans} onDeletePlan={handleDeletePlan} />
               </div>
             )}
             {activeTab === 'shopping' && (

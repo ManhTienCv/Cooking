@@ -64,3 +64,16 @@ export const adminLoginRateLimit = rateLimit({
     });
   },
 });
+
+export const feedbackSubmitRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // Limit each IP to 3 feedback submissions per hour
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({
+      success: false,
+      message: 'Quá nhiều yêu cầu phản hồi. Vui lòng thử lại sau 1 giờ.',
+    });
+  },
+});

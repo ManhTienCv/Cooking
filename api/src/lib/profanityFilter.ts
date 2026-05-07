@@ -37,7 +37,7 @@ function normalize(text: string): string {
  * Kiểm tra nội dung có chứa từ ngữ xấu không.
  * @returns true nếu nội dung SẠCH (không có từ cấm).
  */
-export function isClean(text: string): boolean {
+function isClean(text: string): boolean {
   const normalized = normalize(text);
   // Tách thành mảng từ và kiểm tra từng từ
   const words = normalized.split(/\s+/);
@@ -57,7 +57,7 @@ export function isClean(text: string): boolean {
  * Thay thế từ ngữ xấu bằng dấu ***.
  * Giữ nguyên các ký tự không bị cấm.
  */
-export function censor(text: string): string {
+function censor(text: string): string {
   let result = text;
   const normalizedText = normalize(text);
 

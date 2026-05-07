@@ -171,3 +171,26 @@ CREATE INDEX IF NOT EXISTS idx_health_plans_user_created ON health_plans(user_id
 
 -- Create the first admin explicitly with a bcrypt password before production.
 -- Do not keep predictable default admin credentials in schema/bootstrap SQL.
+
+
+CREATE TABLE IF NOT EXISTS "session" (
+  "sid" varchar NOT NULL COLLATE "default",
+  "sess" json NOT NULL,
+  "expire" timestamp(6) NOT NULL
+) WITH (OIDS=FALSE);
+
+ALTER TABLE "session" DROP CONSTRAINT IF EXISTS "session_pkey";
+ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
+
+CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+
+
+CREATE INDEX IF NOT EXISTS "idx_recipes_author_id" ON "recipes" ("author_id");
+CREATE INDEX IF NOT EXISTS "idx_recipes_category_id" ON "recipes" ("category_id");
+CREATE INDEX IF NOT EXISTS "idx_blog_posts_author_id" ON "blog_posts" ("author_id");
+CREATE INDEX IF NOT EXISTS "idx_blog_posts_category_id" ON "blog_posts" ("category_id");
+CREATE INDEX IF NOT EXISTS "idx_blog_comments_post_id" ON "blog_comments" ("post_id");
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS "idx_recipes_title_trgm" ON "recipes" USING gin ("title" gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS "idx_recipes_ingredients_trgm" ON "recipes" USING gin ("ingredients" gin_trgm_ops);

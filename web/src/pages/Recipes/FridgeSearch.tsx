@@ -180,7 +180,7 @@ export default function FridgeSearch() {
                   >
                     <div className="relative aspect-[4/3] overflow-hidden">
                       <img
-                        src={recipe.image_url || '/assets/images/default-recipe.jpg'}
+                        src={recipe.image_url || '/assets/images/vietnam1.jpg'}
                         alt={recipe.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         onError={(e) => {

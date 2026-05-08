@@ -29,14 +29,30 @@ export async function createPlan(pool: Pool, userId: number, data: Record<string
   return Number(r.rows[0]?.id ?? 0) || null;
 }
 
+function formatDate(d: unknown): string | null {
+  if (d instanceof Date) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  return typeof d === 'string' ? d.slice(0, 10) : null;
+}
+
 export async function getUserPlans(pool: Pool, userId: number): Promise<DbRow[]> {
   const r = await pool.query('SELECT * FROM health_plans WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
-  return r.rows;
+  return r.rows.map(row => ({
+    ...row,
+    start_date: formatDate(row.start_date) || row.start_date,
+    end_date: formatDate(row.end_date) || row.end_date
+  }));
 }
 
 export async function getPlanById(pool: Pool, planId: number, userId: number): Promise<DbRow | null> {
   const r = await pool.query('SELECT * FROM health_plans WHERE id = $1 AND user_id = $2', [planId, userId]);
-  return r.rows[0] ?? null;
+  if (!r.rows[0]) return null;
+  return {
+    ...r.rows[0],
+    start_date: formatDate(r.rows[0].start_date) || r.rows[0].start_date,
+    end_date: formatDate(r.rows[0].end_date) || r.rows[0].end_date
+  };
 }
 
 export async function deletePlan(pool: Pool, planId: number, userId: number): Promise<boolean> {

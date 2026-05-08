@@ -235,11 +235,13 @@ Return ONLY a JSON array, no markdown:
   }
 
   private async estimateNutrition(recipeName: string): Promise<{ calories: number; protein: number; carbs: number; fat: number }> {
-    const prompt = `Evaluate if '${recipeName}' is a real, valid food, dish, or beverage. 
-If it is NOT a valid food/beverage (e.g., gibberish, random letters like 'a', offensive words, or non-food items), return exactly: {"valid": false}.
-If it IS a valid food/beverage, estimate nutritional values for 1 serving and return ONLY a JSON object:
+    const prompt = `You are a strict nutritionist evaluating food items.
+Evaluate if the string '${recipeName}' represents a real, valid, edible food, dish, or beverage.
+Rules:
+1. If the string is gibberish (e.g., 'a', 'abc', 'asdf'), a random word (e.g., 'car', 'hello'), offensive, or a non-food item, you MUST return exactly: {"valid": false}.
+2. If it is a real food/beverage, estimate its nutritional values for 1 serving and return ONLY a JSON object:
 {"valid": true, "calories": integer, "protein": integer, "carbs": integer, "fat": integer}
-Do not include markdown formatting or explanations.`;
+Do not include any markdown formatting, code blocks, or explanations. Just the JSON object.`;
 
     const apiResult = await generateContent(prompt);
     if (apiResult && typeof apiResult === 'object' && !Array.isArray(apiResult)) {
@@ -257,8 +259,8 @@ Do not include markdown formatting or explanations.`;
       }
     }
     
-    if (recipeName.trim().length < 2) {
-      throw new Error('Tên món ăn quá ngắn hoặc không hợp lệ.');
+    if (recipeName.trim().length < 3) {
+      throw new Error('Tên món ăn quá ngắn hoặc không hợp lệ. Vui lòng nhập tên món ăn thực tế.');
     }
     return estimateNutritionFallback(recipeName);
   }
@@ -266,6 +268,14 @@ Do not include markdown formatting or explanations.`;
 
 function estimateNutritionFallback(recipeName: string): { calories: number; protein: number; carbs: number; fat: number } {
   const name = recipeName.toLowerCase();
+  
+  const knownWords = ['cơm', 'phở', 'bún', 'bánh', 'thịt', 'cá', 'gà', 'bò', 'tôm', 'cua', 'mực', 'trứng', 'đậu', 'rau', 'canh', 'lẩu', 'cháo', 'xôi', 'mì', 'chè', 'kem', 'sữa', 'trà', 'nước', 'salad', 'chicken', 'beef', 'pork', 'fish', 'rice', 'noodle', 'soup', 'bread', 'pizza', 'burger', 'khoai', 'bơ', 'chuối', 'táo', 'cam'];
+  const hasKnownWord = knownWords.some(w => name.includes(w));
+  
+  if (!hasKnownWord) {
+    throw new Error('Tên món ăn không có thật hoặc hệ thống không thể nhận diện. Vui lòng nhập một món ăn cụ thể.');
+  }
+
   const nutrition = { calories: 400, protein: 15, carbs: 40, fat: 10 };
 
   const rules: { keywords: string[]; impact: Partial<typeof nutrition> }[] = [

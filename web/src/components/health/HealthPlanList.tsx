@@ -53,10 +53,10 @@ export default function HealthPlanList({ isLoading, plans, onDeletePlan }: Healt
                   e.stopPropagation();
                   onDeletePlan(plan.id);
                 }}
-                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-red-900/30 rounded-full transition-colors"
                 title="Xóa kế hoạch"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-5 h-5" />
               </button>
             )}
             <h4 className="text-xl font-bold text-black dark:text-white group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors mb-2 pr-8">

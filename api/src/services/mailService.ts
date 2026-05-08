@@ -184,9 +184,6 @@ export async function sendFeedbackEmail(to: string, name: string): Promise<boole
     }
   }
   
-  if (env.nodeEnv !== 'production') {
-    console.info(`[dev] Feedback email to ${to}`);
-    return true;
-  }
+  console.info(`[dev] Feedback email to ${to} (not sent because SMTP not configured)`);
   return false;
 }

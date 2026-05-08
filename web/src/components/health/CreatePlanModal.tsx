@@ -14,7 +14,6 @@ interface CreatePlanModalProps {
 export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDates }: CreatePlanModalProps) {
   const [isSubmittingPlan, setIsSubmittingPlan] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
-  const [calorieNotes, setCalorieNotes] = useState('');
 
   const [planForm, setPlanForm] = useState(() => ({
     name: '',
@@ -60,10 +59,6 @@ export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDat
     );
 
     setIsSubmittingPlan(true);
-    const hasCalories = planForm.targetCalories && Number(planForm.targetCalories) >= 1000;
-    if (hasCalories) {
-      setCalorieNotes('AI đang tạo thực đơn phù hợp với mục tiêu calo... Vui lòng đợi vài giây nhé.');
-    }
     try {
       await apiJson<{ success: boolean; id: number; aiMessage?: string }>('/api/health/plans', {
         method: 'POST',
@@ -92,11 +87,9 @@ export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDat
         activityLevel: 'light',
         goal: 'maintain',
       });
-      setCalorieNotes('');
       await onSuccess();
     } catch (err) {
       setPlanError(err instanceof Error ? err.message : 'Không thể tạo kế hoạch.');
-      setCalorieNotes('');
     } finally {
       setIsSubmittingPlan(false);
     }
@@ -151,7 +144,6 @@ export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDat
               <p className="text-xs text-gray-500 mt-1">Nhập mục tiêu calo để AI tự động tạo thực đơn phù hợp. Tối thiểu 1000 kcal.</p>
             </div>
 
-            {calorieNotes && <p className="text-sm text-blue-600 bg-blue-50 px-4 py-3 rounded-xl animate-pulse">{calorieNotes}</p>}
             {planError && <p className="text-sm text-red-600">{planError}</p>}
             <div className="pt-4">
               <div className="flex justify-end space-x-3">

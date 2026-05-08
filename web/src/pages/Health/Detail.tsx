@@ -105,11 +105,10 @@ export default function HealthDetail() {
           });
           
           if (allNames.length > 0) {
-            // Lấy từ khóa từ món ăn đầu tiên (ví dụ "Cơm chiên" -> lấy "Cơm")
             const firstDish = allNames[0];
             const words = firstDish.split(' ').filter(w => w.length > 2);
             if (words.length > 0) {
-              keyword = words[0];
+              keyword = words[words.length - 1]; // Use the last meaningful word for better matching
             } else {
               keyword = firstDish.split(' ')[0] || '';
             }
@@ -135,12 +134,18 @@ export default function HealthDetail() {
   }, [loadPlanAndMeals]);
 
   const generateDays = () => {
-    if (!plan?.start_date) return [];
+    if (!plan?.start_date || !plan?.end_date) return [];
     const daysArr = [];
-    // Parse start_date as local date (YYYY-MM-DD) to avoid timezone offset issues
-    const parts = String(plan.start_date).slice(0, 10).split('-');
-    const start = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-    for (let i = 0; i < 7; i++) {
+    const partsStart = String(plan.start_date).slice(0, 10).split('-');
+    const start = new Date(Number(partsStart[0]), Number(partsStart[1]) - 1, Number(partsStart[2]));
+    
+    const partsEnd = String(plan.end_date).slice(0, 10).split('-');
+    const end = new Date(Number(partsEnd[0]), Number(partsEnd[1]) - 1, Number(partsEnd[2]));
+    
+    let dayCount = Math.ceil((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+    if (dayCount < 1) dayCount = 1;
+
+    for (let i = 0; i < dayCount; i++) {
       const current = new Date(start);
       current.setDate(current.getDate() + i);
       const isoDate = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
@@ -302,7 +307,7 @@ export default function HealthDetail() {
             <p className="text-gray-400 dark:text-gray-500 text-sm italic">Chưa có món ăn</p>
           ) : (
             meals.map(m => (
-              <div key={m.id} className="bg-white/80 dark:bg-slate-800/80 p-3 rounded-lg flex flex-col shadow-sm border border-white dark:border-slate-700 relative group">
+              <div key={m.id} className="bg-white/90 dark:bg-slate-700 p-3 rounded-lg flex flex-col shadow-sm border border-gray-100 dark:border-slate-600 relative group">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-wrap items-center gap-2 pr-6">
                     <span className="font-bold text-gray-800 dark:text-white leading-tight">{m.name}</span>
@@ -424,7 +429,7 @@ export default function HealthDetail() {
                 {suggestions.map(recipe => (
                   <div key={recipe.id} className="min-w-[280px] w-[280px] bg-white dark:bg-slate-700 rounded-xl shadow border border-gray-100 dark:border-slate-600 snap-start flex-shrink-0 hover:shadow-lg transition-shadow">
                     <div className="h-40 relative">
-                      <img src={recipe.image_url || '/assets/images/default-recipe.jpg'} className="w-full h-full object-cover rounded-t-xl" alt={recipe.title} />
+                      <img src={recipe.image_url || '/assets/images/vietnam1.jpg'} className="w-full h-full object-cover rounded-t-xl" alt={recipe.title} />
                       {recipe.calories > 0 && (
                         <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded-md text-xs font-medium">
                           {recipe.calories} kcal

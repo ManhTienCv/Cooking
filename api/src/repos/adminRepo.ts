@@ -121,7 +121,7 @@ export const adminRepo = {
     const r = await pool.query(`
       SELECT c.id, c.content, c.created_at, u.full_name AS author_name, p.title AS post_title
       FROM blog_comments c
-      LEFT JOIN users u ON c.author_id = u.id
+      LEFT JOIN users u ON c.user_id = u.id
       LEFT JOIN blog_posts p ON c.post_id = p.id
       ORDER BY c.created_at DESC
       LIMIT 300

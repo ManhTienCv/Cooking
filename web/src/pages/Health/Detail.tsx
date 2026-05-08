@@ -428,8 +428,8 @@ export default function HealthDetail() {
               <div className="flex overflow-x-auto pb-4 hide-scrollbar gap-6 snap-x">
                 {suggestions.map(recipe => (
                   <div key={recipe.id} className="min-w-[280px] w-[280px] bg-white dark:bg-slate-700 rounded-xl shadow border border-gray-100 dark:border-slate-600 snap-start flex-shrink-0 hover:shadow-lg transition-shadow">
-                    <div className="h-40 relative">
-                      <img src={recipe.image_url || '/assets/images/vietnam1.jpg'} className="w-full h-full object-cover rounded-t-xl" alt={recipe.title} />
+                    <div className="h-40 relative bg-slate-200 dark:bg-slate-600">
+                      <img src={recipe.image_url || '/assets/images/vietnam1.jpg'} className="w-full h-full object-cover rounded-t-xl" alt={recipe.title} onError={(e) => { (e.target as HTMLImageElement).src = '/assets/images/vietnam1.jpg'; }} />
                       {recipe.calories > 0 && (
                         <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded-md text-xs font-medium">
                           {recipe.calories} kcal
@@ -444,7 +444,7 @@ export default function HealthDetail() {
                         <span className="mx-2">•</span>
                         <span>{recipe.difficulty}</span>
                       </div>
-                      <Link to={`/recipes/${recipe.id}`} className="block text-center bg-gray-100 dark:bg-slate-600 hover:bg-black dark:hover:bg-slate-500 hover:text-white dark:text-white text-black font-semibold py-2 rounded-lg transition-colors">
+                      <Link to={`/recipes/detail/${recipe.id}`} className="block text-center bg-gray-100 dark:bg-slate-600 hover:bg-black dark:hover:bg-slate-500 hover:text-white dark:text-white text-black font-semibold py-2 rounded-lg transition-colors">
                         Xem chi tiết
                       </Link>
                     </div>

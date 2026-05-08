@@ -8,10 +8,12 @@ import Pagination from '../../components/ui/Pagination';
 
 import type { ProfileUser, ProfileStats, ProfileRecipe, ProfilePost, ProfilePlan } from '../../components/profile/types';
 import type { BlogCategory } from '../../components/blog/types';
+import type { RecipeCategory } from '../../components/recipes/types';
 import ProfileHeader from '../../components/profile/ProfileHeader';
 import ProfileSidebar from '../../components/profile/ProfileSidebar';
 import ProfileSettingsForm from '../../components/profile/ProfileSettingsForm';
 import EditPostModal from '../../components/blog/EditPostModal';
+import EditRecipeModal from '../../components/recipes/EditRecipeModal';
 
 const PROFILE_PAGE_SIZE = 6;
 type PagedTab = 'recipes' | 'posts' | 'saved';
@@ -37,6 +39,10 @@ export default function Profile() {
   // Edit post modal
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [blogCategories, setBlogCategories] = useState<BlogCategory[]>([]);
+
+  // Edit recipe modal
+  const [editingRecipeId, setEditingRecipeId] = useState<number | null>(null);
+  const [recipeCategories, setRecipeCategories] = useState<RecipeCategory[]>([]);
 
   const loadTabData = useCallback(async (tab: string) => {
     const getPageQuery = (pagedTab: PagedTab) => {
@@ -120,6 +126,9 @@ export default function Profile() {
     apiJson<{ categories: BlogCategory[] }>('/api/blog/categories')
       .then(d => setBlogCategories(d.categories ?? []))
       .catch(() => {});
+    apiJson<{ categories: RecipeCategory[] }>('/api/recipes/categories')
+      .then(d => setRecipeCategories(d.categories ?? []))
+      .catch(() => {});
   }, [loadMe]);
 
   useEffect(() => {
@@ -182,7 +191,7 @@ export default function Profile() {
     <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-blue-50 to-indigo-50 pb-24 transition-colors duration-300 dark:from-slate-900 dark:to-slate-800">
       <ProfileHeader isLoading={isLoading} user={user} stats={stats} />
 
-      <Reveal className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8" y={22}>
+      <Reveal className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8" y={22}>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
           <div className="lg:col-span-1">
             <ProfileSidebar
@@ -238,7 +247,7 @@ export default function Profile() {
                                     Xem chi tiết &rarr;
                                   </Link>
                                   <div className="flex space-x-2">
-                                    <button onClick={() => alert("Tính năng sửa đang được cập nhật!")} className="p-1 text-gray-500 hover:text-blue-600 transition-colors" title="Sửa bài">
+                                    <button onClick={() => setEditingRecipeId(r.id)} className="p-1 text-gray-500 hover:text-blue-600 transition-colors" title="Sửa công thức">
                                       <Edit className="h-4 w-4" />
                                     </button>
                                     <button onClick={() => handleDeleteRecipe(r.id)} className="p-1 text-gray-500 hover:text-red-600 transition-colors" title="Xóa bài">
@@ -380,6 +389,15 @@ export default function Profile() {
         onSuccess={async () => { await loadTabData('posts'); }}
         categoryOptions={blogCategories}
         modalCategoryOptions={blogCategories.map(c => ({ value: String(c.id), label: c.name, id: c.id, name: c.name }))}
+      />
+
+      {/* Edit Recipe Modal */}
+      <EditRecipeModal
+        isOpen={editingRecipeId !== null}
+        recipeId={editingRecipeId ?? 0}
+        onClose={() => setEditingRecipeId(null)}
+        onSuccess={async () => { await loadTabData('recipes'); }}
+        categoryOptions={recipeCategories}
       />
     </div>
   );

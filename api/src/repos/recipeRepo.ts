@@ -321,6 +321,42 @@ export async function searchRecipesByIngredients(ingredients: string[], limit: n
   };
 }
 
+export async function updateRecipe(id: number, authorId: number, data: {
+  title?: string;
+  description?: string | null;
+  ingredients?: string;
+  instructions?: string;
+  difficulty?: string;
+  cookingTime?: number | null;
+  servings?: number | null;
+  imageUrl?: string | null;
+  categoryId?: number;
+}): Promise<boolean> {
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  let idx = 1;
+
+  if (data.title !== undefined) { sets.push(`title = $${idx++}`); params.push(data.title); }
+  if (data.description !== undefined) { sets.push(`description = $${idx++}`); params.push(data.description); }
+  if (data.ingredients !== undefined) { sets.push(`ingredients = $${idx++}`); params.push(data.ingredients); }
+  if (data.instructions !== undefined) { sets.push(`instructions = $${idx++}`); params.push(data.instructions); }
+  if (data.difficulty !== undefined) { sets.push(`difficulty = $${idx++}`); params.push(data.difficulty); }
+  if (data.cookingTime !== undefined) { sets.push(`cooking_time = $${idx++}`); params.push(data.cookingTime); }
+  if (data.servings !== undefined) { sets.push(`servings = $${idx++}`); params.push(data.servings); }
+  if (data.imageUrl !== undefined) { sets.push(`image_url = $${idx++}`); params.push(data.imageUrl); }
+  if (data.categoryId !== undefined) { sets.push(`category_id = $${idx++}`); params.push(data.categoryId); }
+
+  if (sets.length === 0) return false;
+  sets.push(`updated_at = NOW()`);
+
+  params.push(id, authorId);
+  const { rowCount } = await pool.query(
+    `UPDATE recipes SET ${sets.join(', ')} WHERE id = $${idx++} AND author_id = $${idx}`,
+    params
+  );
+  return (rowCount ?? 0) > 0;
+}
+
 export async function deleteRecipe(id: number): Promise<void> {
   await pool.query('DELETE FROM recipes WHERE id = ', [id]);
 }

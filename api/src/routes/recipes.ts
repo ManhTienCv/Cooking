@@ -152,6 +152,49 @@ recipesRouter.post('/:id/view', requireCsrf, async (req, res) => {
   res.json({ ok: true, incremented });
 });
 
+recipesRouter.put('/:id', requireAuth, requireCsrf, async (req, res) => {
+  const id = Number(req.params.id);
+  const userId = req.session.userId!;
+  if (!id) return res.status(400).json({ error: 'Invalid id' });
+
+  const existing = await recipeRepo.getRecipeById(id, userId);
+  if (!existing || existing.author_id !== userId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const title = req.body?.title !== undefined ? String(req.body.title).trim() : undefined;
+  const description = req.body?.description !== undefined ? (String(req.body.description).trim() || null) : undefined;
+  const ingredients = req.body?.ingredients !== undefined ? String(req.body.ingredients).trim() : undefined;
+  const instructions = req.body?.instructions !== undefined ? String(req.body.instructions).trim() : undefined;
+  const difficulty = req.body?.difficulty !== undefined ? String(req.body.difficulty).trim() : undefined;
+  const cookingTimeRaw = req.body?.cooking_time !== undefined ? Number(req.body.cooking_time) : undefined;
+  const servingsRaw = req.body?.servings !== undefined ? Number(req.body.servings) : undefined;
+  const categoryId = req.body?.category_id !== undefined ? Number(req.body.category_id) : undefined;
+
+  let imageUrl: string | null | undefined = undefined;
+  if (req.body?.image_url) {
+    imageUrl = processImageBase64(String(req.body.image_url).trim());
+  }
+
+  const ok = await recipeRepo.updateRecipe(id, userId, {
+    title,
+    description,
+    ingredients,
+    instructions,
+    difficulty,
+    cookingTime: cookingTimeRaw !== undefined ? (Number.isFinite(cookingTimeRaw) && cookingTimeRaw > 0 ? cookingTimeRaw : null) : undefined,
+    servings: servingsRaw !== undefined ? (Number.isFinite(servingsRaw) && servingsRaw > 0 ? servingsRaw : null) : undefined,
+    imageUrl,
+    categoryId,
+  });
+
+  if (!ok) {
+    res.status(400).json({ success: false, message: 'Không thể cập nhật công thức.' });
+    return;
+  }
+  res.json({ success: true });
+});
+
 recipesRouter.delete('/:id', requireAuth, requireCsrf, async (req, res) => {
   const id = Number(req.params.id);
   const userId = req.session.userId ?? null;

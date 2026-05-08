@@ -126,8 +126,9 @@ export default function EditPostModal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 py-8">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-xl max-h-[85vh] flex flex-col my-4 overflow-hidden">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 py-8" style={{ animation: 'fadeIn 200ms ease-out' }}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white dark:bg-slate-800 rounded-2xl w-full max-w-xl max-h-[85vh] flex flex-col my-4 overflow-hidden" style={{ animation: 'slideUp 250ms ease-out' }}>
         <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
           <h3 className="text-2xl font-bold text-black dark:text-white">Sửa Bài Viết</h3>
           <button type="button" title="Đóng" onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white transition-colors">

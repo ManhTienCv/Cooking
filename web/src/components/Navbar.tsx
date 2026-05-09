@@ -142,6 +142,7 @@ export default function Navbar() {
                 ) : me.authenticated ? (
                   <>
                     <Link
+                      data-testid="nav-profile-link"
                       to="/profile"
                       onClick={() => scrollWindowToTop()}
                       className="flex items-center gap-2 rounded-full pl-1 pr-3 py-1 bg-white/90 border border-gray-200 hover:bg-white transition-colors"
@@ -157,6 +158,7 @@ export default function Navbar() {
                       <span className="text-sm font-medium text-gray-900 max-w-[8rem] truncate">{me.user.full_name}</span>
                     </Link>
                     <button
+                      data-testid="nav-logout-button"
                       type="button"
                       onClick={() => void handleLogout()}
                       className="btn btn-enhanced p-2 rounded-full text-sm bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 transition-all"
@@ -167,8 +169,8 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
-                    <button onClick={openLogin} className="btn btn-enhanced px-4 py-2 rounded-full text-sm font-semibold bg-black text-white hover:bg-gray-800 transition-all duration-300">Đăng nhập</button>
-                    <button onClick={openSignUp} className="btn btn-enhanced px-4 py-2 rounded-full text-sm font-semibold bg-white text-black hover:bg-gray-100 border border-gray-300 transition-all duration-300">Đăng ký</button>
+                    <button data-testid="nav-login-button" onClick={openLogin} className="btn btn-enhanced px-4 py-2 rounded-full text-sm font-semibold bg-black text-white hover:bg-gray-800 transition-all duration-300">Đăng nhập</button>
+                    <button data-testid="nav-signup-button" onClick={openSignUp} className="btn btn-enhanced px-4 py-2 rounded-full text-sm font-semibold bg-white text-black hover:bg-gray-100 border border-gray-300 transition-all duration-300">Đăng ký</button>
                   </>
                 )}
               </div>

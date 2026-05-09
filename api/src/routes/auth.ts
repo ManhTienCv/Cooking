@@ -23,6 +23,9 @@ function normalizeEmail(s: string): string {
 }
 
 function generateOtp(): string {
+  if (env.nodeEnv !== 'production' && /^\d{6}$/.test(env.testOtpCode)) {
+    return env.testOtpCode;
+  }
   return String(randomInt(100000, 1000000));
 }
 

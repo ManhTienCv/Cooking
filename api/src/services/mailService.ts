@@ -109,11 +109,49 @@ function subjectForPurpose(purpose: OtpEmailPurpose, brand: string): string {
   return `[${brand}] Mã đặt lại mật khẩu`;
 }
 
+function normalizeRecipient(to: string): { local: string; domain: string } {
+  const email = to.trim().toLowerCase();
+  const at = email.lastIndexOf('@');
+  if (at < 1) return { local: email, domain: '' };
+  return {
+    local: email.slice(0, at),
+    domain: email.slice(at + 1),
+  };
+}
+
+function isReservedTestRecipient(to: string): boolean {
+  const { local, domain } = normalizeRecipient(to);
+  return (
+    domain === 'localhost' ||
+    domain === 'test.com' ||
+    domain.endsWith('.local') ||
+    domain.endsWith('.test') ||
+    local.startsWith('test+') ||
+    local.startsWith('verify_') ||
+    local.startsWith('autotest+')
+  );
+}
+
+function shouldLogOtpOnly(to: string): boolean {
+  if (env.otpEmailMode === 'console') return true;
+  if (env.otpEmailMode === 'smtp') return false;
+  return env.nodeEnv !== 'production' && isReservedTestRecipient(to);
+}
+
+function logOtpOnly(to: string, subject: string, code: string, reason: string): void {
+  console.info(`[OTP:${reason}] Email delivery skipped for ${to} (${subject}). OTP: ${code}`);
+}
+
 export async function sendOtpEmail(to: string, code: string, purpose: OtpEmailPurpose): Promise<boolean> {
   const brand = env.mailBrand;
   const subject = subjectForPurpose(purpose, brand);
   const text = buildOtpText(code, purpose, brand);
   const html = buildOtpHtml(code, purpose, brand);
+
+  if (shouldLogOtpOnly(to)) {
+    logOtpOnly(to, subject, code, env.otpEmailMode === 'console' ? 'console-mode' : 'test-recipient');
+    return true;
+  }
 
   const t = getTransporter();
   if (t) {

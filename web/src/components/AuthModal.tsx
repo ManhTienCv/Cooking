@@ -238,7 +238,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
 
   return createPortal(
     <div className={`blackwhite-auth-overlay ${isOpen ? 'show' : ''}`} onClick={handleOverlayClick}>
-      <div className={`blackwhite-container ${isActive ? 'active' : ''} bg-white dark:bg-slate-900 overflow-hidden`}>
+      <div
+        data-testid="auth-modal-container"
+        className={`blackwhite-container ${isActive ? 'active' : ''} bg-white dark:bg-slate-900 overflow-hidden`}
+      >
         {/* Registration Form */}
         <div className="blackwhite-form-container blackwhite-sign-up">
           {registerStep === 1 ? (
@@ -332,7 +335,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
         </div>
 
         {/* Login Form */}
-        <div className="blackwhite-form-container blackwhite-sign-in" style={{ display: view === 'main' ? 'block' : 'none' }}>
+        <div
+          data-testid="auth-login-form"
+          className="blackwhite-form-container blackwhite-sign-in"
+          style={{ display: view === 'main' ? 'block' : 'none' }}
+        >
           <form className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900" onSubmit={handleLogin}>
             <h1 className="text-2xl font-bold mb-2 text-black dark:text-white">Đăng Nhập</h1>
             <span className="text-gray-500 dark:text-gray-400 text-xs mb-4">hoặc sử dụng email và mật khẩu</span>
@@ -340,9 +347,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               <p className="text-green-700 text-xs mb-2 w-full text-center">{authSuccess}</p>
             )}
             {!isActive && authError && (
-              <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
+              <p data-testid="auth-login-error" className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
             )}
             <input
+              data-testid="auth-login-email"
               name="email"
               type="email"
               placeholder="Email"
@@ -350,6 +358,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
             />
             <input
+              data-testid="auth-login-password"
               name="password"
               type="password"
               placeholder="Mật khẩu"
@@ -367,6 +376,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               </a>
             </p>
             <button
+              data-testid="auth-login-submit"
               type="submit"
               disabled={authLoading}
               className="bg-black text-white rounded-lg py-3 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors disabled:opacity-60"

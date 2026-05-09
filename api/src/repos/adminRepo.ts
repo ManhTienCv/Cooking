@@ -1,8 +1,9 @@
 import { pool } from '../db/pool.js';
 import { hashPlainPasswordForAdminStorage } from '../lib/adminPassword.js';
+import { DashboardStats } from '../types/admin.js';
 
 export const adminRepo = {
-  async getDashboardStats() {
+  async getDashboardStats(): Promise<DashboardStats> {
     const [admins, users, recipes, blogs, feedback, pendingRecipes, pendingBlogs] = await Promise.all([
       pool.query('SELECT COUNT(*)::int AS total FROM quantrivien'),
       pool.query('SELECT COUNT(*)::int AS total FROM users'),

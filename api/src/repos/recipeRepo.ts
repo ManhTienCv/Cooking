@@ -1,7 +1,6 @@
 import { pool } from '../db/pool.js';
 import { DEFAULT_RECIPE_CATEGORIES, slugify } from '../data/defaultCategories.js';
-
-type DbRow = Record<string, unknown>;
+import { Recipe, RecipeWithAuthor, RecipeCategory } from '../types/recipe.js';
 
 async function ensureDefaultCategories(): Promise<void> {
   for (const name of DEFAULT_RECIPE_CATEGORIES) {
@@ -23,7 +22,7 @@ function isAllCategory(category: string | null): boolean {
   return !category || category === 'Tat ca' || category === 'Tất cả';
 }
 
-export async function getFeaturedRecipes(limit = 6): Promise<DbRow[]> {
+export async function getFeaturedRecipes(limit = 6): Promise<RecipeWithAuthor[]> {
   const { rows } = await pool.query(
     `SELECT r.*, r.calories, c.name AS category_name, u.full_name AS author_name, u.avatar_url AS author_avatar
      FROM recipes r
@@ -34,10 +33,10 @@ export async function getFeaturedRecipes(limit = 6): Promise<DbRow[]> {
      LIMIT $1`,
     [limit]
   );
-  return rows;
+  return rows as RecipeWithAuthor[];
 }
 
-export async function searchRecipes(search: string | null, category: string | null, limit: number, offset: number): Promise<DbRow[]> {
+export async function searchRecipes(search: string | null, category: string | null, limit: number, offset: number): Promise<RecipeWithAuthor[]> {
   const conditions: string[] = ["r.status = 'approved'"];
   const params: (string | number)[] = [];
 
@@ -60,7 +59,7 @@ export async function searchRecipes(search: string | null, category: string | nu
   params.push(limit, offset);
 
   const { rows } = await pool.query(sql, params);
-  return rows;
+  return rows as RecipeWithAuthor[];
 }
 
 export async function searchRecipesWithViewer(
@@ -69,7 +68,7 @@ export async function searchRecipesWithViewer(
   viewerId: number,
   limit: number,
   offset: number
-): Promise<DbRow[]> {
+): Promise<RecipeWithAuthor[]> {
   const conditions: string[] = ["(r.status = 'approved' OR r.author_id = $1)"];
   const params: (string | number)[] = [viewerId];
 
@@ -92,7 +91,7 @@ export async function searchRecipesWithViewer(
   params.push(limit, offset);
 
   const { rows } = await pool.query(sql, params);
-  return rows;
+  return rows as RecipeWithAuthor[];
 }
 
 export async function countSearchRecipes(search: string | null, category: string | null): Promise<number> {
@@ -143,7 +142,7 @@ export async function countSearchRecipesWithViewer(
   return parseTotal(rows[0]?.total);
 }
 
-export async function getRecipeById(id: number, viewerId: number | null): Promise<DbRow | null> {
+export async function getRecipeById(id: number, viewerId: number | null): Promise<RecipeWithAuthor | null> {
   const v = viewerId ?? 0;
   const { rows } = await pool.query(
     `SELECT r.*, r.calories, c.name AS category_name, u.full_name AS author_name, u.avatar_url AS author_avatar, u.email AS author_email
@@ -153,7 +152,7 @@ export async function getRecipeById(id: number, viewerId: number | null): Promis
      WHERE r.id = $1 AND (r.status = 'approved' OR r.author_id = $2)`,
     [id, v]
   );
-  return rows[0] ?? null;
+  return (rows[0] as RecipeWithAuthor) ?? null;
 }
 
 export async function incrementViews(recipeId: number, userId: number | null): Promise<boolean> {
@@ -166,10 +165,10 @@ export async function incrementViews(recipeId: number, userId: number | null): P
   return true;
 }
 
-export async function getCategories(): Promise<DbRow[]> {
+export async function getCategories(): Promise<RecipeCategory[]> {
   await ensureDefaultCategories();
-  const { rows } = await pool.query('SELECT id, name FROM recipe_categories ORDER BY name ASC');
-  return rows;
+  const { rows } = await pool.query('SELECT id, name, slug, description FROM recipe_categories ORDER BY name ASC');
+  return rows as RecipeCategory[];
 }
 
 export async function isSaved(userId: number, recipeId: number): Promise<boolean> {
@@ -221,7 +220,7 @@ export async function createRecipe(data: {
   return Number(r.rows[0]?.id ?? 0) || null;
 }
 
-export async function getRecipesByAuthor(authorId: number, limit: number, offset: number): Promise<DbRow[]> {
+export async function getRecipesByAuthor(authorId: number, limit: number, offset: number): Promise<Recipe[]> {
   const { rows } = await pool.query(
     `SELECT r.*, c.name AS category_name
      FROM recipes r
@@ -231,7 +230,7 @@ export async function getRecipesByAuthor(authorId: number, limit: number, offset
      LIMIT $2 OFFSET $3`,
     [authorId, limit, offset]
   );
-  return rows;
+  return rows as Recipe[];
 }
 
 export async function countRecipesByAuthor(authorId: number): Promise<number> {
@@ -244,7 +243,7 @@ export async function countRecipesByAuthor(authorId: number): Promise<number> {
   return parseTotal(rows[0]?.total);
 }
 
-export async function getSavedRecipesByUser(userId: number, limit: number, offset: number): Promise<DbRow[]> {
+export async function getSavedRecipesByUser(userId: number, limit: number, offset: number): Promise<RecipeWithAuthor[]> {
   const { rows } = await pool.query(
     `SELECT r.*, c.name AS category_name, s.created_at AS saved_at
      FROM saved_recipes s
@@ -255,7 +254,7 @@ export async function getSavedRecipesByUser(userId: number, limit: number, offse
      LIMIT $2 OFFSET $3`,
     [userId, limit, offset]
   );
-  return rows;
+  return rows as RecipeWithAuthor[];
 }
 
 export async function countSavedRecipesByUser(userId: number): Promise<number> {
@@ -268,21 +267,18 @@ export async function countSavedRecipesByUser(userId: number): Promise<number> {
   return parseTotal(rows[0]?.total);
 }
 
-export async function searchRecipesByIngredients(ingredients: string[], limit: number, offset: number): Promise<{ rows: DbRow[]; total: number }> {
+export async function searchRecipesByIngredients(ingredients: string[], limit: number, offset: number): Promise<{ rows: RecipeWithAuthor[]; total: number }> {
   if (!ingredients || ingredients.length === 0) return { rows: [], total: 0 };
 
-  // Filter and sanitize ingredients
   const validIngredients = ingredients
     .map(i => i.trim().toLowerCase())
     .filter(i => i.length > 0)
-    .slice(0, 10); // Max 10 ingredients to prevent abuse
+    .slice(0, 10);
 
   if (validIngredients.length === 0) return { rows: [], total: 0 };
 
   const conditions: string[] = ["r.status = 'approved'"];
   const params: (string | number)[] = [];
-  
-  // Build dynamic match clauses
   const matchCases: string[] = [];
   const orConditions: string[] = [];
   
@@ -294,7 +290,6 @@ export async function searchRecipesByIngredients(ingredients: string[], limit: n
   });
 
   conditions.push(`(${orConditions.join(' OR ')})`);
-  
   const matchCountSql = matchCases.join(' + ');
 
   const sql = `SELECT r.*, r.calories, r.protein, r.carbs, r.fat, c.name AS category_name, u.full_name AS author_name, u.avatar_url AS author_avatar,
@@ -315,9 +310,9 @@ export async function searchRecipesByIngredients(ingredients: string[], limit: n
     pool.query(countSql, params)
   ]);
 
-  return { 
-    rows: dataResult.rows, 
-    total: parseTotal(countResult.rows[0]?.total) 
+  return {
+    rows: dataResult.rows as RecipeWithAuthor[],
+    total: parseTotal(countResult.rows[0]?.total)
   };
 }
 
@@ -358,5 +353,5 @@ export async function updateRecipe(id: number, authorId: number, data: {
 }
 
 export async function deleteRecipe(id: number): Promise<void> {
-  await pool.query('DELETE FROM recipes WHERE id = ', [id]);
+  await pool.query('DELETE FROM recipes WHERE id = $1', [id]);
 }

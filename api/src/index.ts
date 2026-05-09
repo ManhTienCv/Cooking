@@ -14,6 +14,7 @@ import { blogRouter } from './routes/blog.js';
 import { healthRouter } from './routes/health.js';
 import { adminRouter } from './routes/admin.js';
 import { feedbackRouter } from './routes/feedback.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
@@ -88,15 +89,7 @@ app.use('/api/health', healthRouter);
 app.use('/api/recipes', recipesRouter);
 app.use('/api/feedback', feedbackRouter);
 
-app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  if (env.nodeEnv === 'production') {
-    const msg = err instanceof Error ? err.message : 'Internal server error';
-    console.error('Request error:', msg);
-  } else {
-    console.error(err);
-  }
-  res.status(500).json({ error: 'Internal server error' });
-});
+app.use(errorHandler);
 
 app.listen(env.port, () => {
   console.log(`cookapp-server listening on http://localhost:${env.port}`);

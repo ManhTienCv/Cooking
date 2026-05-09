@@ -15,29 +15,55 @@ export async function getCsrfToken(): Promise<string> {
   if (!csrfPromise) {
     csrfPromise = fetch(`${base}/api/auth/csrf`, { credentials: 'include' })
       .then((r) => {
-        if (!r.ok) throw new Error('CSRF');
+        if (!r.ok) {
+          throw new Error('Khong lay duoc CSRF token. Kiem tra backend API dang chay.');
+        }
         return r.json() as Promise<{ csrfToken: string }>;
       })
-      .then((d) => d.csrfToken);
+      .then((d) => {
+        if (!d.csrfToken) {
+          throw new Error('CSRF token khong hop le.');
+        }
+        return d.csrfToken;
+      })
+      .catch((err) => {
+        resetCsrfCache();
+        throw err;
+      });
   }
   return csrfPromise;
 }
 
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const headers = new Headers(init.headers);
   const method = (init.method ?? 'GET').toUpperCase();
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-    const t = await getCsrfToken();
-    headers.set('X-CSRF-TOKEN', t);
+  const needsCsrf = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+
+  const withHeaders = async () => {
+    const headers = new Headers(init.headers);
+    if (needsCsrf) {
+      const t = await getCsrfToken();
+      headers.set('X-CSRF-TOKEN', t);
+    }
+    if (
+      init.body !== undefined &&
+      typeof init.body === 'string' &&
+      !headers.has('Content-Type')
+    ) {
+      headers.set('Content-Type', 'application/json');
+    }
+    return headers;
+  };
+
+  let headers = await withHeaders();
+  let response = await fetch(`${base}${path}`, { ...init, credentials: 'include', headers });
+
+  if (needsCsrf && response.status === 403) {
+    resetCsrfCache();
+    headers = await withHeaders();
+    response = await fetch(`${base}${path}`, { ...init, credentials: 'include', headers });
   }
-  if (
-    init.body !== undefined &&
-    typeof init.body === 'string' &&
-    !headers.has('Content-Type')
-  ) {
-    headers.set('Content-Type', 'application/json');
-  }
-  return fetch(`${base}${path}`, { ...init, credentials: 'include', headers });
+
+  return response;
 }
 
 export async function apiJson<T>(path: string, init: RequestInit = {}): Promise<T> {

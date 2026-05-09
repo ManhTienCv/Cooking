@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, X, ChefHat } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import AuthModal from '../../components/AuthModal';
 import { apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
@@ -10,82 +10,31 @@ import RecipeList from '../../components/recipes/RecipeList';
 import CreateRecipeModal from '../../components/recipes/CreateRecipeModal';
 import Pagination from '../../components/ui/Pagination';
 import type { RecipeListRow, RecipeCategory } from '../../components/recipes/types';
-
-const LEGACY_RECIPE_CATEGORIES = [
-  'Bữa Tối',
-  'Nhanh & Gọn',
-  'Món Salad',
-  'Eat Clean',
-  'Món Chay',
-  'Nồi Áp Suất',
-  'Thuần Chay',
-  'Thực đơn bận rộn',
-  'Súp & Canh',
-  'Đồ uống',
-  'Món chính',
-  'Món khai vị',
-  'Tráng miệng',
-];
+import { LEGACY_RECIPE_CATEGORIES } from '../../constants/recipes';
+import { useRecipeFilters } from '../../hooks/useRecipeFilters';
 
 const PAGE_SIZE = 6;
 
-const normalizeCategory = (value: string) =>
-  value
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[-_]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
-
 export default function Recipes() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const categoryParam = searchParams.get('category');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Tất cả');
-  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   const [categoryOptions, setCategoryOptions] = useState<RecipeCategory[]>([]);
   const [categories, setCategories] = useState<string[]>(['Tất cả']);
   
+  const {
+    searchQuery,
+    setSearchQuery,
+    selectedCategory,
+    setSelectedCategory,
+    currentPage,
+    setCurrentPage,
+    clearFilters
+  } = useRecipeFilters(categories);
+
   const [recipes, setRecipes] = useState<RecipeListRow[]>([]);
   const [totalRecipes, setTotalRecipes] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!categoryParam) return;
-    const normalizedParam = normalizeCategory(categoryParam);
-    if (!normalizedParam) return;
-
-    const normalizedAll = normalizeCategory('Tất cả');
-    if (normalizedParam === normalizedAll) {
-      setSelectedCategory((prev) => (prev !== 'Tất cả' ? 'Tất cả' : prev));
-      return;
-    }
-
-    const match = categories.find((cat) => normalizeCategory(cat) === normalizedParam);
-    if (match) {
-      setSelectedCategory((prev) => (prev !== match ? match : prev));
-    }
-  }, [categoryParam, categories]);
-
-  const handleCategoryChange = (value: string) => {
-    const isAll = value === 'Tất cả';
-    const isSame = value === selectedCategory;
-    const isUrlSynced = isAll ? !categoryParam : categoryParam === value;
-    if (isSame && isUrlSynced) return;
-
-    setSelectedCategory(value);
-    const next = new URLSearchParams(searchParams);
-    if (value && !isAll) {
-      next.set('category', value);
-    } else {
-      next.delete('category');
-    }
-    setSearchParams(next, { replace: true });
-  };
 
   // Load Categories
   useEffect(() => {
@@ -134,15 +83,6 @@ export default function Recipes() {
     return () => clearTimeout(t);
   }, [fetchRecipes]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedCategory]);
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   // Auth & Modal handling
   useEffect(() => {
     if (isModalOpen) {
@@ -187,7 +127,7 @@ export default function Recipes() {
       <RecipeFilterBar 
         categories={categories}
         selectedCategory={selectedCategory}
-        setSelectedCategory={handleCategoryChange}
+        setSelectedCategory={setSelectedCategory}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -222,17 +162,14 @@ export default function Recipes() {
         <RecipeList 
           isLoading={isLoading} 
           recipes={recipes} 
-          onClearFilters={() => {
-            setSearchQuery('');
-            handleCategoryChange('Tất cả');
-          }} 
+          onClearFilters={clearFilters}
         />
         {!isLoading && (
           <Pagination
             currentPage={currentPage}
             totalItems={totalRecipes}
             pageSize={PAGE_SIZE}
-            onPageChange={handlePageChange}
+            onPageChange={setCurrentPage}
           />
         )}
       </div>

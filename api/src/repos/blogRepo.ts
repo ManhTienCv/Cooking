@@ -1,18 +1,7 @@
 import { pool } from '../db/pool.js';
-
-import { DEFAULT_BLOG_CATEGORIES } from '../data/defaultCategories.js';
+import { DEFAULT_BLOG_CATEGORIES, slugify } from '../data/defaultCategories.js';
 
 type DbRow = Record<string, unknown>;
-
-function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 120);
-}
 
 async function ensureDefaultCategories(): Promise<void> {
   for (const name of DEFAULT_BLOG_CATEGORIES) {

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { apiJson } from '../../lib/api';
+import { DIFFICULTY_LEVELS } from '../../constants/recipes';
 import type { RecipeCategory } from './types';
 
 interface CreateRecipeModalProps {
@@ -134,9 +135,9 @@ export default function CreateRecipeModal({
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Độ khó *</label>
                 <select required value={formData.difficulty} onChange={(e) => setFormData((prev) => ({ ...prev, difficulty: e.target.value }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all">
-                  <option value="Dễ">Dễ</option>
-                  <option value="Trung bình">Trung bình</option>
-                  <option value="Khó">Khó</option>
+                  {DIFFICULTY_LEVELS.map((level) => (
+                    <option key={level} value={level}>{level}</option>
+                  ))}
                 </select>
               </div>
             </div>

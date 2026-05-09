@@ -8,6 +8,7 @@ import { apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
 import DOMPurify from 'dompurify';
 import ImageWithFallback from '../../lib/ImageWithFallback';
+import { AUTH_CHANGE_EVENT } from '../../lib/authEvents';
 
 interface BlogPost {
   id: number;
@@ -111,6 +112,14 @@ export default function BlogDetail() {
   }, [id]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    const handleAuthChanged = () => {
+      void load();
+    };
+    window.addEventListener(AUTH_CHANGE_EVENT, handleAuthChanged);
+    return () => window.removeEventListener(AUTH_CHANGE_EVENT, handleAuthChanged);
+  }, [load]);
 
   // Sticky bar on scroll
   useEffect(() => {
@@ -254,7 +263,7 @@ export default function BlogDetail() {
           <button onClick={() => setIsAuthOpen(true)} className="bg-black dark:bg-white text-white dark:text-black px-8 py-3 rounded-full hover:opacity-80 transition-opacity font-semibold mb-3 w-full">Đăng nhập</button>
           <Link to="/blog" className="text-sm text-gray-500 hover:text-black dark:hover:text-white transition-colors">← Quay lại trang Blog</Link>
         </div>
-        <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onSuccess={load} />
+        <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       </main>
     );
   }
@@ -524,8 +533,7 @@ export default function BlogDetail() {
         </Reveal>
       </section>
 
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onSuccess={load} />
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
     </main>
   );
 }
-

@@ -5,34 +5,26 @@ import { Reveal } from '../../components/motion/ScrollReveal';
 import AuthModal from '../../components/AuthModal';
 
 import type { BlogPostRow, BlogCategory } from '../../components/blog/types';
-import { LEGACY_BLOG_CATEGORIES } from '../../components/blog/types';
 import BlogFilterBar from '../../components/blog/BlogFilterBar';
 import BlogList from '../../components/blog/BlogList';
 import CreatePostModal from '../../components/blog/CreatePostModal';
 import Pagination from '../../components/ui/Pagination';
-
-const PAGE_SIZE = 6;
+import { useBlogFilters } from '../../hooks/useBlogFilters';
+import { BLOG_PAGE_SIZE, LEGACY_BLOG_CATEGORIES } from '../../constants/blog';
 
 export default function Blog() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Tất cả');
-  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
-  useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.paddingRight = '8px';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
-    };
-  }, [isModalOpen]);
+  const {
+    searchQuery,
+    setSearchQuery,
+    selectedCategory,
+    setSelectedCategory,
+    currentPage,
+    setCurrentPage,
+    clearFilters
+  } = useBlogFilters();
 
   const [categoryOptions, setCategoryOptions] = useState<BlogCategory[]>([]);
   const categories = useMemo(() => {
@@ -61,8 +53,8 @@ export default function Blog() {
       const q = new URLSearchParams();
       if (searchQuery.trim()) q.set('q', searchQuery.trim());
       if (selectedCategory && selectedCategory !== 'Tất cả') q.set('category', selectedCategory);
-      q.set('limit', String(PAGE_SIZE));
-      q.set('offset', String((currentPage - 1) * PAGE_SIZE));
+      q.set('limit', String(BLOG_PAGE_SIZE));
+      q.set('offset', String((currentPage - 1) * BLOG_PAGE_SIZE));
       const data = await apiJson<{ posts: BlogPostRow[]; total?: number }>(`/api/blog/posts?${q.toString()}`);
       
       setPosts(data.posts ?? []);
@@ -109,14 +101,20 @@ export default function Blog() {
     };
   }, [loadPosts]);
 
+  // Auth & Modal handling
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedCategory]);
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = '8px';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    };
+  }, [isModalOpen]);
 
   const openCreateModal = async () => {
     try {
@@ -193,17 +191,14 @@ export default function Blog() {
         <BlogList 
           isLoading={isLoading} 
           posts={posts} 
-          onClearFilter={() => {
-            setSearchQuery('');
-            setSelectedCategory('Tất cả');
-          }} 
+          onClearFilter={clearFilters}
         />
         {!isLoading && (
           <Pagination
             currentPage={currentPage}
             totalItems={totalPosts}
-            pageSize={PAGE_SIZE}
-            onPageChange={handlePageChange}
+            pageSize={BLOG_PAGE_SIZE}
+            onPageChange={setCurrentPage}
           />
         )}
       </div>

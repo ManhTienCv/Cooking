@@ -6,6 +6,7 @@ import { apiFetch, apiJson } from '../../lib/api';
 import ImageWithFallback from '../../lib/ImageWithFallback';
 import AuthModal from '../../components/AuthModal';
 import { HeroEnter, Reveal, RevealStaggerItem } from '../../components/motion/ScrollReveal';
+import { AUTH_CHANGE_EVENT } from '../../lib/authEvents';
 
 interface RecipeRow {
   id: number;
@@ -73,6 +74,14 @@ export default function RecipeDetail() {
   }, [id]);
 
   useEffect(() => { void loadRecipe(); }, [loadRecipe]);
+
+  useEffect(() => {
+    const handleAuthChanged = () => {
+      void loadRecipe();
+    };
+    window.addEventListener(AUTH_CHANGE_EVENT, handleAuthChanged);
+    return () => window.removeEventListener(AUTH_CHANGE_EVENT, handleAuthChanged);
+  }, [loadRecipe]);
 
   // Timer countdown
   useEffect(() => {
@@ -146,7 +155,7 @@ export default function RecipeDetail() {
           <button onClick={() => setIsAuthOpen(true)} className="bg-black dark:bg-white text-white dark:text-black px-8 py-3 rounded-full hover:opacity-80 transition-opacity font-semibold mb-3 w-full">Đăng nhập</button>
           <Link to="/recipes" className="text-sm text-gray-500 hover:text-black dark:hover:text-white transition-colors">← Quay lại danh sách</Link>
         </div>
-        <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onSuccess={loadRecipe} />
+        <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       </main>
     );
   }
@@ -399,4 +408,3 @@ export default function RecipeDetail() {
     </main>
   );
 }
-

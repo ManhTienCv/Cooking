@@ -38,11 +38,13 @@ authRouter.get('/me', asyncHandler(async (req, res) => {
 authRouter.post('/login', authLoginRateLimit, requireCsrf, asyncHandler(async (req, res) => {
   const { userId, user } = await authService.login(req);
 
+  const oldCsrfToken = req.session.csrfToken;
   req.session.regenerate((regenErr) => {
     if (regenErr) {
       res.status(500).json({ success: false, message: 'Login failed.' });
       return;
     }
+    req.session.csrfToken = oldCsrfToken;
     req.session.userId = userId;
     logAuthLogin('user', { success: true, email: user.email, req, subjectId: userId });
     res.json({
@@ -72,11 +74,13 @@ authRouter.post('/register/request-otp', authRegisterOtpRateLimit, requireCsrf, 
 authRouter.post('/register/verify', authRegisterRateLimit, requireCsrf, asyncHandler(async (req, res) => {
   const { userId, user } = await authService.verifyRegisterOtp(req.body);
 
+  const oldCsrfToken = req.session.csrfToken;
   req.session.regenerate((regenErr) => {
     if (regenErr) {
       res.status(500).json({ success: false, message: 'Đăng ký thất bại.' });
       return;
     }
+    req.session.csrfToken = oldCsrfToken;
     req.session.userId = userId;
     res.json({
       success: true,

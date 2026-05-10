@@ -24,11 +24,13 @@ adminRouter.get('/me', asyncHandler(async (req, res) => {
 adminRouter.post('/login', adminLoginRateLimit, requireCsrf, asyncHandler(async (req, res) => {
   const { adminId, admin } = await adminService.login(req);
 
+  const oldCsrfToken = req.session.csrfToken;
   req.session.regenerate((regenErr) => {
     if (regenErr) {
       res.status(500).json({ success: false, message: 'Login failed.' });
       return;
     }
+    req.session.csrfToken = oldCsrfToken;
     req.session.adminId = adminId;
     res.json({ success: true, admin });
   });

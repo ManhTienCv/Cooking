@@ -9,12 +9,12 @@ import ImageWithFallback from '../../lib/ImageWithFallback';
 import type { FeaturedRecipe } from './types';
 
 const STATIC_COLLECTIONS = [
-  { text: 'Nồi áp suất', detail: 'Món mềm nhanh, ít canh lửa' },
-  { text: 'Món thuần chay', detail: 'Nhẹ bụng cho ngày trong tuần' },
-  { text: 'Thực đơn bận rộn', detail: 'Chuẩn bị nhanh sau giờ làm' },
-  { text: 'Nhanh và dễ', detail: 'Ít bước, nguyên liệu quen' },
-  { text: 'Món mì Ý', detail: 'Pasta sốt kem, sốt cà chua' },
-  { text: 'Súp và canh', detail: 'Ấm bụng, dễ nấu cho gia đình' },
+  { text: 'Nồi áp suất', detail: 'Món mềm nhanh, ít canh lửa', category: 'Nồi Áp Suất' },
+  { text: 'Món thuần chay', detail: 'Nhẹ bụng cho ngày trong tuần', category: 'Thuần Chay' },
+  { text: 'Thực đơn bận rộn', detail: 'Chuẩn bị nhanh sau giờ làm', category: 'Thực đơn bận rộn' },
+  { text: 'Nhanh và dễ', detail: 'Ít bước, nguyên liệu quen', category: 'Nhanh & Gọn' },
+  { text: 'Món mì Ý', detail: 'Pasta sốt kem, sốt cà chua', search: 'mì Ý' },
+  { text: 'Súp và canh', detail: 'Ấm bụng, dễ nấu cho gia đình', category: 'Súp & Canh' },
 ];
 
 export default function FeaturedRecipes() {
@@ -137,7 +137,7 @@ export default function FeaturedRecipes() {
                     {STATIC_COLLECTIONS.map((col, i) => (
                       <li key={col.text}>
                         <Link
-                          to={`/recipes?category=${encodeURIComponent(col.text)}`}
+                          to={col.category ? `/recipes?category=${encodeURIComponent(col.category)}` : `/recipes?q=${encodeURIComponent(col.search || '')}`}
                           className="flex gap-3 rounded-md px-2 py-3 transition hover:bg-gray-100 dark:hover:bg-slate-800"
                         >
                           <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white dark:bg-white dark:text-slate-950">

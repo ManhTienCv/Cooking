@@ -13,8 +13,9 @@ const normalizeCategory = (value: string) =>
 export function useRecipeFilters(categories: string[]) {
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
+  const qParam = searchParams.get('q');
   
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(qParam || '');
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [currentPage, setCurrentPage] = useState(1);
 

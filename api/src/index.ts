@@ -14,6 +14,7 @@ import { blogRouter } from './routes/blog.js';
 import { healthRouter } from './routes/health.js';
 import { adminRouter } from './routes/admin.js';
 import { feedbackRouter } from './routes/feedback.js';
+import { marketplaceRouter } from './routes/marketplace.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -88,6 +89,7 @@ app.use('/api/blog', blogRouter);
 app.use('/api/health', healthRouter);
 app.use('/api/recipes', recipesRouter);
 app.use('/api/feedback', feedbackRouter);
+app.use('/api/marketplace', marketplaceRouter);
 
 app.use(errorHandler);
 

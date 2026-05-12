@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Moon, Sun, Calendar, Bell } from 'lucide-react';
+import { Moon, Sun, Calendar } from 'lucide-react';
 import { useTheme } from '../../../hooks/useTheme';
+import NotificationBell from '../../../components/ui/NotificationBell';
 
 export default function AdminHeader({ pendingCount }: { pendingCount: number }) {
   const [time, setTime] = useState('');
@@ -49,15 +49,7 @@ export default function AdminHeader({ pendingCount }: { pendingCount: number }) 
           </span>
         </div>
 
-        <Link
-          to="/admin/approvals"
-          className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-center relative cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition"
-        >
-          <Bell className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-          {pendingCount > 0 && (
-            <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-slate-800" />
-          )}
-        </Link>
+        <NotificationBell />
       </div>
     </header>
   );

@@ -15,7 +15,7 @@ function cachePathSync(prompt: string): string {
 /* ──────────────────────────────────────────────────────────────
  *  Multi-provider AI — thử lần lượt các provider miễn phí.
  *  Khi 1 provider hết quota (429) hoặc lỗi, tự chuyển sang cái tiếp theo.
- *  Thứ tự ưu tiên: Gemini → Groq → OpenRouter free → null
+ *  Thứ tự ưu tiên: Groq → Gemini → OpenRouter free → null
  * ────────────────────────────────────────────────────────────── */
 
 type AiProvider = {
@@ -27,12 +27,12 @@ type AiProvider = {
 function getProviders(): AiProvider[] {
   const list: AiProvider[] = [];
 
-  // 1. Google Gemini (AI_API_KEY)
-  if (env.aiApiKey) list.push({ name: 'Gemini', call: callGemini });
-
-  // 2. Groq — Llama models, rất nhanh, free 30 req/min
+  // 1. Groq — Llama models, rất nhanh, free 30 req/min (ưu tiên cao nhất)
   const groqKey = process.env.GROQ_API_KEY ?? '';
   if (groqKey) list.push({ name: 'Groq', call: callGroq });
+
+  // 2. Google Gemini (AI_API_KEY)
+  if (env.aiApiKey) list.push({ name: 'Gemini', call: callGemini });
 
   // 3. OpenRouter — free models (meta-llama, mistral, etc.)
   const orKey = process.env.OPENROUTER_API_KEY ?? '';

@@ -4,7 +4,7 @@
 
   # 🍳 CookingBoy
 
-  **Nền tảng quản lý, chia sẻ công thức ẩm thực và xây dựng lối sống lành mạnh**
+  **Nền tảng ẩm thực số hoàn chỉnh — Công thức, Cửa hàng, Diễn đàn & Sức khỏe**
 
   [![React 19](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=black&style=for-the-badge)](#tech-stack)
   [![Vite 8](https://img.shields.io/badge/Vite-8.0-646CFF?logo=vite&logoColor=white&style=for-the-badge)](#tech-stack)
@@ -114,6 +114,34 @@
 
   </td>
   </tr>
+  <tr>
+    <td width="50%">
+
+### 🛒 Marketplace & Cửa hàng
+- **Duyệt sản phẩm** theo danh mục, loại (đồ ăn / nguyên liệu / đồ bếp)
+- **Chi tiết sản phẩm** với gallery, thông số, đánh giá
+- **Giỏ hàng** thêm / sửa / xóa sản phẩm
+- **Checkout** đặt hàng với COD hoặc chuyển khoản
+- **Theo dõi đơn hàng** — trạng thái realtime
+- **AI gợi ý sản phẩm** dựa trên Groq LLM
+- **Recipe → Shop** liên kết nguyên liệu → mua sắm
+- **Featured Bundles** combo sản phẩm nổi bật
+
+  </td>
+  <td width="50%">
+
+### 🏪 Seller Dashboard & Quản lý bán hàng
+- **Đăng ký bán hàng** từ trang profile
+- **Dashboard seller** với thống kê doanh thu, đơn hàng
+- **Tạo sản phẩm** với form thông minh theo loại (đồ ăn / nguyên liệu / đồ bếp)
+- **Quản lý sản phẩm** — trạng thái duyệt, tồn kho
+- **Quản lý đơn hàng** — xác nhận, vận chuyển
+- **Thông báo realtime** khi có đơn hàng mới (polling 30s)
+- **Admin duyệt** sản phẩm + đơn hàng marketplace
+- **Search/Filter nâng cao** cho admin quản lý
+
+  </td>
+  </tr>
 </table>
 
 ---
@@ -129,6 +157,9 @@
 │   ┌──────────┐  ┌──────────┐  ┌────────┐  ┌────────┐  ┌────────────┐  │
 │   │   Home   │  │ Recipes  │  │  Blog  │  │ Health │  │   Admin    │  │
 │   └──────────┘  └──────────┘  └────────┘  └────────┘  └────────────┘  │
+│   ┌──────────┐  ┌──────────┐  ┌────────────┐  ┌──────────────────┐    │
+│   │   Shop   │  │   Cart   │  │  Checkout  │  │ Seller Dashboard │    │
+│   └──────────┘  └──────────┘  └────────────┘  └──────────────────┘    │
 │                         │                                              │
 │                   RESTful API (fetch)                                   │
 └─────────────────────────┼──────────────────────────────────────────────┘
@@ -143,10 +174,11 @@
 │                                                                        │
 │   ┌─── Route Layer ────────────────────────────────────────────────┐   │
 │   │  /api/auth · /api/recipes · /api/blog · /api/health · /api/admin│  │
+│   │  /api/marketplace (products · cart · orders · seller)           │  │
 │   └────────────────────────────────────────────────────────────────┘   │
 │                                                                        │
 │   ┌─── Service Layer ──────────────────────────────────────────────┐   │
-│   │  mailService · aiService · mealPlanHandler                      │   │
+│   │  mailService · aiService · mealPlanHandler · marketplaceService │  │
 │   └────────────────────────────────────────────────────────────────┘   │
 │                          │                                             │
 │                     pg (node-postgres)                                  │
@@ -159,6 +191,8 @@
 │   recipe_categories · recipe_views · saved_recipes                     │
 │   blog_categories · blog_posts · blog_likes · blog_comments           │
 │   health_plans · plan_meals · shopping_items · feedback                │
+│   market_categories · market_products · market_product_reviews         │
+│   market_sellers · market_carts · market_orders · market_order_items   │
 │                                                                        │
 │              Indexes · Foreign Keys · JSONB · Constraints              │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -210,7 +244,7 @@
 
 ## 🗄️ Cơ sở dữ liệu
 
-Hệ thống sử dụng **15 bảng** quan hệ với ràng buộc chặt chẽ:
+Hệ thống sử dụng **22 bảng** quan hệ với ràng buộc chặt chẽ:
 
 ```
 ┌──────────────────┐       ┌──────────────────────┐
@@ -324,6 +358,31 @@ Tất cả API endpoints đều có prefix `/api` và trả về JSON.
 | `GET` | `/admin/users` | Danh sách người dùng | Admin |
 | `PUT` | `/admin/recipes/:id/status` | Duyệt / từ chối công thức | Admin |
 | `PUT` | `/admin/blog/:id/status` | Duyệt / từ chối bài viết | Admin |
+
+### 🛒 Marketplace (`/api/marketplace`)
+
+| Method | Endpoint | Mô tả | Bảo vệ |
+| :---: | :--- | :--- | :---: |
+| `GET` | `/products` | Danh sách sản phẩm (lọc, phân trang) | Public |
+| `GET` | `/products/:slug` | Chi tiết sản phẩm | Public |
+| `GET` | `/categories` | Danh mục sản phẩm | Public |
+| `POST` | `/cart` | Thêm sản phẩm vào giỏ | Auth |
+| `GET` | `/cart` | Xem giỏ hàng | Auth |
+| `DELETE` | `/cart/:id` | Xóa sản phẩm khỏi giỏ | Auth |
+| `POST` | `/orders` | Đặt hàng (checkout) | Auth |
+| `GET` | `/orders` | Danh sách đơn hàng | Auth |
+| `GET` | `/orders/:id` | Chi tiết đơn hàng | Auth |
+
+### 🏪 Seller (`/api/marketplace/seller`)
+
+| Method | Endpoint | Mô tả | Bảo vệ |
+| :---: | :--- | :--- | :---: |
+| `POST` | `/register` | Đăng ký bán hàng | Auth |
+| `GET` | `/profile` | Thông tin cửa hàng | Seller |
+| `GET` | `/products` | Sản phẩm của seller | Seller |
+| `POST` | `/products` | Tạo sản phẩm mới | Seller |
+| `GET` | `/orders` | Đơn hàng của seller | Seller |
+| `PUT` | `/orders/:id/status` | Cập nhật trạng thái đơn | Seller |
 
 ---
 
@@ -470,18 +529,22 @@ CookingBoy/
 │   │   │   ├── csrf.ts           #     CSRF token protection
 │   │   │   ├── rateLimits.ts     #     Rate limiting rules
 │   │   │   ├── requireAuth.ts    #     Xác thực người dùng
-│   │   │   └── requireAdmin.ts   #     Xác thực quản trị viên
+│   │   │   ├── requireAdmin.ts   #     Xác thực quản trị viên
+│   │   │   └── requireSeller.ts  #     Xác thực người bán
 │   │   ├── routes/               #   API route handlers
 │   │   │   ├── auth.ts           #     Đăng ký, đăng nhập, OTP
 │   │   │   ├── recipes.ts        #     CRUD công thức
 │   │   │   ├── blog.ts           #     CRUD bài viết
 │   │   │   ├── health.ts         #     Kế hoạch dinh dưỡng
+│   │   │   ├── marketplace.ts    #     Marketplace + Seller APIs
 │   │   │   └── admin.ts          #     Quản trị hệ thống
 │   │   ├── services/             #   Business logic
 │   │   │   ├── mailService.ts    #     Gửi email OTP (SMTP)
-│   │   │   ├── aiService.ts      #     Tích hợp Gemini AI
+│   │   │   ├── aiService.ts      #     Tích hợp Gemini / Groq AI
+│   │   │   ├── marketplaceService.ts #  Marketplace business logic
 │   │   │   └── mealPlanHandler.ts#     Xử lý kế hoạch bữa ăn
 │   │   ├── repos/                #   Data access layer
+│   │   │   └── marketplaceRepo.ts#     Marketplace queries
 │   │   └── types/                #   TypeScript interfaces
 │   ├── tsconfig.json
 │   └── package.json
@@ -504,8 +567,16 @@ CookingBoy/
 │   │   │   ├── Recipes/         #     Công thức (list + detail)
 │   │   │   ├── Blog/            #     Blog (list + detail)
 │   │   │   ├── Health/          #     Sức khỏe (list + detail)
-│   │   │   ├── Profile/         #     Hồ sơ cá nhân
-│   │   │   └── Admin/           #     Admin dashboard + login
+│   │   │   ├── Profile/         #     Hồ sơ cá nhân (+ tab Cửa hàng)
+│   │   │   ├── Admin/           #     Admin dashboard + login
+│   │   │   ├── Shop/            #     Marketplace (list + detail)
+│   │   │   ├── Seller/          #     Seller dashboard + tạo sản phẩm
+│   │   │   ├── Cart.tsx         #     Giỏ hàng
+│   │   │   ├── Checkout.tsx     #     Thanh toán
+│   │   │   └── Orders.tsx       #     Lịch sử đơn hàng
+│   │   ├── contexts/            #   React Context providers
+│   │   │   ├── CartContext.tsx   #     Cart state management
+│   │   │   └── NotificationContext.tsx # Realtime notification polling
 │   │   ├── lib/                 #   Utilities & helpers
 │   │   └── assets/              #   Static resources
 │   ├── public/                  #   Public assets
@@ -564,9 +635,17 @@ Bộ tài liệu toàn diện dành cho lập trình viên muốn cài đặt, m
 | `/blog/detail/:id` | `BlogDetail` | Chi tiết bài viết | 🌐 Public |
 | `/health` | `Health` | Trang sức khỏe & dinh dưỡng | 🌐 Public |
 | `/health/detail/:id` | `HealthDetail` | Chi tiết kế hoạch sức khỏe | 🌐 Public |
-| `/profile` | `Profile` | Hồ sơ & quản lý tài khoản | 🔒 Auth |
+| `/profile` | `Profile` | Hồ sơ & quản lý tài khoản (+ tab Cửa hàng) | 🔒 Auth |
+| `/shop` | `Shop` | Duyệt & tìm kiếm sản phẩm marketplace | 🌐 Public |
+| `/shop/:slug` | `ProductDetail` | Chi tiết sản phẩm + đánh giá | 🌐 Public |
+| `/cart` | `Cart` | Giỏ hàng | 🔒 Auth |
+| `/checkout` | `Checkout` | Thanh toán đơn hàng | 🔒 Auth |
+| `/orders` | `Orders` | Lịch sử đơn hàng | 🔒 Auth |
+| `/seller` | `SellerDashboard` | Bảng điều khiển người bán | 🔒 Seller |
 | `/admin/login` | `AdminLogin` | Đăng nhập quản trị | 🌐 Public |
 | `/admin` | `AdminPage` | Bảng điều khiển quản trị | 🔐 Admin |
+| `/admin/market-products` | `MarketProductsTab` | Quản lý sản phẩm marketplace | 🔐 Admin |
+| `/admin/market-orders` | `MarketOrdersTab` | Quản lý đơn hàng marketplace | 🔐 Admin |
 
 ---
 

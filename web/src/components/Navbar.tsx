@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChefHat, Menu, LogOut, Moon, Sun } from 'lucide-react';
+import { ChefHat, Menu, LogOut, Moon, Sun, ShoppingCart, Store } from 'lucide-react';
 import AuthModal from './AuthModal';
 import { apiFetch, apiJson, resetCsrfCache } from '../lib/api';
 import { AUTH_CHANGE_EVENT, notifyAuthChanged } from '../lib/authEvents';
 import { scrollWindowToTop } from '../lib/scroll';
 import { useTheme } from '../hooks/useTheme';
+import { useCart } from '../contexts/CartContext';
 
 type MeState =
   | { authenticated: false }
@@ -24,6 +25,7 @@ type MeState =
 const NAV_ITEMS = [
   { path: '/', label: 'Trang chủ' },
   { path: '/recipes', label: 'Công thức' },
+  { path: '/shop', label: 'Cửa hàng' },
   { path: '/blog', label: 'Diễn đàn' },
   { path: '/health', label: 'Sức khỏe' },
   { path: '/about', label: 'Về chúng tôi' },
@@ -35,6 +37,7 @@ export default function Navbar() {
   const [authInitialSignUp, setAuthInitialSignUp] = useState(false);
   const [me, setMe] = useState<MeState | null>(null);
   const { isDark, toggleTheme } = useTheme();
+  const { count: cartCount } = useCart();
   const location = useLocation();
   const navigate = useNavigate();
   const currentPage = location.pathname;
@@ -127,6 +130,35 @@ export default function Navbar() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              {/* Cart badge */}
+              <Link
+                to="/cart"
+                onClick={() => scrollWindowToTop()}
+                className="relative p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors duration-300"
+                aria-label="Giỏ hàng"
+                title="Giỏ hàng"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm">
+                    {cartCount > 99 ? '99+' : cartCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Seller link - next to cart */}
+              {me?.authenticated && (
+                <Link
+                  to="/seller"
+                  onClick={() => scrollWindowToTop()}
+                  className="relative p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-400 transition-colors duration-300"
+                  aria-label="Kênh bán hàng"
+                  title="Kênh bán hàng"
+                >
+                  <Store className="w-5 h-5" />
+                </Link>
+              )}
+
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors duration-300"
@@ -229,6 +261,13 @@ export default function Navbar() {
                         </span>
                       )}
                       {me.user.full_name}
+                    </Link>
+                    <Link
+                      to="/seller"
+                      onClick={() => { scrollWindowToTop(); setIsMenuOpen(false); }}
+                      className={`mobile-menu-item ${isMenuOpen ? 'show' : ''} flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20`}
+                    >
+                      <Store className="w-5 h-5" /> Kênh bán hàng
                     </Link>
                     <button
                       type="button"

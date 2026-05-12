@@ -1,0 +1,181 @@
+-- ================================================================
+-- Migration: Smart Cooking Hub — Marketplace
+-- Adds: product_categories, products, cart_items, orders,
+--        order_items, product_reviews, seller_profiles,
+--        product_bundles, bundle_items, wishlist_items
+-- ================================================================
+
+-- 1. Danh mục sản phẩm (cả đồ ăn & đồ bếp)
+CREATE TABLE IF NOT EXISTS product_categories (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  slug VARCHAR(100) NOT NULL UNIQUE,
+  type VARCHAR(20) NOT NULL DEFAULT 'food',          -- 'food' | 'equipment'
+  icon VARCHAR(50),
+  description TEXT,
+  parent_id INT REFERENCES product_categories(id) ON DELETE SET NULL,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Seller profiles — user nâng cấp thành người bán
+CREATE TABLE IF NOT EXISTS seller_profiles (
+  user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  store_name VARCHAR(200) NOT NULL,
+  store_description TEXT,
+  phone VARCHAR(20),
+  address TEXT,
+  is_verified BOOLEAN DEFAULT FALSE,
+  total_sales INT DEFAULT 0,
+  rating DECIMAL(3,2) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. Sản phẩm thống nhất (đồ ăn + đồ bếp)
+CREATE TABLE IF NOT EXISTS products (
+  id SERIAL PRIMARY KEY,
+  seller_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  category_id INT NOT NULL REFERENCES product_categories(id) ON DELETE RESTRICT,
+  name VARCHAR(200) NOT NULL,
+  slug VARCHAR(220) NOT NULL UNIQUE,
+  description TEXT,
+  price DECIMAL(12,2) NOT NULL CHECK (price >= 0),
+  sale_price DECIMAL(12,2) CHECK (sale_price IS NULL OR sale_price >= 0),
+  image_url VARCHAR(500),
+  images JSONB DEFAULT '[]',                          -- gallery: ["url1","url2"]
+  product_type VARCHAR(20) NOT NULL DEFAULT 'food',   -- 'food' | 'ingredient' | 'equipment'
+  specs JSONB DEFAULT '{}',                           -- kỹ thuật: {"material":"Inox","weight":"1.2kg"}
+  stock INT DEFAULT 0 CHECK (stock >= 0),
+  unit VARCHAR(50) DEFAULT 'cái',                     -- đơn vị: cái, kg, gói, hộp, ...
+  is_available BOOLEAN DEFAULT TRUE,
+  is_featured BOOLEAN DEFAULT FALSE,
+  rating DECIMAL(3,2) DEFAULT 0,
+  total_reviews INT DEFAULT 0,
+  total_sold INT DEFAULT 0,
+  recipe_id INT REFERENCES recipes(id) ON DELETE SET NULL,  -- liên kết recipe (nếu có)
+  status VARCHAR(20) DEFAULT 'pending',               -- 'pending' | 'approved' | 'rejected'
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 4. Giỏ hàng
+CREATE TABLE IF NOT EXISTS cart_items (
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, product_id)
+);
+
+-- 5. Đơn hàng
+CREATE TABLE IF NOT EXISTS orders (
+  id SERIAL PRIMARY KEY,
+  buyer_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  total_amount DECIMAL(12,2) NOT NULL CHECK (total_amount >= 0),
+  status VARCHAR(30) DEFAULT 'pending',
+    -- pending → confirmed → preparing → shipping → delivered → completed → cancelled
+  shipping_name VARCHAR(120),
+  shipping_phone VARCHAR(20),
+  shipping_address TEXT,
+  payment_method VARCHAR(30) DEFAULT 'cod',           -- 'cod' | 'bank_transfer'
+  note TEXT,
+  cancelled_reason TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 6. Chi tiết đơn hàng
+CREATE TABLE IF NOT EXISTS order_items (
+  id SERIAL PRIMARY KEY,
+  order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  product_id INT NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+  seller_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  product_name VARCHAR(200) NOT NULL,                 -- snapshot tên lúc mua
+  product_image VARCHAR(500),
+  quantity INT NOT NULL CHECK (quantity > 0),
+  unit_price DECIMAL(12,2) NOT NULL,
+  subtotal DECIMAL(12,2) NOT NULL
+);
+
+-- 7. Đánh giá sản phẩm
+CREATE TABLE IF NOT EXISTS product_reviews (
+  id SERIAL PRIMARY KEY,
+  product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment TEXT,
+  images JSONB DEFAULT '[]',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, product_id, order_id)
+);
+
+-- 8. Wishlist / Yêu thích sản phẩm
+CREATE TABLE IF NOT EXISTS wishlist_items (
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, product_id)
+);
+
+-- 9. Bundle / Gói combo
+CREATE TABLE IF NOT EXISTS product_bundles (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  slug VARCHAR(220) NOT NULL UNIQUE,
+  description TEXT,
+  image_url VARCHAR(500),
+  original_price DECIMAL(12,2) NOT NULL,
+  bundle_price DECIMAL(12,2) NOT NULL,
+  recipe_id INT REFERENCES recipes(id) ON DELETE SET NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 10. Chi tiết gói combo
+CREATE TABLE IF NOT EXISTS bundle_items (
+  id SERIAL PRIMARY KEY,
+  bundle_id INT NOT NULL REFERENCES product_bundles(id) ON DELETE CASCADE,
+  product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  quantity INT DEFAULT 1,
+  UNIQUE(bundle_id, product_id)
+);
+
+-- ================================================================
+-- Indexes tối ưu truy vấn
+-- ================================================================
+CREATE INDEX IF NOT EXISTS idx_products_seller ON products(seller_id);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
+CREATE INDEX IF NOT EXISTS idx_products_status_created ON products(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_products_type ON products(product_type);
+CREATE INDEX IF NOT EXISTS idx_products_featured ON products(is_featured) WHERE is_featured = TRUE;
+CREATE INDEX IF NOT EXISTS idx_products_name_trgm ON products USING gin (name gin_trgm_ops);
+
+CREATE INDEX IF NOT EXISTS idx_cart_user ON cart_items(user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_buyer ON orders(buyer_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_seller ON order_items(seller_id);
+CREATE INDEX IF NOT EXISTS idx_product_reviews_product ON product_reviews(product_id);
+CREATE INDEX IF NOT EXISTS idx_wishlist_user ON wishlist_items(user_id);
+
+-- ================================================================
+-- Default product categories
+-- ================================================================
+INSERT INTO product_categories (name, slug, type, icon, sort_order) VALUES
+  -- Đồ ăn
+  ('Đồ ăn sẵn',       'do-an-san',       'food',      'UtensilsCrossed', 1),
+  ('Nguyên liệu tươi','nguyen-lieu-tuoi','food',      'Carrot',          2),
+  ('Đồ khô & Gia vị', 'do-kho-gia-vi',  'food',      'Package',         3),
+  ('Bánh & Đồ ngọt',  'banh-do-ngot',   'food',      'Cake',            4),
+  ('Đồ uống',         'do-uong',        'food',      'Coffee',          5),
+  -- Đồ bếp
+  ('Nồi & Chảo',      'noi-chao',       'equipment', 'CookingPot',      6),
+  ('Dao & Thớt',      'dao-thot',       'equipment', 'Slice',           7),
+  ('Máy xay & Máy ép','may-xay-ep',     'equipment', 'Cog',             8),
+  ('Phụ kiện nhà bếp','phu-kien-bep',   'equipment', 'Wrench',          9),
+  ('Bộ đồ ăn',        'bo-do-an',       'equipment', 'Utensils',       10)
+ON CONFLICT (slug) DO NOTHING;

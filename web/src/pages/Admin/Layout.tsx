@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { apiJson } from '../../lib/api';
 import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
+import { NotificationProvider } from '../../contexts/NotificationContext';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ export default function AdminLayout() {
   }
 
   return (
+    <NotificationProvider role="admin">
     <div className="bg-slate-50 text-slate-900 h-screen flex overflow-hidden dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300">
       <AdminSidebar pendingCount={stats.pending} />
       <main className="flex-1 flex flex-col overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
@@ -49,5 +51,6 @@ export default function AdminLayout() {
         </div>
       </main>
     </div>
+    </NotificationProvider>
   );
 }

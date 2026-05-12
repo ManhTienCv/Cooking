@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Activity, BookOpen, Bookmark, CheckCircle, PenTool, Settings, X, Edit, Trash2 } from 'lucide-react';
+import { Activity, BookOpen, Bookmark, CheckCircle, PenTool, Settings, X, Edit, Trash2, Store, ShoppingBag, Package } from 'lucide-react';
 import { apiFetch, apiJson, resetCsrfCache } from '../../lib/api';
 import { notifyAuthChanged } from '../../lib/authEvents';
 import { Reveal } from '../../components/motion/ScrollReveal';
@@ -20,7 +20,7 @@ type PagedTab = 'recipes' | 'posts' | 'saved';
 
 export default function Profile() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('recipes');
+  const [activeTab, setActiveTab] = useState('shop');
   const [showSuccessMenu, setShowSuccessMenu] = useState(false);
 
   const [user, setUser] = useState<ProfileUser | null>(null);
@@ -32,6 +32,11 @@ export default function Profile() {
   const [savedRecipes, setSavedRecipes] = useState<ProfileRecipe[]>([]);
   const [myPlans, setMyPlans] = useState<ProfilePlan[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(false);
+
+  // Seller state
+  const [sellerProfile, setSellerProfile] = useState<{ store_name: string; store_description: string | null } | null>(null);
+  const [sellerProducts, setSellerProducts] = useState<{ id: number; name: string; price: number; status: string; stock: number; total_sold: number; image_url: string | null }[]>([]);
+  const [sellerNotRegistered, setSellerNotRegistered] = useState(false);
 
   const [pageByTab, setPageByTab] = useState<Record<PagedTab, number>>({ recipes: 1, posts: 1, saved: 1 });
   const [totalByTab, setTotalByTab] = useState<Record<PagedTab, number>>({ recipes: 0, posts: 0, saved: 0 });
@@ -69,6 +74,17 @@ export default function Profile() {
       } else if (tab === 'health') {
         const d = await apiJson<{ plans: ProfilePlan[] }>('/api/health/plans');
         setMyPlans(d.plans ?? []);
+      } else if (tab === 'shop') {
+        try {
+          const p = await apiJson<{ profile: { store_name: string; store_description: string | null } | null }>('/api/marketplace/seller/profile');
+          if (!p.profile) { setSellerNotRegistered(true); setSellerProfile(null); setSellerProducts([]); }
+          else {
+            setSellerProfile(p.profile);
+            setSellerNotRegistered(false);
+            const prods = await apiJson<{ products: typeof sellerProducts }>('/api/marketplace/seller/products?limit=20');
+            setSellerProducts(prods.products ?? []);
+          }
+        } catch { setSellerNotRegistered(true); }
       }
     } catch {
       if (tab === 'recipes') {
@@ -176,6 +192,7 @@ export default function Profile() {
   };
 
   const tabs = [
+    { id: 'shop', label: 'Cửa hàng', icon: Store },
     { id: 'recipes', label: 'Công thức của tôi', icon: BookOpen },
     { id: 'posts', label: 'Bài viết của tôi', icon: PenTool },
     { id: 'saved', label: 'Đã lưu', icon: Bookmark },
@@ -368,6 +385,91 @@ export default function Profile() {
                           </div>
                         ))}
                       </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'shop' && (
+                  <div>
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-bold font-serif text-gray-950 dark:text-white">Cửa hàng của tôi</h2>
+                      <Link to="/seller" className="inline-flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-full text-sm font-semibold hover:opacity-80 transition-all">
+                        <Store className="w-4 h-4" /> Quản lý cửa hàng
+                      </Link>
+                    </div>
+
+                    {isDataLoading ? (
+                      <div className="py-12 text-center text-gray-500 dark:text-gray-400">Đang tải...</div>
+                    ) : sellerNotRegistered ? (
+                      <div className="py-12 text-center">
+                        <Store className="mx-auto mb-4 h-16 w-16 text-gray-300 dark:text-slate-600" />
+                        <p className="text-gray-500 dark:text-gray-400 mb-4">Bạn chưa đăng ký bán hàng.</p>
+                        <Link to="/seller" className="inline-flex items-center gap-2 px-6 py-3 bg-amber-500 text-white rounded-full font-bold hover:bg-amber-600 transition-all shadow-md">
+                          <Store className="w-5 h-5" /> Đăng ký ngay
+                        </Link>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Store info card */}
+                        <div className="mb-6 p-5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-100 dark:border-amber-800/30">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+                              <Store className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                            </div>
+                            <h3 className="font-bold text-gray-900 dark:text-white text-lg">{sellerProfile?.store_name}</h3>
+                          </div>
+                          {sellerProfile?.store_description && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400 ml-12">{sellerProfile.store_description}</p>
+                          )}
+                          <div className="flex gap-6 mt-4 ml-12">
+                            <div className="text-center">
+                              <p className="text-xl font-bold text-gray-900 dark:text-white">{sellerProducts.length}</p>
+                              <p className="text-xs text-gray-500">Sản phẩm</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xl font-bold text-green-600">{sellerProducts.filter(p => p.status === 'approved').length}</p>
+                              <p className="text-xs text-gray-500">Đang bán</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xl font-bold text-amber-600">{sellerProducts.filter(p => p.status === 'pending').length}</p>
+                              <p className="text-xs text-gray-500">Chờ duyệt</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xl font-bold text-purple-600">{sellerProducts.reduce((s, p) => s + p.total_sold, 0)}</p>
+                              <p className="text-xs text-gray-500">Đã bán</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Products */}
+                        {sellerProducts.length === 0 ? (
+                          <div className="py-8 text-center text-gray-500 dark:text-gray-400">
+                            <Package className="mx-auto mb-3 h-12 w-12 text-gray-300 dark:text-slate-600" />
+                            <p>Chưa có sản phẩm nào. <Link to="/seller" className="text-amber-600 font-semibold hover:underline">Thêm sản phẩm mới &rarr;</Link></p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            {sellerProducts.map(p => (
+                              <div key={p.id} className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-md transition-shadow">
+                                <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-slate-700 overflow-hidden flex-shrink-0">
+                                  {p.image_url ? <img src={p.image_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xl">📦</div>}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-gray-900 dark:text-white truncate">{p.name}</h4>
+                                  <p className="text-sm text-gray-500">{p.price.toLocaleString('vi-VN')}đ · Kho: {p.stock}</p>
+                                </div>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  p.status === 'approved' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                  p.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                  'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                }`}>
+                                  {p.status === 'approved' ? 'Đang bán' : p.status === 'pending' ? 'Chờ duyệt' : 'Từ chối'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}

@@ -7,6 +7,8 @@ import ImageWithFallback from '../../lib/ImageWithFallback';
 import AuthModal from '../../components/AuthModal';
 import { HeroEnter, Reveal, RevealStaggerItem } from '../../components/motion/ScrollReveal';
 import { AUTH_CHANGE_EVENT } from '../../lib/authEvents';
+import BuyIngredientsPanel from '../../components/shop/BuyIngredientsPanel';
+import AiRecommendations from '../../components/shop/AiRecommendations';
 
 interface RecipeRow {
   id: number;
@@ -363,6 +365,16 @@ export default function RecipeDetail() {
               </div>
             </Reveal>
 
+            {/* Buy Ingredients — Smart Feature */}
+            {ingredientLines.length > 0 && (
+              <Reveal y={18} delay={0.07}>
+                <BuyIngredientsPanel
+                  ingredients={recipe.ingredients ?? ''}
+                  recipeTitle={recipe.title}
+                />
+              </Reveal>
+            )}
+
             {/* Author */}
             <Reveal y={18} delay={0.08}>
               <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700">
@@ -403,6 +415,16 @@ export default function RecipeDetail() {
               </div>
             </Reveal>
           </div>
+        </div>
+
+        {/* AI Recommendations — Smart Feature */}
+        <div className="mt-12">
+          <AiRecommendations
+            recipeTitle={recipe.title}
+            ingredients={recipe.ingredients ?? ''}
+            context="recipe"
+            limit={4}
+          />
         </div>
       </div>
     </main>

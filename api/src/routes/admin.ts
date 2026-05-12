@@ -4,6 +4,8 @@ import { adminLoginRateLimit } from '../middleware/rateLimits.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { adminRepo } from '../repos/adminRepo.js';
 import * as adminService from '../services/adminService.js';
+import * as marketplaceRepo from '../repos/marketplaceRepo.js';
+import * as marketplaceService from '../services/marketplaceService.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 
 export const adminRouter = Router();
@@ -151,5 +153,113 @@ adminRouter.put('/categories/:type/:id', requireAdmin, requireCsrf, asyncHandler
 
 adminRouter.delete('/categories/:type/:id', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
   const result = await adminService.deleteCategory(String(req.params.type ?? ''), req.params.id);
+  res.json(result);
+}));
+
+/* ================================================================
+ * Marketplace Admin
+ * ================================================================ */
+
+// GET /api/admin/marketplace/products — list products (filterable by status)
+adminRouter.get('/marketplace/products', requireAdmin, asyncHandler(async (req, res) => {
+  const status = String(req.query.status ?? 'all');
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+
+  // Use direct search — for admin we include all statuses
+  const { rows, total } = await marketplaceRepo.searchProducts(
+    null, null, null, limit, offset, 'newest'
+  );
+
+  // For pending filter, use a dedicated query
+  if (status !== 'all') {
+    const { pool } = await import('../db/pool.js');
+    const result = await pool.query(
+      `SELECT p.*, pc.name AS category_name, pc.slug AS category_slug,
+              u.full_name AS seller_name, u.avatar_url AS seller_avatar,
+              sp.store_name
+       FROM products p
+       LEFT JOIN product_categories pc ON p.category_id = pc.id
+       LEFT JOIN users u ON p.seller_id = u.id
+       LEFT JOIN seller_profiles sp ON p.seller_id = sp.user_id
+       WHERE p.status = $1
+       ORDER BY p.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [status, limit, offset]
+    );
+    const countResult = await pool.query(
+      'SELECT COUNT(*) AS total FROM products WHERE status = $1',
+      [status]
+    );
+    res.json({
+      products: result.rows,
+      total: Number(countResult.rows[0]?.total ?? 0),
+      limit, offset,
+    });
+    return;
+  }
+
+  res.json({ products: rows, total, limit, offset });
+}));
+
+// POST /api/admin/marketplace/products/:id/approve
+adminRouter.post('/marketplace/products/:id/approve', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
+  const ok = await marketplaceRepo.updateProductStatus(Number(req.params.id), 'approved');
+  if (!ok) { res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại.' }); return; }
+  res.json({ success: true });
+}));
+
+// POST /api/admin/marketplace/products/:id/reject
+adminRouter.post('/marketplace/products/:id/reject', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
+  const ok = await marketplaceRepo.updateProductStatus(Number(req.params.id), 'rejected');
+  if (!ok) { res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại.' }); return; }
+  res.json({ success: true });
+}));
+
+// GET /api/admin/marketplace/orders — list all orders (admin view)
+adminRouter.get('/marketplace/orders', requireAdmin, asyncHandler(async (req, res) => {
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  const status = String(req.query.status ?? '').trim();
+
+  const { pool } = await import('../db/pool.js');
+  const conditions = ['1=1'];
+  const params: (string | number)[] = [];
+
+  if (status) {
+    params.push(status);
+    conditions.push(`o.status = $${params.length}`);
+  }
+
+  const where = conditions.join(' AND ');
+  const dataResult = await pool.query(
+    `SELECT o.*, u.full_name AS buyer_name, u.email AS buyer_email
+     FROM orders o
+     LEFT JOIN users u ON o.buyer_id = u.id
+     WHERE ${where}
+     ORDER BY o.created_at DESC
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, limit, offset]
+  );
+  const countResult = await pool.query(
+    `SELECT COUNT(*) AS total FROM orders o WHERE ${where}`,
+    params
+  );
+
+  res.json({
+    orders: dataResult.rows,
+    total: Number(countResult.rows[0]?.total ?? 0),
+    limit, offset,
+  });
+}));
+
+// PUT /api/admin/marketplace/orders/:id/status — admin update order status
+adminRouter.put('/marketplace/orders/:id/status', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
+  const result = await marketplaceService.updateOrderStatus(
+    0, // admin doesn't need real userId
+    req.params.id,
+    req.body,
+    true // isAdmin = true
+  );
   res.json(result);
 }));

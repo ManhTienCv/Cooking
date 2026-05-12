@@ -77,3 +77,44 @@ export const feedbackSubmitRateLimit = rateLimit({
     });
   },
 });
+
+/* ── Marketplace Rate Limits ────────────────────────────── */
+
+export const orderCreateRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({
+      success: false,
+      message: 'Quá nhiều đơn hàng. Vui lòng thử lại sau.',
+    });
+  },
+});
+
+export const reviewCreateRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({
+      success: false,
+      message: 'Quá nhiều đánh giá. Vui lòng thử lại sau.',
+    });
+  },
+});
+
+export const sellerProductRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({
+      success: false,
+      message: 'Quá nhiều sản phẩm được đăng. Vui lòng thử lại sau.',
+    });
+  },
+});

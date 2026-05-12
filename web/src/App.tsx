@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 
 import Layout from './components/Layout';
+import { CartProvider } from './contexts/CartContext';
 import { scrollWindowToTop } from './lib/scroll';
 
 const Home = lazy(() => import('./pages/Home'));
@@ -26,6 +27,17 @@ const BlogsTab = lazy(() => import('./pages/Admin/tabs/BlogsTab'));
 const FeedbackTab = lazy(() => import('./pages/Admin/tabs/FeedbackTab'));
 const CommentsTab = lazy(() => import('./pages/Admin/tabs/CommentsTab'));
 const CategoriesTab = lazy(() => import('./pages/Admin/tabs/CategoriesTab'));
+const MarketProductsTab = lazy(() => import('./pages/Admin/tabs/MarketProductsTab'));
+const MarketOrdersTab = lazy(() => import('./pages/Admin/tabs/MarketOrdersTab'));
+
+/* Marketplace */
+const Shop = lazy(() => import('./pages/Shop'));
+const ProductDetail = lazy(() => import('./pages/Shop/Detail'));
+const CartPage = lazy(() => import('./pages/Shop/Cart'));
+const Checkout = lazy(() => import('./pages/Shop/Checkout'));
+const OrdersPage = lazy(() => import('./pages/Shop/Orders'));
+const OrderDetailPage = lazy(() => import('./pages/Shop/OrderDetail'));
+const SellerDashboard = lazy(() => import('./pages/Seller'));
 
 const EASE_PAGE = [0.22, 1, 0.36, 1] as const;
 
@@ -64,6 +76,8 @@ export default function App() {
               <Route path="comments" element={<CommentsTab />} />
               <Route path="categories" element={<CategoriesTab />} />
               <Route path="feedback" element={<FeedbackTab />} />
+              <Route path="market-products" element={<MarketProductsTab />} />
+              <Route path="market-orders" element={<MarketOrdersTab />} />
             </Route>
           </Routes>
         </Suspense>
@@ -75,6 +89,7 @@ export default function App() {
   const exitDur = reduceMotion ? 0.1 : 0.44;
 
   return (
+    <CartProvider>
     <Layout>
       <Toaster position="top-right" />
       {/*
@@ -126,11 +141,20 @@ export default function App() {
                 <Route path="/health" element={<Health />} />
                 <Route path="/health/detail/:id" element={<HealthDetail />} />
                 <Route path="/profile" element={<Profile />} />
+                {/* Marketplace */}
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/shop/:slug" element={<ProductDetail />} />
+                <Route path="/cart" element={<CartPage />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/orders" element={<OrdersPage />} />
+                <Route path="/orders/:id" element={<OrderDetailPage />} />
+                <Route path="/seller" element={<SellerDashboard />} />
               </Routes>
             </Suspense>
           </motion.div>
         </AnimatePresence>
       </div>
     </Layout>
+    </CartProvider>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { apiJson } from '../../../lib/api';
 import toast from 'react-hot-toast';
@@ -39,7 +39,7 @@ export default function MarketProductsTab() {
   const [typeFilter, setTypeFilter] = useState('');
   const [sortBy, setSortBy] = useState('newest');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const d = await apiJson<{ products: AdminProduct[]; total: number }>(
@@ -52,9 +52,9 @@ export default function MarketProductsTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [status]);
 
-  useEffect(() => { void load(); }, [status]);
+  useEffect(() => { void load(); }, [load]);
 
   const handleAction = async (id: number, action: 'approve' | 'reject') => {
     const label = action === 'approve' ? 'Duyệt' : 'Từ chối';

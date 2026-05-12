@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { apiJson, apiFetch } from '../lib/api';
 import { AUTH_CHANGE_EVENT } from '../lib/authEvents';

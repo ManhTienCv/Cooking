@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '../../../lib/api';
 import toast from 'react-hot-toast';
 
@@ -51,7 +51,7 @@ export default function MarketOrdersTab() {
   const [statusFilter, setStatusFilter] = useState('');
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const q = statusFilter ? `status=${statusFilter}&` : '';
@@ -65,9 +65,9 @@ export default function MarketOrdersTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
 
-  useEffect(() => { void load(); }, [statusFilter]);
+  useEffect(() => { void load(); }, [load]);
 
   const handleStatusChange = async (orderId: number, newStatus: string) => {
     if (!window.confirm(`Cập nhật đơn #${orderId} → ${newStatus}?`)) return;

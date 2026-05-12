@@ -4,7 +4,7 @@ import { DashboardStats } from '../types/admin.js';
 
 export const adminRepo = {
   async getDashboardStats(): Promise<DashboardStats> {
-    const [admins, users, recipes, blogs, feedback, pendingRecipes, pendingBlogs] = await Promise.all([
+    const [admins, users, recipes, blogs, feedback, pendingRecipes, pendingBlogs, pendingProducts] = await Promise.all([
       pool.query('SELECT COUNT(*)::int AS total FROM quantrivien'),
       pool.query('SELECT COUNT(*)::int AS total FROM users'),
       pool.query('SELECT COUNT(*)::int AS total FROM recipes'),
@@ -12,6 +12,7 @@ export const adminRepo = {
       pool.query('SELECT COUNT(*)::int AS total FROM feedback'),
       pool.query("SELECT COUNT(*)::int AS total FROM recipes WHERE status = 'pending'"),
       pool.query("SELECT COUNT(*)::int AS total FROM blog_posts WHERE status = 'pending'"),
+      pool.query("SELECT COUNT(*)::int AS total FROM products WHERE status = 'pending'"),
     ]);
     return {
       admins: admins.rows[0]?.total ?? 0,
@@ -21,6 +22,7 @@ export const adminRepo = {
       feedback: feedback.rows[0]?.total ?? 0,
       pendingRecipes: pendingRecipes.rows[0]?.total ?? 0,
       pendingBlogs: pendingBlogs.rows[0]?.total ?? 0,
+      pendingProducts: pendingProducts.rows[0]?.total ?? 0,
     };
   },
 

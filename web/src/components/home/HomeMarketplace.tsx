@@ -106,10 +106,10 @@ export default function HomeMarketplace() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-12">
           {SHOP_CATEGORIES.map((cat, idx) => (
             <RevealStaggerItem key={cat.title} index={idx} stagger={0.08} y={20}>
-              <Link to={cat.link}>
+              <Link to={cat.link} className="block h-full">
                 <motion.div
                   whileHover={{ y: -4, scale: 1.01 }}
-                  className={`relative group p-6 sm:p-8 rounded-2xl ${cat.bg} border border-white/60 dark:border-slate-700/50 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden`}
+                  className={`relative group h-full flex flex-col p-6 sm:p-8 rounded-2xl ${cat.bg} border border-white/60 dark:border-slate-700/50 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden`}
                 >
                   {/* Gradient orb */}
                   <div className={`absolute -top-8 -right-8 w-32 h-32 rounded-full bg-gradient-to-br ${cat.color} opacity-20 blur-2xl group-hover:opacity-30 transition-opacity duration-500`} />
@@ -121,11 +121,11 @@ export default function HomeMarketplace() {
                   <h3 className="text-xl font-serif font-bold text-gray-900 dark:text-white mb-2">
                     {cat.title}
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-slate-400 leading-relaxed mb-4">
+                  <p className="text-sm text-gray-600 dark:text-slate-400 leading-relaxed mb-4 flex-1">
                     {cat.desc}
                   </p>
 
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-gray-900 dark:text-white group-hover:gap-3 transition-all duration-300">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-gray-900 dark:text-white group-hover:gap-3 transition-all duration-300 mt-auto">
                     Khám phá
                     <ArrowRight className="w-3.5 h-3.5" />
                   </span>

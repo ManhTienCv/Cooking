@@ -12,4 +12,5 @@ export interface DashboardStats {
   feedback: number;
   pendingRecipes: number;
   pendingBlogs: number;
+  pendingProducts: number;
 }

@@ -8,7 +8,7 @@ import { NotificationProvider } from '../../contexts/NotificationContext';
 export default function AdminLayout() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ pending: 0 });
+  const [stats, setStats] = useState({ pending: 0, pendingProducts: 0 });
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -22,7 +22,10 @@ export default function AdminLayout() {
         const [d] = await Promise.all([
           apiJson<Record<string, number>>('/api/admin/dashboard'),
         ]);
-        setStats({ pending: (d.pendingRecipes ?? 0) + (d.pendingBlogs ?? 0) });
+        setStats({
+          pending: (d.pendingRecipes ?? 0) + (d.pendingBlogs ?? 0),
+          pendingProducts: d.pendingProducts ?? 0,
+        });
       } catch {
         navigate('/admin/login');
       } finally {
@@ -43,7 +46,7 @@ export default function AdminLayout() {
   return (
     <NotificationProvider role="admin">
     <div className="bg-slate-50 text-slate-900 h-screen flex overflow-hidden dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300">
-      <AdminSidebar pendingCount={stats.pending} />
+      <AdminSidebar pendingCount={stats.pending} pendingProducts={stats.pendingProducts} />
       <main className="flex-1 flex flex-col overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
         <div className="p-10 flex-1">
           <AdminHeader />

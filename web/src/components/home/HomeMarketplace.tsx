@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, ArrowRight, Star, TrendingUp, Sparkles } from 'lucide-react';
+import {
+  ShoppingBag, ArrowRight, Star, Truck, ShieldCheck,
+  ChefHat, Flame, Package, UtensilsCrossed
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Reveal, RevealStaggerItem } from '../motion/ScrollReveal';
 import { apiJson } from '../../lib/api';
 
+/* ── types ─────────────────────────────────────── */
 interface FeaturedProduct {
   id: number;
   name: string;
@@ -18,73 +22,125 @@ interface FeaturedProduct {
   store_name: string;
 }
 
-function formatPrice(n: number) {
+function fmt(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
 }
 
-const TYPE_BADGE: Record<string, { label: string; color: string }> = {
-  food: { label: 'Đồ ăn', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
-  ingredient: { label: 'Nguyên liệu', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-  equipment: { label: 'Đồ bếp', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-};
+/* ── static showcase categories ──────────────── */
+const SHOP_CATEGORIES = [
+  {
+    icon: Flame,
+    title: 'Đồ ăn sẵn',
+    desc: 'Món ngon giao tận nơi, sẵn sàng thưởng thức',
+    color: 'from-orange-500 to-red-500',
+    bg: 'bg-orange-50 dark:bg-orange-950/20',
+    link: '/shop?type=food',
+  },
+  {
+    icon: Package,
+    title: 'Nguyên liệu',
+    desc: 'Tươi ngon, đóng gói cẩn thận từ nhà cung cấp uy tín',
+    color: 'from-emerald-500 to-green-600',
+    bg: 'bg-emerald-50 dark:bg-emerald-950/20',
+    link: '/shop?type=ingredient',
+  },
+  {
+    icon: UtensilsCrossed,
+    title: 'Đồ dùng bếp',
+    desc: 'Dụng cụ chất lượng cao cho đầu bếp tại gia',
+    color: 'from-blue-500 to-indigo-600',
+    bg: 'bg-blue-50 dark:bg-blue-950/20',
+    link: '/shop?type=equipment',
+  },
+];
 
+const PERKS = [
+  { icon: ShieldCheck, text: 'Chất lượng đảm bảo' },
+  { icon: Truck, text: 'Giao hàng nhanh chóng' },
+  { icon: ChefHat, text: 'Từ người bán uy tín' },
+];
+
+/* ── component ───────────────────────────────── */
 export default function HomeMarketplace() {
   const [products, setProducts] = useState<FeaturedProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiJson<{ products: FeaturedProduct[] }>('/api/marketplace/products?sort=popular&limit=8&status=approved')
+    apiJson<{ products: FeaturedProduct[] }>('/api/marketplace/products?sort=popular&limit=6&status=approved')
       .then(d => setProducts(d.products ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  if (!loading && products.length === 0) return null;
-
   return (
-    <section className="py-16 sm:py-24 bg-gradient-to-b from-amber-50/60 via-white to-white dark:from-slate-800/60 dark:via-slate-900 dark:to-slate-900 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <Reveal className="text-center mb-12 sm:mb-16">
-          <div className="inline-flex items-center gap-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-            <ShoppingBag className="w-3.5 h-3.5" />
-            Cửa hàng
+    <section className="py-16 sm:py-24 relative overflow-hidden">
+      {/* Decorative BG */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(251,191,36,0.12),transparent)] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(251,191,36,0.06),transparent)]" />
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* ─── Header ─── */}
+        <Reveal className="mb-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-3xl">
+            <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50/80 px-4 py-2 text-xs font-bold uppercase tracking-widest text-amber-700 shadow-sm dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-400">
+              <ShoppingBag className="h-4 w-4" />
+              Cửa hàng ẩm thực
+            </span>
+            <h2 className="text-4xl font-serif font-bold text-black dark:text-white md:text-5xl">
+              Mua sắm cho bếp của bạn
+            </h2>
+            <p className="mt-4 max-w-2xl text-base font-medium leading-7 text-gray-600 dark:text-slate-300 md:text-lg">
+              Từ nguyên liệu tươi ngon đến dụng cụ nhà bếp chuyên nghiệp — tất cả trong một nơi, giao hàng tận nhà.
+            </p>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-serif text-black dark:text-white mb-3 sm:mb-4">
-            Sản Phẩm Nổi Bật
-          </h2>
-          <p className="text-base sm:text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto font-medium">
-            Nguyên liệu tươi ngon, đồ bếp chất lượng — mọi thứ bạn cần để nấu món ngon tại nhà.
-          </p>
+          <Link
+            to="/shop"
+            className="inline-flex w-fit items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-3 text-sm font-bold text-black shadow-sm transition hover:-translate-y-0.5 hover:border-gray-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:border-slate-600"
+          >
+            Ghé cửa hàng
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </Reveal>
 
-        {/* Stats bar */}
-        <Reveal className="mb-10">
-          <div className="flex flex-wrap justify-center gap-6 sm:gap-10">
-            {[
-              { icon: ShoppingBag, label: 'Sản phẩm đa dạng', value: 'Đồ ăn · Nguyên liệu · Đồ bếp' },
-              { icon: TrendingUp, label: 'Giao hàng', value: 'Nhanh chóng & An toàn' },
-              { icon: Sparkles, label: 'AI gợi ý', value: 'Thông minh theo sở thích' },
-            ].map((s, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/20">
-                  <s.icon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400 dark:text-gray-500">{s.label}</div>
-                  <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">{s.value}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Reveal>
+        {/* ─── 3 Category Showcase Cards ─── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-12">
+          {SHOP_CATEGORIES.map((cat, idx) => (
+            <RevealStaggerItem key={cat.title} index={idx} stagger={0.08} y={20}>
+              <Link to={cat.link}>
+                <motion.div
+                  whileHover={{ y: -4, scale: 1.01 }}
+                  className={`relative group p-6 sm:p-8 rounded-2xl ${cat.bg} border border-white/60 dark:border-slate-700/50 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden`}
+                >
+                  {/* Gradient orb */}
+                  <div className={`absolute -top-8 -right-8 w-32 h-32 rounded-full bg-gradient-to-br ${cat.color} opacity-20 blur-2xl group-hover:opacity-30 transition-opacity duration-500`} />
 
-        {/* Product Grid */}
+                  <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${cat.color} shadow-lg mb-4`}>
+                    <cat.icon className="w-6 h-6 text-white" />
+                  </div>
+
+                  <h3 className="text-xl font-serif font-bold text-gray-900 dark:text-white mb-2">
+                    {cat.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-slate-400 leading-relaxed mb-4">
+                    {cat.desc}
+                  </p>
+
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-gray-900 dark:text-white group-hover:gap-3 transition-all duration-300">
+                    Khám phá
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                </motion.div>
+              </Link>
+            </RevealStaggerItem>
+          ))}
+        </div>
+
+        {/* ─── Featured Products Grid ─── */}
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {Array.from({ length: 8 }).map((_, i) => (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-10">
+            {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="animate-pulse">
-                <div className="bg-gray-200 dark:bg-slate-700 rounded-2xl h-48 sm:h-56" />
+                <div className="bg-gray-200 dark:bg-slate-700 rounded-2xl aspect-[4/3]" />
                 <div className="mt-3 space-y-2 px-1">
                   <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-3/4" />
                   <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-1/2" />
@@ -92,98 +148,159 @@ export default function HomeMarketplace() {
               </div>
             ))}
           </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {products.map((p, idx) => {
-              const badge = TYPE_BADGE[p.product_type] ?? TYPE_BADGE.food;
-              const hasDiscount = p.sale_price && p.sale_price < p.price;
-              const discountPct = hasDiscount ? Math.round((1 - p.sale_price! / p.price) * 100) : 0;
+        ) : products.length > 0 ? (
+          <>
+            <Reveal className="mb-6">
+              <h3 className="text-lg font-black uppercase tracking-wider text-gray-900 dark:text-white border-b border-gray-200 dark:border-slate-700 pb-4">
+                Sản phẩm được yêu thích
+              </h3>
+            </Reveal>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-10">
+              {products.map((p, idx) => {
+                const hasDiscount = p.sale_price != null && p.sale_price < p.price;
+                const discountPct = hasDiscount ? Math.round((1 - p.sale_price! / p.price) * 100) : 0;
+                const typeLabel =
+                  p.product_type === 'food' ? 'Đồ ăn' :
+                  p.product_type === 'ingredient' ? 'Nguyên liệu' : 'Đồ bếp';
+                const typeColor =
+                  p.product_type === 'food' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                  p.product_type === 'ingredient' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
 
-              return (
-                <RevealStaggerItem key={p.id} index={idx} stagger={0.05} y={20}>
-                  <Link to={`/shop/${p.slug}`}>
-                    <motion.div
-                      whileHover={{ y: -6 }}
-                      className="group bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-300"
-                    >
-                      {/* Image */}
-                      <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-slate-700">
-                        {p.image_url ? (
-                          <img
-                            src={p.image_url}
-                            alt={p.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-3xl">🍽️</div>
-                        )}
-
-                        {/* Discount badge */}
-                        {hasDiscount && (
-                          <span className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
-                            -{discountPct}%
-                          </span>
-                        )}
-
-                        {/* Type badge */}
-                        <span className={`absolute bottom-2.5 left-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${badge.color}`}>
-                          {badge.label}
-                        </span>
-                      </div>
-
-                      {/* Info */}
-                      <div className="p-3.5 sm:p-4">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                          {p.name}
-                        </h3>
-
-                        <div className="flex items-center gap-1.5 mb-2">
-                          {p.rating > 0 && (
-                            <>
-                              <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{p.rating.toFixed(1)}</span>
-                            </>
+                return (
+                  <RevealStaggerItem key={p.id} index={idx} stagger={0.06} y={18}>
+                    <Link to={`/shop/${p.slug}`}>
+                      <motion.div
+                        whileHover={{ y: -5 }}
+                        className="group bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-300"
+                      >
+                        {/* Image */}
+                        <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-slate-700">
+                          {p.image_url ? (
+                            <img
+                              src={p.image_url}
+                              alt={p.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100 dark:from-slate-700 dark:to-slate-600">
+                              <ShoppingBag className="w-10 h-10 text-amber-300 dark:text-slate-500" />
+                            </div>
                           )}
-                          {p.total_sold > 0 && (
-                            <span className="text-xs text-gray-400">· Đã bán {p.total_sold}</span>
-                          )}
-                        </div>
 
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-base font-bold text-amber-600 dark:text-amber-400">
-                            {formatPrice(hasDiscount ? p.sale_price! : p.price)}
-                          </span>
                           {hasDiscount && (
-                            <span className="text-xs text-gray-400 line-through">{formatPrice(p.price)}</span>
+                            <span className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
+                              -{discountPct}%
+                            </span>
                           )}
+
+                          <span className={`absolute bottom-2.5 left-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm ${typeColor}`}>
+                            {typeLabel}
+                          </span>
                         </div>
 
-                        {p.store_name && (
-                          <div className="mt-2 pt-2 border-t border-gray-50 dark:border-slate-700/50 text-xs text-gray-400 dark:text-gray-500 truncate">
-                            {p.store_name}
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  </Link>
-                </RevealStaggerItem>
-              );
-            })}
-          </div>
-        )}
+                        {/* Info */}
+                        <div className="p-3.5 sm:p-4">
+                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                            {p.name}
+                          </h4>
 
-        {/* CTA */}
-        <Reveal className="text-center mt-10 sm:mt-14">
-          <Link
-            to="/shop"
-            className="inline-flex items-center gap-2.5 bg-black dark:bg-white text-white dark:text-black px-8 py-3.5 font-bold text-xs uppercase tracking-[0.15em] hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors duration-300 rounded-full shadow-lg group"
-          >
-            <ShoppingBag className="w-4 h-4" />
-            Khám phá cửa hàng
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-          </Link>
+                          <div className="flex items-center gap-1.5 mb-2">
+                            {p.rating > 0 && (
+                              <>
+                                <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{p.rating.toFixed(1)}</span>
+                              </>
+                            )}
+                            {p.total_sold > 0 && (
+                              <span className="text-xs text-gray-400">· Đã bán {p.total_sold}</span>
+                            )}
+                          </div>
+
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-base font-bold text-amber-600 dark:text-amber-400">
+                              {fmt(hasDiscount ? p.sale_price! : p.price)}
+                            </span>
+                            {hasDiscount && (
+                              <span className="text-xs text-gray-400 line-through">{fmt(p.price)}</span>
+                            )}
+                          </div>
+
+                          {p.store_name && (
+                            <div className="mt-2 pt-2 border-t border-gray-50 dark:border-slate-700/50 text-xs text-gray-400 dark:text-gray-500 truncate">
+                              {p.store_name}
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    </Link>
+                  </RevealStaggerItem>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
+
+        {/* ─── Banner CTA + Perks ─── */}
+        <Reveal y={24}>
+          <div className="relative rounded-2xl overflow-hidden">
+            {/* Background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900" />
+            <div className="absolute inset-0 opacity-[0.07]" style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+            }} />
+
+            <div className="relative flex flex-col md:flex-row items-center gap-8 p-8 sm:p-12 md:p-16">
+              {/* Left */}
+              <div className="md:w-3/5 text-left">
+                <h3 className="text-2xl sm:text-4xl font-serif font-bold text-white mb-4 leading-tight">
+                  Mở gian hàng của bạn<br className="hidden sm:block" /> trên CookingBoy
+                </h3>
+                <p className="text-base text-gray-300 mb-6 max-w-xl">
+                  Bạn là đầu bếp tài năng hay nhà cung cấp thực phẩm? Đăng ký bán hàng miễn phí và tiếp cận hàng ngàn người yêu ẩm thực.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    to="/shop"
+                    className="inline-flex items-center gap-2 bg-white text-black px-6 py-3 font-bold text-xs uppercase tracking-[0.15em] hover:bg-gray-100 transition-colors duration-300 rounded-full shadow-lg group"
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                    Mua sắm ngay
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                  </Link>
+                  <Link
+                    to="/profile"
+                    className="inline-flex items-center gap-2 border-2 border-white/30 text-white px-6 py-3 font-bold text-xs uppercase tracking-[0.15em] hover:bg-white/10 transition-colors duration-300 rounded-full group"
+                  >
+                    Đăng ký bán hàng
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Right — Perks */}
+              <div className="md:w-2/5 flex flex-col gap-4">
+                {PERKS.map((perk, i) => (
+                  <motion.div
+                    key={perk.text}
+                    initial={{ opacity: 0, x: 20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 + i * 0.1, duration: 0.4 }}
+                    viewport={{ once: true }}
+                    className="flex items-center gap-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl px-5 py-4"
+                  >
+                    <div className="p-2.5 rounded-lg bg-amber-500/20">
+                      <perk.icon className="w-5 h-5 text-amber-400" />
+                    </div>
+                    <span className="text-sm font-semibold text-white">{perk.text}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
         </Reveal>
+
       </div>
     </section>
   );

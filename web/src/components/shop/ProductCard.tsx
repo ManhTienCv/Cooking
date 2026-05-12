@@ -59,11 +59,10 @@ export default function ProductCard({ product, index = 0, onAddToCart, onToggleW
         {onToggleWishlist && (
           <button
             onClick={(e) => { e.preventDefault(); onToggleWishlist(product.id); }}
-            className={`absolute top-3 right-3 p-2 rounded-full shadow-lg backdrop-blur-sm transition-all duration-200 ${
-              wishlisted
+            className={`absolute top-3 right-3 p-2 rounded-full shadow-lg backdrop-blur-sm transition-all duration-200 ${wishlisted
                 ? 'bg-red-500 text-white'
                 : 'bg-white/80 dark:bg-slate-700/80 text-gray-500 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500'
-            }`}
+              }`}
             aria-label={wishlisted ? 'Bỏ yêu thích' : 'Thêm yêu thích'}
           >
             <Heart className={`w-4 h-4 ${wishlisted ? 'fill-current' : ''}`} />
@@ -137,7 +136,7 @@ export default function ProductCard({ product, index = 0, onAddToCart, onToggleW
         {/* Seller */}
         {product.store_name && (
           <div className="pt-2 border-t border-gray-50 dark:border-slate-700/50 text-xs text-gray-400 dark:text-gray-500 truncate">
-            🏪 {product.store_name}
+            {product.store_name}
           </div>
         )}
       </div>

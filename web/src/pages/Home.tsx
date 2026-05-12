@@ -1,6 +1,7 @@
 import HomeEditorialHeader from '../components/home/HomeEditorialHeader';
 import FeaturedRecipes from '../components/home/FeaturedRecipes';
 import HomeCategories from '../components/home/HomeCategories';
+import HomeMarketplace from '../components/home/HomeMarketplace';
 import HomeCallToAction from '../components/home/HomeCallToAction';
 
 declare global {
@@ -15,6 +16,7 @@ export default function Home() {
       <HomeEditorialHeader />
       <FeaturedRecipes />
       <HomeCategories />
+      <HomeMarketplace />
       <HomeCallToAction />
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bell, Check, CheckCheck, Trash2, ShoppingBag, Package, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNotifications, type OrderNotification } from '../../contexts/NotificationContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 function timeAgo(ts: number) {
   const diff = Math.floor((Date.now() - ts) / 1000);

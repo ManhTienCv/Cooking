@@ -3,7 +3,7 @@ import { Moon, Sun, Calendar } from 'lucide-react';
 import { useTheme } from '../../../hooks/useTheme';
 import NotificationBell from '../../../components/ui/NotificationBell';
 
-export default function AdminHeader({ pendingCount }: { pendingCount: number }) {
+export default function AdminHeader() {
   const [time, setTime] = useState('');
   const { isDark, toggleTheme } = useTheme();
 

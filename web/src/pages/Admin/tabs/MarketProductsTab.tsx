@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { apiJson } from '../../../lib/api';
 import toast from 'react-hot-toast';
@@ -154,7 +154,7 @@ export default function MarketProductsTab() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {(() => {
-                  let filtered = products.filter(p => {
+                  const filtered = products.filter(p => {
                     if (search) {
                       const q = search.toLowerCase();
                       if (!p.name.toLowerCase().includes(q) && !(p.store_name||'').toLowerCase().includes(q) && !(p.seller_name||'').toLowerCase().includes(q)) return false;

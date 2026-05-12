@@ -46,7 +46,7 @@ export default function AdminLayout() {
       <AdminSidebar pendingCount={stats.pending} />
       <main className="flex-1 flex flex-col overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
         <div className="p-10 flex-1">
-          <AdminHeader pendingCount={stats.pending} />
+          <AdminHeader />
           <Outlet />
         </div>
       </main>

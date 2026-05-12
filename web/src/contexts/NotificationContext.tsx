@@ -40,7 +40,7 @@ function saveStored(ns: OrderNotification[]) {
 
 export function NotificationProvider({ children, role }: { children: ReactNode; role: 'seller' | 'admin' | 'buyer' }) {
   const [notifications, setNotifications] = useState<OrderNotification[]>(loadStored);
-  const lastCheckRef = useRef(Date.now());
+  const lastCheckRef = useRef(0);
 
   const addNotification = useCallback((n: Omit<OrderNotification, 'id' | 'timestamp' | 'read'>) => {
     const notif: OrderNotification = {
@@ -56,6 +56,7 @@ export function NotificationProvider({ children, role }: { children: ReactNode; 
   // Poll for new orders (seller/admin)
   useEffect(() => {
     if (role === 'buyer') return;
+    lastCheckRef.current = Date.now();
 
     const endpoint = role === 'admin'
       ? '/api/admin/marketplace/orders?limit=5'

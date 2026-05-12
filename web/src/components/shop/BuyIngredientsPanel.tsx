@@ -11,14 +11,13 @@ import type { Product } from '../../types/marketplace';
 
 interface Props {
   ingredients: string;
-  recipeTitle: string;
 }
 
 function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
 }
 
-export default function BuyIngredientsPanel({ ingredients, recipeTitle }: Props) {
+export default function BuyIngredientsPanel({ ingredients }: Props) {
   const { addItem } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [keywords, setKeywords] = useState<string[]>([]);

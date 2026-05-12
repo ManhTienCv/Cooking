@@ -370,7 +370,6 @@ export default function RecipeDetail() {
               <Reveal y={18} delay={0.07}>
                 <BuyIngredientsPanel
                   ingredients={recipe.ingredients ?? ''}
-                  recipeTitle={recipe.title}
                 />
               </Reveal>
             )}

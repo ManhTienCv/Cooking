@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, Package, ShoppingBag, Plus, Edit, Trash2, Eye, TrendingUp } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Store, Package, ShoppingBag, Plus, Trash2, Eye, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiJson, apiFetch } from '../../lib/api';
 import CreateProductModal from './CreateProductModal';

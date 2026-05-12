@@ -330,6 +330,8 @@ export default function ProductDetail() {
               ))}
             </div>
           )}
+        </div>
+
         {/* Related Products — AI-powered */}
         <div className="mt-14">
           <AiRecommendations

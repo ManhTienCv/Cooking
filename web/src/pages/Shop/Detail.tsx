@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Star, Minus, Plus, ChevronRight, Package, Store, ArrowLeft, Heart, MessageSquare } from 'lucide-react';
+import { ShoppingCart, Star, Minus, Plus, ChevronRight, Package, Store, ArrowLeft, Heart, MessageSquare, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { apiJson, apiFetch } from '../../lib/api';
@@ -105,6 +105,7 @@ export default function ProductDetail() {
   const finalPrice = hasDiscount ? product.sale_price! : product.price;
   const allImages = product.image_url ? [product.image_url, ...product.images] : product.images;
   const specs = product.specs && Object.keys(product.specs).length > 0 ? product.specs : null;
+  const chatHref = `/messages?sellerId=${product.seller_id}&seller=${encodeURIComponent(product.store_name || product.seller_name || 'Shop')}&productId=${product.id}&product=${encodeURIComponent(product.name)}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 transition-colors">
@@ -255,10 +256,17 @@ export default function ProductDetail() {
                   <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
                     <Store className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                   </div>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="font-semibold text-gray-900 dark:text-white text-sm">{product.store_name}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500">bởi {product.seller_name}</p>
                   </div>
+                  <Link
+                    to={chatHref}
+                    className="shrink-0 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-300 dark:hover:bg-amber-900/35"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Chat
+                  </Link>
                 </div>
               )}
 
@@ -300,7 +308,10 @@ export default function ProductDetail() {
           </Reveal>
 
           {reviews.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-10">Chưa có đánh giá nào.</p>
+            <div className="text-center py-10">
+              <p className="text-gray-500 dark:text-gray-400">Chưa có đánh giá nào.</p>
+              <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">Khách hàng đánh giá tại trang chi tiết đơn hàng sau khi đơn đã giao.</p>
+            </div>
           ) : (
             <div className="space-y-4">
               {reviews.map((r) => (

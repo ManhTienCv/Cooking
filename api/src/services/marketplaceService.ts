@@ -280,6 +280,20 @@ export async function getOrderDetail(userId: number, idRaw: unknown) {
   return { order };
 }
 
+export async function getOrderReviews(userId: number, idRaw: unknown) {
+  const id = Number(idRaw);
+  if (!id) throw { status: 400, message: 'Invalid order ID' };
+
+  const order = await marketplaceRepo.getOrderById(id);
+  if (!order) throw { status: 404, message: 'Đơn hàng không tồn tại.' };
+  if (order.buyer_id !== userId) {
+    throw { status: 403, message: 'Không có quyền xem đánh giá đơn hàng này.' };
+  }
+
+  const reviews = await marketplaceRepo.getOrderReviews(id, userId);
+  return { reviews };
+}
+
 export async function getSellerOrders(userId: number, limitRaw: unknown, offsetRaw: unknown) {
   const limit = Math.min(50, Math.max(1, Number(limitRaw) || 10));
   const offset = Math.max(0, Number(offsetRaw) || 0);
@@ -346,6 +360,10 @@ export async function createReview(userId: number, body: Record<string, unknown>
   }
   if (!['delivered', 'completed'].includes(order.status)) {
     throw { status: 400, message: 'Chỉ có thể đánh giá sau khi nhận hàng.' };
+  }
+
+  if (!order.items.some((item) => item.product_id === productId)) {
+    throw { status: 403, message: 'Sáº£n pháº©m khÃ´ng thuá»™c Ä‘Æ¡n hÃ ng nÃ y.' };
   }
 
   const id = await marketplaceRepo.createReview(userId, productId, orderId, rating, comment);

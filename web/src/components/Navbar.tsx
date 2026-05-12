@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChefHat, Menu, LogOut, Moon, Sun, ShoppingCart, Store } from 'lucide-react';
+import { ChefHat, Menu, LogOut, Moon, Sun, ShoppingCart, Store, MessageCircle } from 'lucide-react';
 import AuthModal from './AuthModal';
 import { apiFetch, apiJson, resetCsrfCache } from '../lib/api';
 import { AUTH_CHANGE_EVENT, notifyAuthChanged } from '../lib/authEvents';
@@ -22,6 +22,10 @@ type MeState =
       };
     };
 
+type MessageConversationSummary = {
+  unread_count?: number;
+};
+
 const NAV_ITEMS = [
   { path: '/', label: 'Trang chủ' },
   { path: '/recipes', label: 'Công thức' },
@@ -36,6 +40,7 @@ export default function Navbar() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authInitialSignUp, setAuthInitialSignUp] = useState(false);
   const [me, setMe] = useState<MeState | null>(null);
+  const [messageUnreadCount, setMessageUnreadCount] = useState(0);
   const { isDark, toggleTheme } = useTheme();
   const { count: cartCount } = useCart();
   const location = useLocation();
@@ -51,15 +56,60 @@ export default function Navbar() {
     }
   }, []);
 
+  const loadMessageUnread = useCallback(async () => {
+    if (!me?.authenticated) {
+      setMessageUnreadCount(0);
+      return;
+    }
+    try {
+      const data = await apiJson<{ conversations: MessageConversationSummary[] }>('/api/messages/conversations');
+      const total = (data.conversations ?? []).reduce(
+        (sum, c) => sum + Number(c.unread_count ?? 0),
+        0
+      );
+      setMessageUnreadCount(total);
+    } catch {
+      setMessageUnreadCount(0);
+    }
+  }, [me?.authenticated]);
+
   useEffect(() => {
     void refreshMe();
   }, [refreshMe]);
+
+  useEffect(() => {
+    if (me?.authenticated) {
+      void loadMessageUnread();
+      return;
+    }
+    setMessageUnreadCount(0);
+  }, [me, loadMessageUnread]);
 
   useEffect(() => {
     const onAuth = () => void refreshMe();
     window.addEventListener(AUTH_CHANGE_EVENT, onAuth);
     return () => window.removeEventListener(AUTH_CHANGE_EVENT, onAuth);
   }, [refreshMe]);
+
+  useEffect(() => {
+    if (!me?.authenticated) return;
+
+    const es = new EventSource('/api/messages/stream', { withCredentials: true });
+    const refresh = () => void loadMessageUnread();
+
+    const onRead = () => void loadMessageUnread();
+    window.addEventListener('messages:read', onRead);
+
+    es.addEventListener('message', refresh);
+    es.addEventListener('ready', refresh);
+
+    return () => {
+      window.removeEventListener('messages:read', onRead);
+      es.removeEventListener('message', refresh);
+      es.removeEventListener('ready', refresh);
+      es.close();
+    };
+  }, [me?.authenticated, loadMessageUnread]);
 
   const openLogin = () => {
     setAuthInitialSignUp(false);
@@ -79,6 +129,7 @@ export default function Navbar() {
     }
     resetCsrfCache();
     setMe({ authenticated: false });
+    setMessageUnreadCount(0);
     notifyAuthChanged();
     setIsMenuOpen(false);
     if (location.pathname.startsWith('/profile')) {
@@ -148,15 +199,31 @@ export default function Navbar() {
 
               {/* Seller link - next to cart */}
               {me?.authenticated && (
-                <Link
-                  to="/seller"
-                  onClick={() => scrollWindowToTop()}
-                  className="relative p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-400 transition-colors duration-300"
-                  aria-label="Kênh bán hàng"
-                  title="Kênh bán hàng"
-                >
-                  <Store className="w-5 h-5" />
-                </Link>
+                <>
+                  <Link
+                    to="/messages"
+                    onClick={() => scrollWindowToTop()}
+                    className="relative p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors duration-300"
+                    aria-label="Tin nhắn"
+                    title="Tin nhắn"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    {messageUnreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm">
+                        {messageUnreadCount > 99 ? '99+' : messageUnreadCount}
+                      </span>
+                    )}
+                  </Link>
+                  <Link
+                    to="/seller"
+                    onClick={() => scrollWindowToTop()}
+                    className="relative p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-400 transition-colors duration-300"
+                    aria-label="Kênh bán hàng"
+                    title="Kênh bán hàng"
+                  >
+                    <Store className="w-5 h-5" />
+                  </Link>
+                </>
               )}
 
               <button
@@ -268,6 +335,18 @@ export default function Navbar() {
                       className={`mobile-menu-item ${isMenuOpen ? 'show' : ''} flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20`}
                     >
                       <Store className="w-5 h-5" /> Kênh bán hàng
+                    </Link>
+                    <Link
+                      to="/messages"
+                      onClick={() => { scrollWindowToTop(); setIsMenuOpen(false); }}
+                      className={`mobile-menu-item ${isMenuOpen ? 'show' : ''} flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-800 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-slate-800`}
+                    >
+                      <MessageCircle className="w-5 h-5" /> Tin nhắn
+                      {messageUnreadCount > 0 && (
+                        <span className="ml-auto inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                          {messageUnreadCount > 99 ? '99+' : messageUnreadCount}
+                        </span>
+                      )}
                     </Link>
                     <button
                       type="button"

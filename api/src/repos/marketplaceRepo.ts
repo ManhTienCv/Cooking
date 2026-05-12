@@ -525,6 +525,8 @@ export async function createReview(
     const { rows } = await client.query(
       `INSERT INTO product_reviews (product_id, user_id, order_id, rating, comment)
        VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id, product_id, order_id)
+       DO UPDATE SET rating = EXCLUDED.rating, comment = EXCLUDED.comment, created_at = NOW()
        RETURNING id`,
       [productId, userId, orderId, rating, comment]
     );
@@ -546,6 +548,21 @@ export async function createReview(
   } finally {
     client.release();
   }
+}
+
+export async function getOrderReviews(
+  orderId: number,
+  userId: number
+): Promise<ProductReview[]> {
+  const { rows } = await pool.query(
+    `SELECT pr.*, u.full_name, u.avatar_url
+     FROM product_reviews pr
+     JOIN users u ON u.id = pr.user_id
+     WHERE pr.order_id = $1 AND pr.user_id = $2
+     ORDER BY pr.created_at DESC`,
+    [orderId, userId]
+  );
+  return rows as ProductReview[];
 }
 
 /* ================================================================

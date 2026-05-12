@@ -1,11 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, MapPin, Phone, User, CreditCard, Package, CheckCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, User, CreditCard, Package, CheckCircle, Star } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-import { apiJson } from '../../lib/api';
+import { apiFetch, apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
 import { scrollWindowToTop } from '../../lib/scroll';
 import type { Order, OrderItem } from '../../types/marketplace';
+
+type OrderReview = {
+  product_id: number;
+  rating: number;
+  comment: string | null;
+};
 
 const STATUS_STEPS = [
   { key: 'pending', label: 'Chờ xác nhận' },
@@ -24,6 +31,7 @@ export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<(Order & { items: OrderItem[] }) | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reviewForms, setReviewForms] = useState<Record<number, { rating: number; comment: string; submitting: boolean; submitted: boolean }>>({});
 
   useEffect(() => {
     if (!id) return;
@@ -60,6 +68,69 @@ export default function OrderDetail() {
 
   const isCancelled = order.status === 'cancelled';
   const stepIndex = isCancelled ? -1 : STATUS_STEPS.findIndex((s) => s.key === order.status);
+  const canReview = ['delivered', 'completed'].includes(order.status);
+
+  const updateReviewForm = (productId: number, patch: Partial<{ rating: number; comment: string; submitting: boolean; submitted: boolean }>) => {
+    setReviewForms((prev) => ({
+      ...prev,
+      [productId]: {
+        ...{ rating: 5, comment: '', submitting: false, submitted: false },
+        ...prev[productId],
+        ...patch,
+      },
+    }));
+  };
+
+  useEffect(() => {
+    if (!order || !canReview) return;
+    let active = true;
+    apiJson<{ reviews: OrderReview[] }>(`/api/marketplace/orders/${order.id}/reviews`)
+      .then((d) => {
+        if (!active) return;
+        const reviews = d.reviews ?? [];
+        if (reviews.length === 0) return;
+        setReviewForms((prev) => {
+          const next = { ...prev };
+          for (const review of reviews) {
+            next[review.product_id] = {
+              rating: review.rating,
+              comment: review.comment ?? '',
+              submitting: false,
+              submitted: true,
+            };
+          }
+          return next;
+        });
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [order, canReview]);
+
+  const submitReview = async (item: OrderItem) => {
+    const form = reviewForms[item.product_id] ?? { rating: 5, comment: '', submitting: false, submitted: false };
+    updateReviewForm(item.product_id, { submitting: true });
+    try {
+      const response = await apiFetch('/api/marketplace/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_id: item.product_id,
+          order_id: order.id,
+          rating: form.rating,
+          comment: form.comment,
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({})) as { message?: string };
+        throw new Error(data.message || 'Không thể gửi đánh giá');
+      }
+      updateReviewForm(item.product_id, { submitting: false, submitted: true });
+      toast.success('Đã gửi đánh giá');
+    } catch (err) {
+      updateReviewForm(item.product_id, { submitting: false });
+      toast.error(err instanceof Error ? err.message : 'Không thể gửi đánh giá');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 transition-colors">
@@ -128,8 +199,11 @@ export default function OrderDetail() {
               </h3>
             </div>
             <div className="divide-y divide-gray-50 dark:divide-slate-700/30">
-              {order.items.map((item) => (
-                <div key={item.id} className="flex gap-4 p-5">
+              {order.items.map((item) => {
+                const reviewForm = reviewForms[item.product_id] ?? { rating: 5, comment: '', submitting: false, submitted: false };
+                return (
+                <div key={item.id} className="p-5">
+                  <div className="flex gap-4">
                   <div className="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-700">
                     {item.product_image ? (
                       <img src={item.product_image} alt="" className="w-full h-full object-cover" />
@@ -142,8 +216,51 @@ export default function OrderDetail() {
                     <p className="text-xs text-gray-400 mt-1">x{item.quantity} · {formatPrice(item.unit_price)}/{'\u200b'}sp</p>
                   </div>
                   <span className="font-bold text-sm text-gray-900 dark:text-white">{formatPrice(item.subtotal)}</span>
+                  </div>
+                  {canReview && (
+                    <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50/60 p-4 dark:border-amber-900/30 dark:bg-amber-900/10">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <span className="text-sm font-bold text-gray-900 dark:text-white">Đánh giá món này</span>
+                        {reviewForm.submitted && <span className="text-xs font-semibold text-green-600 dark:text-green-400">Đã lưu</span>}
+                      </div>
+                      <div className="mb-3 flex items-center gap-1">
+                        {Array.from({ length: 5 }).map((_, i) => {
+                          const value = i + 1;
+                          const active = value <= reviewForm.rating;
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => updateReviewForm(item.product_id, { rating: value, submitted: false })}
+                              className="rounded p-0.5 transition-transform hover:scale-110"
+                              aria-label={`${value} sao`}
+                            >
+                              <Star className={`h-5 w-5 ${active ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-slate-600'}`} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <textarea
+                        value={reviewForm.comment}
+                        onChange={(e) => updateReviewForm(item.product_id, { comment: e.target.value, submitted: false })}
+                        rows={3}
+                        maxLength={500}
+                        placeholder="Nhận xét của bạn"
+                        className="w-full resize-none rounded-lg border border-amber-100 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 dark:border-slate-700 dark:bg-slate-950/40 dark:text-white"
+                      />
+                      <button
+                        type="button"
+                        disabled={reviewForm.submitting}
+                        onClick={() => void submitReview(item)}
+                        className="mt-3 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+                      >
+                        {reviewForm.submitting ? 'Đang gửi...' : reviewForm.submitted ? 'Cập nhật đánh giá' : 'Gửi đánh giá'}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
             <div className="px-6 py-4 border-t border-gray-100 dark:border-slate-700/50 flex justify-between">
               <span className="font-bold text-gray-900 dark:text-white">Tổng cộng</span>

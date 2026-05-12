@@ -33,7 +33,7 @@ messagesRouter.post('/conversations/:id/messages', requireAuth, asyncHandler(asy
 
 messagesRouter.post('/conversations/:id/read', requireAuth, asyncHandler(async (req, res) => {
   const result = await messagesService.markConversationRead(req.session.userId!, req.params.id);
-  res.json({ success: true, ...result });
+  res.json(result);
 }));
 
 messagesRouter.get('/stream', requireAuth, (req, res) => {

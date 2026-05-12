@@ -118,6 +118,7 @@ export interface OrderItem {
   product_id: number;
   seller_id: number;
   product_name: string;
+  product_slug?: string | null;
   product_image: string | null;
   quantity: number;
   unit_price: number;
@@ -145,9 +146,15 @@ export interface WishlistItem {
   created_at: Date;
   /* joined */
   product_name: string;
+  product_slug: string;
   product_image: string | null;
   product_price: number;
   product_sale_price: number | null;
+  product_unit: string;
+  product_stock: number;
+  product_rating: number;
+  product_total_reviews: number;
+  store_name: string | null;
 }
 
 export interface ProductBundle {

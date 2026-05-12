@@ -174,6 +174,11 @@ marketplaceRouter.get('/wishlist', requireAuth, wrap(async (req, res) => {
   res.json(ok(result));
 }));
 
+marketplaceRouter.get('/wishlist/:productId', requireAuth, wrap(async (req, res) => {
+  const result = await marketplaceService.isWishlisted(req.session.userId!, req.params.productId);
+  res.json(ok(result));
+}));
+
 marketplaceRouter.post('/wishlist/:productId', requireAuth, wrap(async (req, res) => {
   const result = await marketplaceService.toggleWishlist(req.session.userId!, req.params.productId);
   res.json(ok(result));

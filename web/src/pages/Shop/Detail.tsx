@@ -44,6 +44,9 @@ export default function ProductDetail() {
     apiJson<{ reviews: ProductReview[]; total: number }>(`/api/marketplace/products/${product.id}/reviews?limit=10`)
       .then((d) => { setReviews(d.reviews ?? []); setReviewTotal(d.total ?? 0); })
       .catch(() => {});
+    apiJson<{ wishlisted: boolean }>(`/api/marketplace/wishlist/${product.id}`)
+      .then((d) => setWishlisted(Boolean(d.wishlisted)))
+      .catch(() => setWishlisted(false));
   }, [product]);
 
   const handleAddToCart = async () => {

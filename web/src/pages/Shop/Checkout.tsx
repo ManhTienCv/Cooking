@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { CreditCard, MapPin, Phone, User, FileText, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Building2, CreditCard, MapPin, Phone, User, FileText, ArrowLeft, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useCart } from '../../contexts/CartContext';
 import { apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
 import { scrollWindowToTop } from '../../lib/scroll';
+import { loadProfilePreferences, type LinkedBankAccount, type SavedAddress } from '../../lib/profilePreferences';
 
 function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
@@ -16,6 +17,10 @@ export default function Checkout() {
   const { items, total, refresh } = useCart();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [linkedBanks, setLinkedBanks] = useState<LinkedBankAccount[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
+  const [selectedBankId, setSelectedBankId] = useState('');
   const [form, setForm] = useState({
     shipping_name: '',
     shipping_phone: '',
@@ -27,6 +32,42 @@ export default function Checkout() {
   const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
+  useEffect(() => {
+    apiJson<{ authenticated: boolean; user?: { email: string; full_name?: string } }>('/api/auth/me')
+      .then((me) => {
+        const prefs = loadProfilePreferences(me.user?.email);
+        setSavedAddresses(prefs.addresses);
+        setLinkedBanks(prefs.banks);
+
+        const defaultAddress = prefs.addresses.find((item) => item.isDefault) ?? prefs.addresses[0];
+        if (defaultAddress) {
+          setSelectedAddressId(defaultAddress.id);
+          setForm((f) => ({
+            ...f,
+            shipping_name: defaultAddress.name,
+            shipping_phone: defaultAddress.phone,
+            shipping_address: defaultAddress.address,
+          }));
+        } else if (me.user?.full_name) {
+          setForm((f) => ({ ...f, shipping_name: f.shipping_name || me.user?.full_name || '' }));
+        }
+
+        const defaultBank = prefs.banks.find((item) => item.isDefault) ?? prefs.banks[0];
+        if (defaultBank) setSelectedBankId(defaultBank.id);
+      })
+      .catch(() => {});
+  }, []);
+
+  const selectAddress = (address: SavedAddress) => {
+    setSelectedAddressId(address.id);
+    setForm((f) => ({
+      ...f,
+      shipping_name: address.name,
+      shipping_phone: address.phone,
+      shipping_address: address.address,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (items.length === 0) {
@@ -35,6 +76,10 @@ export default function Checkout() {
     }
     if (!form.shipping_name.trim() || !form.shipping_phone.trim() || !form.shipping_address.trim()) {
       toast.error('Vui lòng nhập đầy đủ thông tin giao hàng');
+      return;
+    }
+    if (form.payment_method === 'bank_transfer' && linkedBanks.length > 0 && !selectedBankId) {
+      toast.error('Vui lòng chọn tài khoản ngân hàng liên kết');
       return;
     }
 
@@ -92,6 +137,30 @@ export default function Checkout() {
                 </h3>
 
                 <div className="space-y-4">
+                  {savedAddresses.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-slate-500">Địa chỉ đã lưu</p>
+                      {savedAddresses.map((address) => (
+                        <button
+                          key={address.id}
+                          type="button"
+                          onClick={() => selectAddress(address)}
+                          className={`w-full rounded-xl border p-4 text-left transition-all ${
+                            selectedAddressId === address.id
+                              ? 'border-amber-400 bg-amber-50 dark:border-amber-500 dark:bg-amber-900/10'
+                              : 'border-gray-200 hover:border-gray-300 dark:border-slate-700'
+                          }`}
+                        >
+                          <span className="block text-sm font-bold text-gray-900 dark:text-white">
+                            {address.name} <span className="font-normal text-gray-400">| {address.phone}</span>
+                          </span>
+                          <span className="mt-1 block text-sm text-gray-500 dark:text-slate-400">{address.address}</span>
+                          {address.isDefault && <span className="mt-2 inline-flex rounded border border-red-300 px-2 py-0.5 text-xs font-semibold text-red-500">Mặc định</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -184,6 +253,48 @@ export default function Checkout() {
                       <span className="text-sm font-medium text-gray-900 dark:text-white">{pm.label}</span>
                     </label>
                   ))}
+                  {form.payment_method === 'bank_transfer' && (
+                    <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-900/10">
+                      <div className="mb-3 flex items-center gap-2 text-sm font-bold text-blue-700 dark:text-blue-300">
+                        <Building2 className="h-4 w-4" /> Ngân hàng liên kết
+                      </div>
+                      {linkedBanks.length === 0 ? (
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm text-gray-600 dark:text-slate-300">Bạn chưa liên kết tài khoản ngân hàng.</p>
+                          <Link to="/profile?tab=settings&settings=banks" className="shrink-0 text-sm font-semibold text-blue-600 hover:underline">
+                            Thêm trong hồ sơ
+                          </Link>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {linkedBanks.map((bank) => (
+                            <label
+                              key={bank.id}
+                              className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-all ${
+                                selectedBankId === bank.id
+                                  ? 'border-blue-400 bg-white dark:border-blue-500 dark:bg-slate-800'
+                                  : 'border-transparent bg-white/70 dark:bg-slate-800/60'
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="linked_bank"
+                                checked={selectedBankId === bank.id}
+                                onChange={() => setSelectedBankId(bank.id)}
+                                className="accent-blue-500"
+                              />
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-gray-900 dark:text-white">{bank.bankName}</p>
+                                <p className="text-xs text-gray-500 dark:text-slate-400">
+                                  {bank.accountName} · **** {bank.accountNumber.replace(/\s+/g, '').slice(-4)}
+                                </p>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </Reveal>

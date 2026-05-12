@@ -430,7 +430,11 @@ export async function getOrderById(orderId: number): Promise<OrderWithItems | nu
   if (orderRows.length === 0) return null;
 
   const { rows: itemRows } = await pool.query(
-    'SELECT * FROM order_items WHERE order_id = $1 ORDER BY id',
+    `SELECT oi.*, p.slug AS product_slug
+     FROM order_items oi
+     LEFT JOIN products p ON p.id = oi.product_id
+     WHERE oi.order_id = $1
+     ORDER BY oi.id`,
     [orderId]
   );
 
@@ -571,10 +575,14 @@ export async function getOrderReviews(
 
 export async function getWishlist(userId: number): Promise<WishlistItem[]> {
   const { rows } = await pool.query(
-    `SELECT wi.*, p.name AS product_name, p.image_url AS product_image,
-            p.price AS product_price, p.sale_price AS product_sale_price
+    `SELECT wi.*, p.name AS product_name, p.slug AS product_slug, p.image_url AS product_image,
+            p.price AS product_price, p.sale_price AS product_sale_price,
+            p.unit AS product_unit, p.stock AS product_stock,
+            p.rating AS product_rating, p.total_reviews AS product_total_reviews,
+            sp.store_name
      FROM wishlist_items wi
      JOIN products p ON p.id = wi.product_id
+     LEFT JOIN seller_profiles sp ON sp.user_id = p.seller_id
      WHERE wi.user_id = $1
      ORDER BY wi.created_at DESC`,
     [userId]

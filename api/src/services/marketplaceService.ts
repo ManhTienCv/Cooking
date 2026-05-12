@@ -1,5 +1,6 @@
 import * as marketplaceRepo from '../repos/marketplaceRepo.js';
 import * as aiService from './aiService.js';
+import { processImageBase64 } from '../lib/processImage.js';
 import type { CreateOrderInput } from '../types/marketplace.js';
 
 /* ================================================================
@@ -97,12 +98,14 @@ export async function createProduct(userId: number, body: Record<string, unknown
   const categoryId = Number(body?.category_id ?? 0);
   if (!categoryId) throw { status: 422, message: 'Vui lòng chọn danh mục sản phẩm.' };
 
+  const imageUrl = processImageBase64(String(body?.image_url ?? '').trim() || null);
+
   const id = await marketplaceRepo.createProduct(userId, {
     name,
     description: String(body?.description ?? '').trim() || null,
     price,
     sale_price: body?.sale_price ? Number(body.sale_price) : null,
-    image_url: String(body?.image_url ?? '').trim() || null,
+    image_url: imageUrl,
     images: Array.isArray(body?.images) ? (body.images as string[]) : [],
     product_type: (['food', 'ingredient', 'equipment'].includes(String(body?.product_type ?? ''))
       ? String(body?.product_type)
@@ -132,7 +135,7 @@ export async function updateProduct(userId: number, idRaw: unknown, body: Record
   if (body.description !== undefined) data.description = String(body.description).trim() || null;
   if (body.price !== undefined) data.price = Number(body.price);
   if (body.sale_price !== undefined) data.sale_price = body.sale_price ? Number(body.sale_price) : null;
-  if (body.image_url !== undefined) data.image_url = String(body.image_url).trim() || null;
+  if (body.image_url !== undefined) data.image_url = processImageBase64(String(body.image_url).trim() || null);
   if (body.images !== undefined) data.images = Array.isArray(body.images) ? body.images : [];
   if (body.category_id !== undefined) data.category_id = Number(body.category_id);
   if (body.specs !== undefined) data.specs = typeof body.specs === 'object' ? body.specs : {};
@@ -383,6 +386,13 @@ export async function toggleWishlist(userId: number, productIdRaw: unknown) {
   const productId = Number(productIdRaw);
   if (!productId) throw { status: 400, message: 'Invalid product ID' };
   const wishlisted = await marketplaceRepo.toggleWishlist(userId, productId);
+  return { wishlisted };
+}
+
+export async function isWishlisted(userId: number, productIdRaw: unknown) {
+  const productId = Number(productIdRaw);
+  if (!productId) throw { status: 400, message: 'Invalid product ID' };
+  const wishlisted = await marketplaceRepo.isInWishlist(userId, productId);
   return { wishlisted };
 }
 

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Upload, Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { apiJson } from '../../lib/api';
@@ -29,6 +29,7 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
   const [categories, setCategories] = useState<Category[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [specs, setSpecs] = useState<{ key: string; value: string }[]>([]);
+  const [imageName, setImageName] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -49,6 +50,51 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
   }, [open]);
 
   const set = (key: string, val: string) => setForm(f => ({ ...f, [key]: val }));
+
+  const getSpecValue = (key: string) => specs.find(s => s.key === key)?.value ?? '';
+
+  const setSpecValue = (key: string, value: string) => {
+    setSpecs(prev => {
+      const idx = prev.findIndex(s => s.key === key);
+      if (!value.trim()) return idx >= 0 ? prev.filter((_, i) => i !== idx) : prev;
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], value };
+        return next;
+      }
+      return [...prev, { key, value }];
+    });
+  };
+
+  const handleImageFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chọn file ảnh.');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Ảnh tối đa 10MB.');
+      event.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      if (!result) {
+        toast.error('Không thể đọc file ảnh.');
+        return;
+      }
+      set('image_url', result);
+      setImageName(file.name);
+    };
+    reader.onerror = () => toast.error('Không thể đọc file ảnh.');
+    reader.readAsDataURL(file);
+  };
 
   const filteredCats = categories.filter(c =>
     form.product_type === 'equipment' ? c.type === 'equipment' : c.type === 'food'
@@ -83,6 +129,7 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
       toast.success('Đã tạo sản phẩm! Đang chờ admin duyệt.');
       setForm({ ...BLANK });
       setSpecs([]);
+      setImageName('');
       onCreated();
       onClose();
     } catch (err) {
@@ -165,11 +212,31 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={labelCls}>Giá gốc (đ) *</label>
-                  <input type="number" value={form.price} onChange={e => set('price', e.target.value)} placeholder="50000" className={inputCls} />
+                  <input
+                    type="number"
+                    name="product_price"
+                    min="0"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    defaultValue={form.price}
+                    onChange={e => set('price', e.target.value)}
+                    placeholder="50000"
+                    className={inputCls}
+                  />
                 </div>
                 <div>
                   <label className={labelCls}>Giá khuyến mãi (đ)</label>
-                  <input type="number" value={form.sale_price} onChange={e => set('sale_price', e.target.value)} placeholder="Để trống nếu không" className={inputCls} />
+                  <input
+                    type="number"
+                    name="product_sale_price"
+                    min="0"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    defaultValue={form.sale_price}
+                    onChange={e => set('sale_price', e.target.value)}
+                    placeholder="Để trống nếu không"
+                    className={inputCls}
+                  />
                 </div>
               </div>
 
@@ -177,7 +244,18 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={labelCls}>Tồn kho</label>
-                  <input type="number" value={form.stock} onChange={e => set('stock', e.target.value)} placeholder="100" className={inputCls} />
+                  <input
+                    type="number"
+                    name="product_stock"
+                    min="0"
+                    step="1"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    defaultValue={form.stock}
+                    onChange={e => set('stock', e.target.value)}
+                    placeholder="100"
+                    className={inputCls}
+                  />
                 </div>
                 <div>
                   <label className={labelCls}>Đơn vị</label>
@@ -192,31 +270,23 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className={labelCls}>Khẩu phần</label>
-                    <input value={form.description.includes('Khẩu phần:') ? '' : ''}
+                    <input
+                      value={getSpecValue('Khẩu phần')}
                       placeholder="VD: 1-2 người"
-                      onChange={e => {
-                        const v = e.target.value;
-                        setSpecs(prev => {
-                          const idx = prev.findIndex(s => s.key === 'Khẩu phần');
-                          if (idx >= 0) { const n = [...prev]; n[idx].value = v; return n; }
-                          return [...prev, { key: 'Khẩu phần', value: v }];
-                        });
-                      }}
-                      className={inputCls} />
+                      onChange={e => setSpecValue('Khẩu phần', e.target.value)}
+                      autoComplete="off"
+                      className={inputCls}
+                    />
                   </div>
                   <div>
                     <label className={labelCls}>Hạn sử dụng</label>
                     <input
+                      value={getSpecValue('Hạn sử dụng')}
                       placeholder="VD: 3 ngày, 1 tháng"
-                      onChange={e => {
-                        const v = e.target.value;
-                        setSpecs(prev => {
-                          const idx = prev.findIndex(s => s.key === 'Hạn sử dụng');
-                          if (idx >= 0) { const n = [...prev]; n[idx].value = v; return n; }
-                          return [...prev, { key: 'Hạn sử dụng', value: v }];
-                        });
-                      }}
-                      className={inputCls} />
+                      onChange={e => setSpecValue('Hạn sử dụng', e.target.value)}
+                      autoComplete="off"
+                      className={inputCls}
+                    />
                   </div>
                 </div>
               )}
@@ -226,30 +296,22 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
                   <div>
                     <label className={labelCls}>Xuất xứ</label>
                     <input
+                      value={getSpecValue('Xuất xứ')}
                       placeholder="VD: Việt Nam, Hàn Quốc"
-                      onChange={e => {
-                        const v = e.target.value;
-                        setSpecs(prev => {
-                          const idx = prev.findIndex(s => s.key === 'Xuất xứ');
-                          if (idx >= 0) { const n = [...prev]; n[idx].value = v; return n; }
-                          return [...prev, { key: 'Xuất xứ', value: v }];
-                        });
-                      }}
-                      className={inputCls} />
+                      onChange={e => setSpecValue('Xuất xứ', e.target.value)}
+                      autoComplete="off"
+                      className={inputCls}
+                    />
                   </div>
                   <div>
                     <label className={labelCls}>Khối lượng</label>
                     <input
+                      value={getSpecValue('Khối lượng')}
                       placeholder="VD: 500g, 1 lít"
-                      onChange={e => {
-                        const v = e.target.value;
-                        setSpecs(prev => {
-                          const idx = prev.findIndex(s => s.key === 'Khối lượng');
-                          if (idx >= 0) { const n = [...prev]; n[idx].value = v; return n; }
-                          return [...prev, { key: 'Khối lượng', value: v }];
-                        });
-                      }}
-                      className={inputCls} />
+                      onChange={e => setSpecValue('Khối lượng', e.target.value)}
+                      autoComplete="off"
+                      className={inputCls}
+                    />
                   </div>
                 </div>
               )}
@@ -259,41 +321,54 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
                   <div>
                     <label className={labelCls}>Thương hiệu</label>
                     <input
+                      value={getSpecValue('Thương hiệu')}
                       placeholder="VD: Tefal, Sunhouse"
-                      onChange={e => {
-                        const v = e.target.value;
-                        setSpecs(prev => {
-                          const idx = prev.findIndex(s => s.key === 'Thương hiệu');
-                          if (idx >= 0) { const n = [...prev]; n[idx].value = v; return n; }
-                          return [...prev, { key: 'Thương hiệu', value: v }];
-                        });
-                      }}
-                      className={inputCls} />
+                      onChange={e => setSpecValue('Thương hiệu', e.target.value)}
+                      autoComplete="off"
+                      className={inputCls}
+                    />
                   </div>
                   <div>
                     <label className={labelCls}>Bảo hành</label>
                     <input
+                      value={getSpecValue('Bảo hành')}
                       placeholder="VD: 12 tháng, 2 năm"
-                      onChange={e => {
-                        const v = e.target.value;
-                        setSpecs(prev => {
-                          const idx = prev.findIndex(s => s.key === 'Bảo hành');
-                          if (idx >= 0) { const n = [...prev]; n[idx].value = v; return n; }
-                          return [...prev, { key: 'Bảo hành', value: v }];
-                        });
-                      }}
-                      className={inputCls} />
+                      onChange={e => setSpecValue('Bảo hành', e.target.value)}
+                      autoComplete="off"
+                      className={inputCls}
+                    />
                   </div>
                 </div>
               )}
 
-              {/* Image URL */}
+              {/* Product image */}
               <div>
-                <label className={labelCls}>URL ảnh sản phẩm</label>
-                <input value={form.image_url} onChange={e => set('image_url', e.target.value)} placeholder="https://..." className={inputCls} />
+                <label className={labelCls}>Ảnh sản phẩm</label>
+                <label className={`${inputCls} cursor-pointer flex items-center justify-between gap-3`}>
+                  <span className={`truncate ${imageName ? '' : 'text-gray-400 dark:text-gray-500'}`}>
+                    {imageName || 'Chọn ảnh từ thiết bị'}
+                  </span>
+                  <Upload className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <input type="file" accept="image/*" onChange={handleImageFileChange} className="sr-only" />
+                </label>
                 {form.image_url && (
-                  <img src={form.image_url} alt="preview" className="mt-2 h-24 rounded-xl object-cover border border-gray-200 dark:border-slate-600"
-                    onError={e => (e.currentTarget.style.display = 'none')} />
+                  <div className="mt-3 flex items-start gap-3">
+                    <img
+                      src={form.image_url}
+                      alt="preview"
+                      className="h-24 w-24 rounded-xl object-cover border border-gray-200 dark:border-slate-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        set('image_url', '');
+                        setImageName('');
+                      }}
+                      className="text-xs font-semibold text-red-500 hover:text-red-600"
+                    >
+                      Xóa ảnh
+                    </button>
+                  </div>
                 )}
               </div>
 

@@ -1,25 +1,39 @@
 import type { Request, Response, NextFunction } from 'express';
 
-export interface AppError extends Error {
-  status?: number;
-  message: string;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function statusFromError(err: unknown): number {
+  if (!isRecord(err) || typeof err.status !== 'number') return 500;
+  return err.status >= 400 && err.status < 600 ? err.status : 500;
+}
+
+function messageFromError(err: unknown): string {
+  if (isRecord(err) && typeof err.message === 'string' && err.message.trim()) {
+    return err.message;
+  }
+  return 'System error. Please try again later.';
 }
 
 export function errorHandler(
-  err: AppError,
+  err: unknown,
   req: Request,
   res: Response,
-  next: NextFunction
-) {
-  const status = err.status || 500;
-  const message = err.message || 'Lỗi hệ thống. Vui lòng thử lại sau.';
+  _next: NextFunction
+): void {
+  const status = statusFromError(err);
+  const message = messageFromError(err);
+  const captchaRequired = isRecord(err) && typeof err.captchaRequired === 'boolean' ? err.captchaRequired : undefined;
+  const details = isRecord(err) && err.details !== undefined ? err.details : undefined;
 
   console.error(`[Error] ${req.method} ${req.path}:`, err);
 
   res.status(status).json({
     success: false,
     message,
-    // Trả về stack trace chỉ khi ở môi trường development
+    captchaRequired,
+    details,
     error: process.env.NODE_ENV === 'development' ? err : undefined,
   });
 }

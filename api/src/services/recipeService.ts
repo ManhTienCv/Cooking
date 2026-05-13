@@ -53,7 +53,7 @@ export async function getSavedRecipes(userId: number, limitRaw: unknown, offsetR
   return { recipes, total, limit, offset };
 }
 
-export async function createRecipe(userId: number, body: any) {
+export async function createRecipe(userId: number, body: Record<string, unknown>) {
   const title = String(body?.title ?? '').trim();
   const description = String(body?.description ?? '').trim() || null;
   const ingredients = String(body?.ingredients ?? '').trim();
@@ -134,7 +134,7 @@ export async function incrementRecipeViews(idRaw: unknown, userId: number | null
   return { incremented };
 }
 
-export async function updateRecipe(idRaw: unknown, userId: number, body: any) {
+export async function updateRecipe(idRaw: unknown, userId: number, body: Record<string, unknown>) {
   const id = Number(idRaw);
   if (!id) throw { status: 400, message: 'Invalid id' };
 

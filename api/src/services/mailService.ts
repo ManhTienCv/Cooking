@@ -67,7 +67,7 @@ function buildOtpHtml(code: string, purpose: OtpEmailPurpose, brand: string): st
           </tr>
           <tr>
             <td style="padding:28px 24px 8px;">
-              <p style="margin:0 0 16px;font-size:14px;color:#475569;font-family:system-ui,-apple-system,sans-serif;line-height:1.6;">Mã OTP của bạn (có hiệu lực <strong style="color:#0f172a;">15 phút</strong>):</p>
+              <p style="margin:0 0 16px;font-size:14px;color:#475569;font-family:system-ui,-apple-system,sans-serif;line-height:1.6;">Mã OTP của bạn (có hiệu lực <strong style="color:#0f172a;">5 phút</strong>):</p>
               <table role="presentation" cellspacing="0" cellpadding="0" align="center" style="margin:0 auto;">
                 <tr>${digitBoxes}</tr>
               </table>
@@ -101,7 +101,7 @@ function buildOtpText(code: string, purpose: OtpEmailPurpose, brand: string): st
     purpose === 'register'
       ? 'Mã xác thực đăng ký tài khoản'
       : 'Mã đặt lại mật khẩu';
-  return `${brand} — ${line}\n\nMã OTP: ${code}\nCó hiệu lực trong 15 phút.\n\nKhông chia sẻ mã này cho bất kỳ ai.`;
+  return `${brand} — ${line}\n\nMã OTP: ${code}\nCó hiệu lực trong 5 phút.\n\nKhông chia sẻ mã này cho bất kỳ ai.`;
 }
 
 function subjectForPurpose(purpose: OtpEmailPurpose, brand: string): string {

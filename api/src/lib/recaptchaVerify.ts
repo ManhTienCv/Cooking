@@ -1,10 +1,25 @@
-/** Google reCAPTCHA v2 / checkbox — siteverify */
-export async function verifyRecaptchaV2(
+type RecaptchaSiteVerifyResponse = {
+  success?: boolean;
+  score?: number;
+  action?: string;
+  hostname?: string;
+  challenge_ts?: string;
+  'error-codes'?: string[];
+};
+
+function isRecaptchaResponse(value: unknown): value is RecaptchaSiteVerifyResponse {
+  return typeof value === 'object' && value !== null;
+}
+
+export async function verifyRecaptchaV3(
   secret: string,
   token: string | undefined,
+  expectedAction: string,
+  minScore: number,
   remoteip?: string
 ): Promise<boolean> {
   if (!token?.trim()) return false;
+
   const params = new URLSearchParams();
   params.set('secret', secret);
   params.set('response', token.trim());
@@ -18,8 +33,12 @@ export async function verifyRecaptchaV2(
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) return false;
-    const data = (await res.json()) as { success?: boolean };
-    return data.success === true;
+
+    const data: unknown = await res.json();
+    if (!isRecaptchaResponse(data)) return false;
+
+    const score = typeof data.score === 'number' ? data.score : 0;
+    return data.success === true && data.action === expectedAction && score >= minScore;
   } catch {
     return false;
   }

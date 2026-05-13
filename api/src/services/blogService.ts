@@ -57,7 +57,7 @@ export async function searchPosts(query: {
   return { posts, total, limit, offset };
 }
 
-export async function createPost(userId: number, body: any) {
+export async function createPost(userId: number, body: Record<string, unknown>) {
   const title = String(body?.title ?? '').trim();
   const content = String(body?.content ?? '').trim();
   const excerptRaw = String(body?.excerpt ?? '').trim();
@@ -92,7 +92,7 @@ export async function createPost(userId: number, body: any) {
   return { id, status: 'pending' };
 }
 
-export async function updatePost(idRaw: unknown, userId: number, body: any) {
+export async function updatePost(idRaw: unknown, userId: number, body: Record<string, unknown>) {
   const id = Number(idRaw);
   if (!id) throw { status: 400, message: 'Invalid id' };
 

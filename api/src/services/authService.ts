@@ -1,18 +1,90 @@
 import { randomInt } from 'node:crypto';
 import bcrypt from 'bcryptjs';
+import type { Request } from 'express';
+import { z } from 'zod';
 import { pool } from '../db/pool.js';
 import { env } from '../env.js';
 import { sendOtpEmail } from './mailService.js';
 import { User, UserStats } from '../types/auth.js';
 import { captchaRequiredAfterFailures, recordLoginFailure, clearLoginFailure } from '../lib/loginFailures.js';
-import { verifyRecaptchaV2 } from '../lib/recaptchaVerify.js';
+import { verifyRecaptchaV3 } from '../lib/recaptchaVerify.js';
 import { logAuthLogin } from '../lib/auditLog.js';
-import type { Request } from 'express';
+import { httpError } from '../lib/httpError.js';
 
-const OTP_EXPIRY_MS = 15 * 60 * 1000;
+const OTP_EXPIRY_MS = 5 * 60 * 1000;
+const OTP_MAX_ATTEMPTS = 5;
+const OTP_MAX_SENDS_PER_PENDING = 5;
+const OTP_MIN_RESEND_MS = 60 * 1000;
+const BCRYPT_COST = 12;
 
-function normalizeEmail(s: string): string {
-  return s.trim().toLowerCase();
+const emailSchema = z.string().trim().toLowerCase().email().max(150);
+const recaptchaTokenSchema = z.string().trim().max(4096).optional().default('');
+
+const loginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1).max(128),
+  recaptchaToken: recaptchaTokenSchema,
+});
+
+const registerRequestSchema = z.object({
+  full_name: z.string().trim().min(3).max(120),
+  email: emailSchema,
+  password: z.string().min(8).max(128),
+  recaptchaToken: recaptchaTokenSchema,
+});
+
+const otpVerifySchema = z.object({
+  email: emailSchema,
+  otp: z.string().trim().regex(/^\d{6}$/),
+});
+
+const forgotPasswordSchema = z.object({
+  email: emailSchema,
+  recaptchaToken: recaptchaTokenSchema,
+});
+
+const resetPasswordSchema = z.object({
+  email: emailSchema,
+  otp: z.string().trim().regex(/^\d{6}$/),
+  new_password: z.string().min(8).max(128),
+});
+
+const updateProfileSchema = z.object({
+  full_name: z.string().trim().min(3).max(120),
+  bio: z.string().trim().max(2000).optional().default(''),
+});
+
+const changePasswordSchema = z.object({
+  current_password: z.string().min(1).max(128),
+  new_password: z.string().min(8).max(128),
+});
+
+type PendingRegistrationRow = {
+  email: string;
+  full_name: string;
+  password_hash: string;
+  otp_hash: string;
+  expires_at: Date;
+  attempt_count: number;
+  resend_count: number;
+  updated_at: Date;
+};
+
+type PasswordResetRow = {
+  id: number;
+  reset_token: string | null;
+  reset_token_expiry: Date | null;
+  reset_token_attempts: number;
+};
+
+function parsePayload<T>(schema: z.ZodType<T>, input: unknown): T {
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) {
+    throw httpError(422, parsed.error.issues[0]?.message ?? 'Invalid request payload.', {
+      details: parsed.error.flatten(),
+    });
+  }
+  return parsed.data;
 }
 
 function generateOtp(): string {
@@ -22,12 +94,36 @@ function generateOtp(): string {
   return String(randomInt(100000, 1000000));
 }
 
+function remoteIp(req: Request): string {
+  return String(req.ip || req.socket.remoteAddress || '');
+}
+
+async function verifyRecaptchaIfConfigured(
+  req: Request,
+  token: string,
+  action: string,
+  message = 'reCAPTCHA verification failed.'
+): Promise<void> {
+  if (!env.recaptchaSecretKey) return;
+  const ok = await verifyRecaptchaV3(env.recaptchaSecretKey, token, action, env.recaptchaMinScore, remoteIp(req));
+  if (!ok) {
+    throw httpError(400, message, { captchaRequired: true });
+  }
+}
+
 export async function getCurrentUser(userId: number): Promise<{ authenticated: boolean; user?: User; stats?: UserStats }> {
-  const r = await pool.query('SELECT id, full_name, email, avatar_url, bio, created_at, updated_at FROM users WHERE id = $1 LIMIT 1', [userId]);
+  const r = await pool.query<User>(
+    'SELECT id, full_name, email, avatar_url, bio, created_at, updated_at FROM users WHERE id = $1 LIMIT 1',
+    [userId]
+  );
   const user = r.rows[0];
   if (!user) return { authenticated: false };
 
-  const s = await pool.query(
+  const s = await pool.query<{
+    recipe_count: number;
+    post_count: number;
+    recipe_views_sum: string | number;
+  }>(
     `SELECT
        (SELECT COUNT(*)::int FROM recipes WHERE author_id = $1) AS recipe_count,
        (SELECT COUNT(*)::int FROM blog_posts WHERE author_id = $1) AS post_count,
@@ -35,7 +131,7 @@ export async function getCurrentUser(userId: number): Promise<{ authenticated: b
     [userId]
   );
   const st = s.rows[0];
-  
+
   return {
     authenticated: true,
     user,
@@ -48,42 +144,30 @@ export async function getCurrentUser(userId: number): Promise<{ authenticated: b
 }
 
 export async function login(req: Request) {
-  const email = String(req.body?.email ?? '').trim().toLowerCase();
-  const password = String(req.body?.password ?? '');
+  const payload = parsePayload(loginSchema, req.body);
+  const needCaptcha = Boolean(env.recaptchaSecretKey && captchaRequiredAfterFailures('user', req));
 
-  if (!email.includes('@') || !password) {
-    logAuthLogin('user', { success: false, email: email || '(invalid)', req });
-    throw { status: 422, message: 'Invalid login payload.' };
-  }
-
-  const needCaptcha = env.recaptchaSecretKey && captchaRequiredAfterFailures('user', req);
   if (needCaptcha) {
-    const token = String((req.body as any)?.recaptchaToken ?? '');
-    const ip = String(req.ip || req.socket.remoteAddress || '');
-    const ok = await verifyRecaptchaV2(env.recaptchaSecretKey, token, ip);
-    if (!ok) {
-      throw {
-        status: 400,
-        message: 'Vui lòng hoàn tất xác thực reCAPTCHA.',
-        captchaRequired: true,
-      };
-    }
+    await verifyRecaptchaIfConfigured(req, payload.recaptchaToken, 'login', 'Please complete reCAPTCHA verification.');
   }
 
-  const r = await pool.query(
+  const r = await pool.query<{
+    id: number;
+    full_name: string;
+    email: string;
+    password_hash: string;
+    avatar_url: string | null;
+    bio: string | null;
+  }>(
     'SELECT id, full_name, email, password_hash, avatar_url, bio FROM users WHERE email = $1 LIMIT 1',
-    [email]
+    [payload.email]
   );
   const row = r.rows[0];
-  if (!row || !(await bcrypt.compare(password, String(row.password_hash)))) {
+  if (!row || !(await bcrypt.compare(payload.password, row.password_hash))) {
     recordLoginFailure('user', req);
-    logAuthLogin('user', { success: false, email, req });
+    logAuthLogin('user', { success: false, email: payload.email, req });
     const captchaNow = Boolean(env.recaptchaSecretKey && captchaRequiredAfterFailures('user', req));
-    throw {
-      status: 401,
-      message: 'Invalid email or password.',
-      captchaRequired: captchaNow,
-    };
+    throw httpError(401, 'Invalid email or password.', { captchaRequired: captchaNow });
   }
 
   clearLoginFailure('user', req);
@@ -99,171 +183,216 @@ export async function login(req: Request) {
   return { userId, user: userJson };
 }
 
-export async function requestRegisterOtp(body: any) {
-  const fullName = String(body?.full_name ?? '').trim();
-  const email = normalizeEmail(String(body?.email ?? ''));
-  const password = String(body?.password ?? '');
+export async function requestRegisterOtp(req: Request) {
+  const payload = parsePayload(registerRequestSchema, req.body);
+  await verifyRecaptchaIfConfigured(req, payload.recaptchaToken, 'register');
 
-  if (fullName.length < 3) throw { status: 422, message: 'Họ tên ít nhất 3 ký tự.' };
-  if (!email.includes('@')) throw { status: 422, message: 'Email không hợp lệ.' };
-  if (password.length < 8) throw { status: 422, message: 'Mật khẩu ít nhất 8 ký tự.' };
+  const existing = await pool.query<{ id: number }>('SELECT id FROM users WHERE email = $1 LIMIT 1', [payload.email]);
+  if (existing.rows.length > 0) throw httpError(409, 'Email is already registered.');
 
-  const existing = await pool.query('SELECT id FROM users WHERE email = $1 LIMIT 1', [email]);
-  if (existing.rows.length > 0) throw { status: 409, message: 'Email đã được đăng ký.' };
+  const pending = await pool.query<Pick<PendingRegistrationRow, 'expires_at' | 'resend_count' | 'updated_at'>>(
+    'SELECT expires_at, resend_count, updated_at FROM pending_registrations WHERE email = $1 LIMIT 1',
+    [payload.email]
+  );
+  const activePending = pending.rows[0];
+  let resendCount = 1;
+  if (activePending && activePending.expires_at > new Date()) {
+    const elapsedMs = Date.now() - activePending.updated_at.getTime();
+    if (elapsedMs < OTP_MIN_RESEND_MS) {
+      throw httpError(429, 'Please wait before requesting another OTP.');
+    }
+    if (activePending.resend_count >= OTP_MAX_SENDS_PER_PENDING) {
+      throw httpError(429, 'Too many OTP requests. Please try again later.');
+    }
+    resendCount = activePending.resend_count + 1;
+  }
 
   const otp = generateOtp();
-  const otpHash = await bcrypt.hash(otp, 10);
-  const passHash = await bcrypt.hash(password, 10);
+  const otpHash = await bcrypt.hash(otp, BCRYPT_COST);
+  const passHash = await bcrypt.hash(payload.password, BCRYPT_COST);
   const exp = new Date(Date.now() + OTP_EXPIRY_MS);
 
   await pool.query(
-    `INSERT INTO pending_registrations (email, full_name, password_hash, otp_hash, expires_at)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO pending_registrations (email, full_name, password_hash, otp_hash, expires_at, attempt_count, resend_count)
+     VALUES ($1, $2, $3, $4, $5, 0, $6)
      ON CONFLICT (email) DO UPDATE SET
        full_name = EXCLUDED.full_name,
        password_hash = EXCLUDED.password_hash,
        otp_hash = EXCLUDED.otp_hash,
        expires_at = EXCLUDED.expires_at,
+       attempt_count = 0,
+       resend_count = EXCLUDED.resend_count,
        updated_at = CURRENT_TIMESTAMP`,
-    [email, fullName, passHash, otpHash, exp]
+    [payload.email, payload.full_name, passHash, otpHash, exp, resendCount]
   );
 
-  const sent = await sendOtpEmail(email, otp, 'register');
-  if (!sent) throw { status: 503, message: 'Không gửi được email. Cấu hình SMTP trong .env hoặc xem console (chế độ dev).' };
+  const sent = await sendOtpEmail(payload.email, otp, 'register');
+  if (!sent) throw httpError(503, 'Unable to send OTP email.');
 
-  return { success: true, message: 'Đã gửi mã OTP đến email của bạn.' };
+  return { success: true, message: 'OTP has been sent to your email.' };
 }
 
-export async function verifyRegisterOtp(body: any) {
-  const email = normalizeEmail(String(body?.email ?? ''));
-  const otp = String(body?.otp ?? '').trim();
+export async function verifyRegisterOtp(body: unknown) {
+  const payload = parsePayload(otpVerifySchema, body);
+  const client = await pool.connect();
 
-  if (!email.includes('@')) throw { status: 422, message: 'Email không hợp lệ.' };
-  if (!/^\d{6}$/.test(otp)) throw { status: 422, message: 'Mã OTP phải gồm 6 số.' };
+  try {
+    await client.query('BEGIN');
+    const r = await client.query<PendingRegistrationRow>(
+      'SELECT email, full_name, password_hash, otp_hash, expires_at, attempt_count, resend_count, updated_at FROM pending_registrations WHERE email = $1 FOR UPDATE',
+      [payload.email]
+    );
+    const row = r.rows[0];
 
-  const r = await pool.query(
-    'SELECT email, full_name, password_hash, otp_hash, expires_at FROM pending_registrations WHERE email = $1',
-    [email]
-  );
-  const row = r.rows[0];
+    if (!row) throw httpError(400, 'No active registration request for this email.');
 
-  if (!row) throw { status: 400, message: 'Không có yêu cầu đăng ký cho email này. Gửi mã OTP lại ở bước trước.' };
+    if (row.expires_at < new Date()) {
+      await client.query('DELETE FROM pending_registrations WHERE email = $1', [payload.email]);
+      throw httpError(400, 'OTP has expired. Please register again.');
+    }
 
-  if (new Date(row.expires_at) < new Date()) {
-    await pool.query('DELETE FROM pending_registrations WHERE email = $1', [email]);
-    throw { status: 400, message: 'Mã OTP đã hết hạn. Vui lòng đăng ký lại từ đầu.' };
+    if (row.attempt_count >= OTP_MAX_ATTEMPTS) {
+      await client.query('DELETE FROM pending_registrations WHERE email = $1', [payload.email]);
+      throw httpError(429, 'Too many OTP attempts. Please request a new OTP.');
+    }
+
+    const otpOk = await bcrypt.compare(payload.otp, row.otp_hash);
+    if (!otpOk) {
+      const nextAttempts = row.attempt_count + 1;
+      if (nextAttempts >= OTP_MAX_ATTEMPTS) {
+        await client.query('DELETE FROM pending_registrations WHERE email = $1', [payload.email]);
+        throw httpError(429, 'Too many OTP attempts. Please request a new OTP.');
+      }
+      await client.query('UPDATE pending_registrations SET attempt_count = $1, updated_at = CURRENT_TIMESTAMP WHERE email = $2', [
+        nextAttempts,
+        payload.email,
+      ]);
+      throw httpError(401, `OTP is incorrect. ${OTP_MAX_ATTEMPTS - nextAttempts} attempts remaining.`);
+    }
+
+    await client.query('DELETE FROM pending_registrations WHERE email = $1', [payload.email]);
+
+    const ins = await client.query<{ id: number }>(
+      'INSERT INTO users (full_name, email, password_hash) VALUES ($1, $2, $3) RETURNING id',
+      [row.full_name, payload.email, row.password_hash]
+    );
+    await client.query('COMMIT');
+
+    const insertId = Number(ins.rows[0]?.id);
+    return {
+      userId: insertId,
+      user: {
+        id: insertId,
+        full_name: row.full_name,
+        email: payload.email,
+        avatar_url: null,
+        bio: null,
+      },
+    };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function forgotPassword(req: Request) {
+  const payload = parsePayload(forgotPasswordSchema, req.body);
+  await verifyRecaptchaIfConfigured(req, payload.recaptchaToken, 'forgot_password');
+
+  const u = await pool.query<{ id: number }>('SELECT id FROM users WHERE email = $1 LIMIT 1', [payload.email]);
+  if (u.rows.length === 0) {
+    return { success: true, message: 'If the email exists, an OTP has been sent.' };
   }
 
-  const otpOk = await bcrypt.compare(otp, row.otp_hash);
-  if (!otpOk) throw { status: 401, message: 'Mã OTP không đúng.' };
-
-  await pool.query('DELETE FROM pending_registrations WHERE email = $1', [email]);
-
-  const ins = await pool.query(
-    'INSERT INTO users (full_name, email, password_hash) VALUES ($1, $2, $3) RETURNING id',
-    [row.full_name, email, row.password_hash]
-  );
-  const insertId = Number(ins.rows[0]?.id);
-
-  return {
-    userId: insertId,
-    user: {
-      id: insertId,
-      full_name: row.full_name,
-      email,
-      avatar_url: null,
-      bio: null,
-    },
-  };
-}
-
-export async function forgotPassword(emailRaw: unknown) {
-  const email = normalizeEmail(String(emailRaw ?? ''));
-  if (!email.includes('@')) throw { status: 422, message: 'Email không hợp lệ.' };
-
-  const u = await pool.query('SELECT id FROM users WHERE email = $1 LIMIT 1', [email]);
-  if (u.rows.length === 0) throw { status: 404, message: 'Không tìm thấy tài khoản với email này.' };
-
   const otp = generateOtp();
-  const otpHash = await bcrypt.hash(otp, 10);
+  const otpHash = await bcrypt.hash(otp, BCRYPT_COST);
   const exp = new Date(Date.now() + OTP_EXPIRY_MS);
-  await pool.query('UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE email = $3', [
-    otpHash,
-    exp,
-    email,
-  ]);
+  await pool.query(
+    'UPDATE users SET reset_token = $1, reset_token_expiry = $2, reset_token_attempts = 0 WHERE email = $3',
+    [otpHash, exp, payload.email]
+  );
 
-  const sent = await sendOtpEmail(email, otp, 'reset');
-  if (!sent) throw { status: 503, message: 'Không gửi được email. Kiểm tra SMTP hoặc console (dev).' };
+  const sent = await sendOtpEmail(payload.email, otp, 'reset');
+  if (!sent) throw httpError(503, 'Unable to send OTP email.');
 
-  return { success: true, message: 'Đã gửi mã OTP đến email đã đăng ký.' };
+  return { success: true, message: 'If the email exists, an OTP has been sent.' };
 }
 
-export async function resetPassword(body: any) {
-  const email = normalizeEmail(String(body?.email ?? ''));
-  const otp = String(body?.otp ?? '').trim();
-  const newPassword = String(body?.new_password ?? '');
+export async function resetPassword(body: unknown) {
+  const payload = parsePayload(resetPasswordSchema, body);
 
-  if (!email.includes('@')) throw { status: 422, message: 'Email không hợp lệ.' };
-  if (!/^\d{6}$/.test(otp)) throw { status: 422, message: 'Mã OTP phải gồm 6 số.' };
-  if (newPassword.length < 8) throw { status: 422, message: 'Mật khẩu mới ít nhất 8 ký tự.' };
-
-  const r = await pool.query(
-    'SELECT id, reset_token, reset_token_expiry FROM users WHERE email = $1 LIMIT 1',
-    [email]
+  const r = await pool.query<PasswordResetRow>(
+    'SELECT id, reset_token, reset_token_expiry, reset_token_attempts FROM users WHERE email = $1 LIMIT 1',
+    [payload.email]
   );
   const row = r.rows[0];
 
   if (!row?.reset_token || !row.reset_token_expiry) {
-    throw { status: 400, message: 'Chưa có yêu cầu đặt lại mật khẩu. Dùng Quên mật khẩu để nhận OTP.' };
+    throw httpError(400, 'No active password reset request.');
   }
 
-  if (new Date(row.reset_token_expiry) < new Date()) {
-    await pool.query('UPDATE users SET reset_token = NULL, reset_token_expiry = NULL WHERE id = $1', [row.id]);
-    throw { status: 400, message: 'Mã OTP đã hết hạn. Vui lòng gửi lại mã.' };
+  if (row.reset_token_expiry < new Date()) {
+    await pool.query('UPDATE users SET reset_token = NULL, reset_token_expiry = NULL, reset_token_attempts = 0 WHERE id = $1', [
+      row.id,
+    ]);
+    throw httpError(400, 'OTP has expired. Please request a new code.');
   }
 
-  const otpOk = await bcrypt.compare(otp, row.reset_token);
-  if (!otpOk) throw { status: 401, message: 'Mã OTP không đúng.' };
+  if (row.reset_token_attempts >= OTP_MAX_ATTEMPTS) {
+    await pool.query('UPDATE users SET reset_token = NULL, reset_token_expiry = NULL, reset_token_attempts = 0 WHERE id = $1', [
+      row.id,
+    ]);
+    throw httpError(429, 'Too many OTP attempts. Please request a new code.');
+  }
 
-  const hash = await bcrypt.hash(newPassword, 10);
+  const otpOk = await bcrypt.compare(payload.otp, row.reset_token);
+  if (!otpOk) {
+    const nextAttempts = row.reset_token_attempts + 1;
+    if (nextAttempts >= OTP_MAX_ATTEMPTS) {
+      await pool.query('UPDATE users SET reset_token = NULL, reset_token_expiry = NULL, reset_token_attempts = 0 WHERE id = $1', [
+        row.id,
+      ]);
+      throw httpError(429, 'Too many OTP attempts. Please request a new code.');
+    }
+    await pool.query('UPDATE users SET reset_token_attempts = $1 WHERE id = $2', [nextAttempts, row.id]);
+    throw httpError(401, `OTP is incorrect. ${OTP_MAX_ATTEMPTS - nextAttempts} attempts remaining.`);
+  }
+
+  const hash = await bcrypt.hash(payload.new_password, BCRYPT_COST);
   await pool.query(
-    'UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expiry = NULL WHERE id = $2',
+    'UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expiry = NULL, reset_token_attempts = 0, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
     [hash, row.id]
   );
 
-  return { success: true, message: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập.' };
+  return { success: true, message: 'Password reset successful. You can sign in now.' };
 }
 
-export async function updateProfile(userId: number, body: any) {
-  const fullName = String(body?.full_name ?? '').trim();
-  const bio = String(body?.bio ?? '').trim() || null;
+export async function updateProfile(userId: number, body: unknown) {
+  const payload = parsePayload(updateProfileSchema, body);
+  const bio = payload.bio.trim() || null;
 
-  if (fullName.length < 3) throw { status: 422, message: 'Họ và tên tối thiểu 3 ký tự.' };
-
-  const r = await pool.query(
+  const r = await pool.query<Pick<User, 'id' | 'full_name' | 'email' | 'avatar_url' | 'bio'>>(
     'UPDATE users SET full_name = $1, bio = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id, full_name, email, avatar_url, bio',
-    [fullName, bio, userId]
+    [payload.full_name, bio, userId]
   );
-  if (r.rows.length === 0) throw { status: 404, message: 'Người dùng không tồn tại.' };
-  return { success: true, message: 'Cập nhật hồ sơ thành công.', user: r.rows[0] };
+  if (r.rows.length === 0) throw httpError(404, 'User not found.');
+  return { success: true, message: 'Profile updated successfully.', user: r.rows[0] };
 }
 
-export async function changePassword(userId: number, body: any) {
-  const currentPassword = String(body?.current_password ?? '');
-  const newPassword = String(body?.new_password ?? '');
+export async function changePassword(userId: number, body: unknown) {
+  const payload = parsePayload(changePasswordSchema, body);
 
-  if (newPassword.length < 8) throw { status: 422, message: 'Mật khẩu mới phải có ít nhất 8 ký tự.' };
-
-  const r = await pool.query('SELECT password_hash FROM users WHERE id = $1', [userId]);
-  if (r.rows.length === 0) throw { status: 404, message: 'Người dùng không tồn tại.' };
+  const r = await pool.query<{ password_hash: string }>('SELECT password_hash FROM users WHERE id = $1', [userId]);
+  if (r.rows.length === 0) throw httpError(404, 'User not found.');
   const row = r.rows[0];
 
-  const currentMatch = await bcrypt.compare(currentPassword, String(row.password_hash));
-  if (!currentMatch) throw { status: 401, message: 'Mật khẩu hiện tại không chính xác.' };
+  const currentMatch = await bcrypt.compare(payload.current_password, row.password_hash);
+  if (!currentMatch) throw httpError(401, 'Current password is incorrect.');
 
-  const newHash = await bcrypt.hash(newPassword, 10);
+  const newHash = await bcrypt.hash(payload.new_password, BCRYPT_COST);
   await pool.query('UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [newHash, userId]);
 
-  return { success: true, message: 'Đổi mật khẩu thành công.' };
+  return { success: true, message: 'Password changed successfully.' };
 }

@@ -65,8 +65,9 @@ export const env = {
   /** Tên hiển thị trong template email OTP */
   mailBrand: process.env.MAIL_BRAND ?? 'CookingWeb',
 
-  /** Google reCAPTCHA v2 secret — bắt buộc sau N lần đăng nhập sai (xem loginFailures) */
+  /** Google reCAPTCHA v3 secret. Login checks are enforced after repeated failures. */
   otpEmailMode: (process.env.OTP_EMAIL_MODE ?? 'auto').toLowerCase(),
   testOtpCode: process.env.TEST_OTP_CODE ?? '',
   recaptchaSecretKey: process.env.RECAPTCHA_SECRET_KEY ?? '',
+  recaptchaMinScore: Number(process.env.RECAPTCHA_MIN_SCORE) || 0.5,
 };

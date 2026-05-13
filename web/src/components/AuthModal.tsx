@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import type ReCAPTCHA from 'react-google-recaptcha';
+import React, { useState, useEffect } from 'react';
 import '../assets/css/BlackwhiteAuth.css';
-import { RecaptchaCook } from './RecaptchaCook';
 import { hasRecaptchaSiteKey } from '../lib/recaptchaSiteKey';
 import { apiFetch, resetCsrfCache } from '../lib/api';
 import { notifyAuthChanged } from '../lib/authEvents';
 import { createPortal } from 'react-dom';
+import { executeRecaptchaV3 } from '../lib/recaptchaV3';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -25,8 +24,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
-  const [captchaRequired, setCaptchaRequired] = useState(false);
-  const recaptchaRef = useRef<ReCAPTCHA | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -38,7 +35,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
       setRegisterStep(1);
       setPendingEmail('');
       setForgotEmail('');
-      setCaptchaRequired(false);
     } else {
       document.body.style.overflow = '';
     }
@@ -89,9 +85,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     const fd = new FormData(e.currentTarget);
     const email = String(fd.get('email') ?? '').trim();
     const password = String(fd.get('password') ?? '');
-    const recaptchaToken = recaptchaRef.current?.getValue() ?? '';
     setAuthLoading(true);
     try {
+      const recaptchaToken = hasRecaptchaSiteKey() ? await executeRecaptchaV3('login') : '';
       const r = await apiFetch('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password, recaptchaToken }),
@@ -103,21 +99,18 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
       };
       if (!r.ok) {
         if (data.captchaRequired) {
-          setCaptchaRequired(true);
           if (!hasRecaptchaSiteKey()) {
             setAuthError(
               'Server yêu cầu reCAPTCHA. Thêm VITE_RECAPTCHA_SITE_KEY vào web/.env và khởi động lại Vite.'
             );
           } else {
             setAuthError(data.message ?? 'Đăng nhập thất bại.');
-            recaptchaRef.current?.reset();
           }
         } else {
           setAuthError(data.message ?? 'Đăng nhập thất bại.');
         }
         return;
       }
-      setCaptchaRequired(false);
       resetCsrfCache();
       notifyAuthChanged();
       onSuccess?.();
@@ -138,9 +131,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     const password = String(fd.get('password') ?? '');
     setAuthLoading(true);
     try {
+      const recaptchaToken = hasRecaptchaSiteKey() ? await executeRecaptchaV3('register') : '';
       const r = await apiFetch('/api/auth/register/request-otp', {
         method: 'POST',
-        body: JSON.stringify({ full_name, email, password }),
+        body: JSON.stringify({ full_name, email, password, recaptchaToken }),
       });
       const data = (await r.json()) as { success?: boolean; message?: string };
       if (!r.ok) {
@@ -190,9 +184,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     const email = String(fd.get('email') ?? '').trim().toLowerCase();
     setAuthLoading(true);
     try {
+      const recaptchaToken = hasRecaptchaSiteKey() ? await executeRecaptchaV3('forgot_password') : '';
       const r = await apiFetch('/api/auth/forgot-password', {
         method: 'POST',
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, recaptchaToken }),
       });
       const data = (await r.json()) as { success?: boolean; message?: string };
       if (!r.ok) {
@@ -365,7 +360,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               required
               className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
             />
-            <RecaptchaCook visible={captchaRequired} recaptchaRef={recaptchaRef} />
             <a href="#" onClick={handleShowForgot} className="text-xs text-gray-400 hover:text-black dark:hover:text-white mb-4">
               Quên mật khẩu?
             </a>

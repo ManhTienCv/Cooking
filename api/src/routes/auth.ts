@@ -66,7 +66,7 @@ authRouter.get('/register', (_req, res) => {
 
 /** Bước 1 đăng ký: gửi OTP tới email (email chưa tồn tại trong users). */
 authRouter.post('/register/request-otp', authRegisterOtpRateLimit, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await authService.requestRegisterOtp(req.body);
+  const result = await authService.requestRegisterOtp(req);
   res.json(result);
 }));
 
@@ -91,7 +91,7 @@ authRouter.post('/register/verify', authRegisterRateLimit, requireCsrf, asyncHan
 }));
 
 authRouter.post('/forgot-password', authForgotPasswordRateLimit, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await authService.forgotPassword(req.body?.email);
+  const result = await authService.forgotPassword(req);
   res.json(result);
 }));
 

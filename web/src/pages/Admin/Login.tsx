@@ -1,26 +1,23 @@
-import { useState, useRef, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChefHat } from 'lucide-react';
-import type ReCAPTCHA from 'react-google-recaptcha';
-import { RecaptchaCook } from '../../components/RecaptchaCook';
 import { hasRecaptchaSiteKey } from '../../lib/recaptchaSiteKey';
 import { apiFetch, resetCsrfCache } from '../../lib/api';
+import { executeRecaptchaV3 } from '../../lib/recaptchaV3';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [captchaRequired, setCaptchaRequired] = useState(false);
-  const recaptchaRef = useRef<ReCAPTCHA | null>(null);
   const navigate = useNavigate();
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const recaptchaToken = recaptchaRef.current?.getValue() ?? '';
     try {
+      const recaptchaToken = hasRecaptchaSiteKey() ? await executeRecaptchaV3('admin_login') : '';
       const r = await apiFetch('/api/admin/login', {
         method: 'POST',
         body: JSON.stringify({ email, password, recaptchaToken }),
@@ -32,19 +29,16 @@ export default function AdminLogin() {
       };
       if (!r.ok) {
         if (data.captchaRequired) {
-          setCaptchaRequired(true);
           if (!hasRecaptchaSiteKey()) {
             setError('Server requires reCAPTCHA. Add VITE_RECAPTCHA_SITE_KEY to web/.env and restart Vite.');
           } else {
             setError(data.message ?? 'Login failed');
-            recaptchaRef.current?.reset();
           }
         } else {
           setError(data.message ?? 'Login failed');
         }
         return;
       }
-      setCaptchaRequired(false);
       resetCsrfCache();
       navigate('/admin');
     } catch (err) {
@@ -124,10 +118,6 @@ export default function AdminLogin() {
                   required
                 />
               </div>
-            </div>
-
-            <div className="mt-4">
-              <RecaptchaCook visible={captchaRequired} recaptchaRef={recaptchaRef} />
             </div>
 
             <button

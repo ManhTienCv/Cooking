@@ -1,13 +1,31 @@
 import bcrypt from 'bcryptjs';
+import { z } from 'zod';
 import { pool } from '../db/pool.js';
 import { env } from '../env.js';
 import { isBcryptHash } from '../lib/adminPassword.js';
 import { captchaRequiredAfterFailures, recordLoginFailure, clearLoginFailure } from '../lib/loginFailures.js';
-import { verifyRecaptchaV2 } from '../lib/recaptchaVerify.js';
+import { verifyRecaptchaV3 } from '../lib/recaptchaVerify.js';
 import { logAuthLogin } from '../lib/auditLog.js';
 import { slugify } from '../data/defaultCategories.js';
 import { adminRepo } from '../repos/adminRepo.js';
 import type { Request } from 'express';
+import { httpError } from '../lib/httpError.js';
+
+const adminLoginSchema = z.object({
+  email: z.string().trim().email().max(150),
+  password: z.string().min(1).max(128),
+  recaptchaToken: z.string().trim().max(4096).optional().default(''),
+});
+
+function parseAdminLogin(input: unknown): z.infer<typeof adminLoginSchema> {
+  const parsed = adminLoginSchema.safeParse(input);
+  if (!parsed.success) {
+    throw httpError(422, parsed.error.issues[0]?.message ?? 'Invalid login payload.', {
+      details: parsed.error.flatten(),
+    });
+  }
+  return parsed.data;
+}
 
 export async function getMe(adminId: number) {
   const r = await pool.query(
@@ -20,42 +38,32 @@ export async function getMe(adminId: number) {
 }
 
 export async function login(req: Request) {
-  const email = String(req.body?.email ?? '').trim();
-  const password = String(req.body?.password ?? '');
-  if (!email || !password) {
-    logAuthLogin('admin', { success: false, email: email || '(invalid)', req });
-    throw { status: 422, message: 'Email/password required.' };
-  }
+  const payload = parseAdminLogin(req.body);
 
-  const needCaptcha = env.recaptchaSecretKey && captchaRequiredAfterFailures('admin', req);
+  const needCaptcha = Boolean(env.recaptchaSecretKey && captchaRequiredAfterFailures('admin', req));
   if (needCaptcha) {
-    const token = String((req.body as any)?.recaptchaToken ?? '');
     const ip = String(req.ip || req.socket.remoteAddress || '');
-    const ok = await verifyRecaptchaV2(env.recaptchaSecretKey, token, ip);
+    const ok = await verifyRecaptchaV3(env.recaptchaSecretKey, payload.recaptchaToken, 'admin_login', env.recaptchaMinScore, ip);
     if (!ok) {
-      throw {
-        status: 400,
-        message: 'Complete reCAPTCHA verification.',
-        captchaRequired: true,
-      };
+      throw httpError(400, 'Complete reCAPTCHA verification.', { captchaRequired: true });
     }
   }
 
   const r = await pool.query(
     'SELECT "MaAD" AS id, "HoTen" AS full_name, "Email" AS email, "MatKhau" AS password_hash FROM quantrivien WHERE "Email" = $1 LIMIT 1',
-    [email]
+    [payload.email]
   );
   const admin = r.rows[0];
   if (!admin) {
     recordLoginFailure('admin', req);
     const captchaNow = Boolean(env.recaptchaSecretKey && captchaRequiredAfterFailures('admin', req));
-    throw { status: 401, message: 'Invalid credentials.', captchaRequired: captchaNow };
+    throw httpError(401, 'Invalid credentials.', { captchaRequired: captchaNow });
   }
 
   let ok = false;
   if (isBcryptHash(admin.password_hash)) {
     try {
-      ok = await bcrypt.compare(password, admin.password_hash);
+      ok = await bcrypt.compare(payload.password, admin.password_hash);
     } catch {
       ok = false;
     }
@@ -63,9 +71,9 @@ export async function login(req: Request) {
 
   if (!ok) {
     recordLoginFailure('admin', req);
-    logAuthLogin('admin', { success: false, email, req });
+    logAuthLogin('admin', { success: false, email: payload.email, req });
     const captchaNow = Boolean(env.recaptchaSecretKey && captchaRequiredAfterFailures('admin', req));
-    throw { status: 401, message: 'Invalid credentials.', captchaRequired: captchaNow };
+    throw httpError(401, 'Invalid credentials.', { captchaRequired: captchaNow });
   }
 
   clearLoginFailure('admin', req);

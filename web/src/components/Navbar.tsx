@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChefHat, Menu, LogOut, Moon, Sun, ShoppingCart, Store, MessageCircle } from 'lucide-react';
+import { ChefHat, Menu, LogOut, Moon, Sun, ShoppingCart, Store, MessageCircle, ClipboardList } from 'lucide-react';
 import AuthModal from './AuthModal';
 import { apiFetch, apiJson, resetCsrfCache } from '../lib/api';
 import { AUTH_CHANGE_EVENT, notifyAuthChanged } from '../lib/authEvents';
@@ -181,47 +181,108 @@ export default function Navbar() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              {/* Cart badge */}
+              {/* Seller link (Kênh bán hàng) */}
+              {me?.authenticated && (
+                <Link
+                  to="/seller"
+                  onClick={() => scrollWindowToTop()}
+                  className={`relative p-2 rounded-full transition-colors duration-300 ${
+                    currentPage.startsWith('/seller') 
+                      ? 'text-white dark:text-black' 
+                      : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800'
+                  }`}
+                  aria-label="Kênh bán hàng"
+                  title="Kênh bán hàng"
+                >
+                  {currentPage.startsWith('/seller') && (
+                    <motion.div
+                      layoutId="nav-pill-desktop"
+                      className="absolute inset-0 rounded-full bg-black dark:bg-white shadow-md"
+                      transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                      style={{ zIndex: -1 }}
+                    />
+                  )}
+                  <Store className="w-5 h-5 relative z-10" />
+                </Link>
+              )}
+
+              {/* Cart link */}
               <Link
                 to="/cart"
                 onClick={() => scrollWindowToTop()}
-                className="relative p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors duration-300"
+                className={`relative p-2 rounded-full transition-colors duration-300 ${
+                  currentPage.startsWith('/cart') || currentPage.startsWith('/checkout')
+                    ? 'text-white dark:text-black' 
+                    : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800'
+                }`}
                 aria-label="Giỏ hàng"
                 title="Giỏ hàng"
               >
-                <ShoppingCart className="w-5 h-5" />
+                {(currentPage.startsWith('/cart') || currentPage.startsWith('/checkout')) && (
+                  <motion.div
+                    layoutId="nav-pill-desktop"
+                    className="absolute inset-0 rounded-full bg-black dark:bg-white shadow-md"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                    style={{ zIndex: -1 }}
+                  />
+                )}
+                <ShoppingCart className="w-5 h-5 relative z-10" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm z-20">
                     {cartCount > 99 ? '99+' : cartCount}
                   </span>
                 )}
               </Link>
 
-              {/* Seller link - next to cart */}
+              {/* Other authenticated links */}
               {me?.authenticated && (
                 <>
                   <Link
                     to="/messages"
                     onClick={() => scrollWindowToTop()}
-                    className="relative p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors duration-300"
+                    className={`relative p-2 rounded-full transition-colors duration-300 ${
+                      currentPage.startsWith('/messages') 
+                        ? 'text-white dark:text-black' 
+                        : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800'
+                    }`}
                     aria-label="Tin nhắn"
                     title="Tin nhắn"
                   >
-                    <MessageCircle className="w-5 h-5" />
+                    {currentPage.startsWith('/messages') && (
+                      <motion.div
+                        layoutId="nav-pill-desktop"
+                        className="absolute inset-0 rounded-full bg-black dark:bg-white shadow-md"
+                        transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                        style={{ zIndex: -1 }}
+                      />
+                    )}
+                    <MessageCircle className="w-5 h-5 relative z-10" />
                     {messageUnreadCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm">
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm z-20">
                         {messageUnreadCount > 99 ? '99+' : messageUnreadCount}
                       </span>
                     )}
                   </Link>
                   <Link
-                    to="/seller"
+                    to="/orders"
                     onClick={() => scrollWindowToTop()}
-                    className="relative p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-400 transition-colors duration-300"
-                    aria-label="Kênh bán hàng"
-                    title="Kênh bán hàng"
+                    className={`relative p-2 rounded-full transition-colors duration-300 ${
+                      currentPage.startsWith('/orders') 
+                        ? 'text-white dark:text-black' 
+                        : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800'
+                    }`}
+                    aria-label="Đơn mua của tôi"
+                    title="Đơn mua của tôi"
                   >
-                    <Store className="w-5 h-5" />
+                    {currentPage.startsWith('/orders') && (
+                      <motion.div
+                        layoutId="nav-pill-desktop"
+                        className="absolute inset-0 rounded-full bg-black dark:bg-white shadow-md"
+                        transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                        style={{ zIndex: -1 }}
+                      />
+                    )}
+                    <ClipboardList className="w-5 h-5 relative z-10" />
                   </Link>
                 </>
               )}

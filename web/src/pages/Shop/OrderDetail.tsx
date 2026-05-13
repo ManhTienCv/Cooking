@@ -42,33 +42,7 @@ export default function OrderDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-6">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-32 bg-white dark:bg-slate-800/80 rounded-2xl animate-pulse" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (!order) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">😕</div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Không tìm thấy đơn hàng</h2>
-          <Link to="/orders" onClick={scrollWindowToTop} className="text-amber-600 dark:text-amber-400 hover:underline font-medium">← Danh sách đơn hàng</Link>
-        </div>
-      </div>
-    );
-  }
-
-  const isCancelled = order.status === 'cancelled';
-  const stepIndex = isCancelled ? -1 : STATUS_STEPS.findIndex((s) => s.key === order.status);
-  const canReview = ['delivered', 'completed'].includes(order.status);
+  const canReview = order ? ['delivered', 'completed'].includes(order.status) : false;
 
   const updateReviewForm = (productId: number, patch: Partial<{ rating: number; comment: string; submitting: boolean; submitted: boolean }>) => {
     setReviewForms((prev) => ({
@@ -105,6 +79,33 @@ export default function OrderDetail() {
       .catch(() => {});
     return () => { active = false; };
   }, [order, canReview]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-6">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-32 bg-white dark:bg-slate-800/80 rounded-2xl animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">😕</div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Không tìm thấy đơn hàng</h2>
+          <Link to="/orders" onClick={scrollWindowToTop} className="text-amber-600 dark:text-amber-400 hover:underline font-medium">← Danh sách đơn hàng</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const isCancelled = order.status === 'cancelled';
+  const stepIndex = isCancelled ? -1 : STATUS_STEPS.findIndex((s) => s.key === order.status);
 
   const submitReview = async (item: OrderItem) => {
     const form = reviewForms[item.product_id] ?? { rating: 5, comment: '', submitting: false, submitted: false };

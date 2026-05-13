@@ -59,6 +59,8 @@ export default function Messages() {
 
   const activeIdRef = useRef<number | null>(null);
   const loadConversationsRef = useRef<() => void>(() => {});
+  const meUser = me?.authenticated ? me.user : null;
+  const meUserId = meUser?.id;
 
   useEffect(() => {
     activeIdRef.current = activeId;
@@ -142,7 +144,7 @@ export default function Messages() {
         if (!payload?.message) return;
         const msg = payload.message;
 
-        const isMine = me?.authenticated && msg.sender_id === me.user.id;
+        const isMine = meUserId !== undefined && msg.sender_id === meUserId;
         const isActive = activeIdRef.current === msg.conversation_id;
 
         setConversations((prev) => {
@@ -179,7 +181,7 @@ export default function Messages() {
       es.removeEventListener('message', onMessage);
       es.close();
     };
-  }, [me?.authenticated, me?.user?.id, markRead]);
+  }, [me?.authenticated, meUserId, markRead]);
 
   useEffect(() => {
     if (!me?.authenticated) return;
@@ -206,8 +208,8 @@ export default function Messages() {
   );
 
   const getConversationName = (conversation: ConversationSummary) => {
-    if (!me?.authenticated) return '';
-    const isSeller = conversation.seller_id === me.user.id;
+    if (!meUser) return '';
+    const isSeller = conversation.seller_id === meUser.id;
     if (isSeller) return conversation.buyer_name;
     return conversation.seller_store_name || conversation.seller_name;
   };
@@ -361,7 +363,7 @@ export default function Messages() {
                   <div className="text-sm text-gray-500 dark:text-slate-400">Chưa có tin nhắn.</div>
                 ) : (
                   messages.map((message) => {
-                    const mine = me?.authenticated && message.sender_id === me.user.id;
+                    const mine = meUserId !== undefined && message.sender_id === meUserId;
                     const isSeller = message.sender_role === 'seller';
                     return (
                       <div key={message.id} className={`flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>

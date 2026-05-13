@@ -132,9 +132,7 @@ export default function Navbar() {
     setMessageUnreadCount(0);
     notifyAuthChanged();
     setIsMenuOpen(false);
-    if (location.pathname.startsWith('/profile')) {
-      navigate('/', { replace: true });
-    }
+    window.location.replace('/');
   };
 
   const userInitials = (name: string) => {

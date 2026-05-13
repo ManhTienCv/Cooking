@@ -9,7 +9,7 @@ export default function AdminSidebar({ pendingCount, pendingProducts }: { pendin
   const handleLogout = async () => {
     if (window.confirm('Bạn có chắc chắn muốn đăng xuất không?')) {
       await apiJson('/api/admin/logout', { method: 'POST' });
-      window.location.href = '/admin/login';
+      window.location.replace('/admin/login');
     }
   };
 

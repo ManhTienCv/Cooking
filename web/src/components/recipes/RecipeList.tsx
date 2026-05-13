@@ -57,6 +57,7 @@ export default function RecipeList({ isLoading, recipes, onClearFilters }: Recip
             difficulty: recipe.difficulty ?? undefined,
             cooking_time: recipe.cooking_time ?? undefined,
             is_featured: !!recipe.is_featured,
+            status: recipe.status ?? undefined,
           }} />
         </RevealStaggerItem>
       ))}

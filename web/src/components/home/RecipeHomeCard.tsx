@@ -4,6 +4,7 @@ import type { FeaturedRecipe } from './types';
 import ImageWithFallback from '../../lib/ImageWithFallback';
 
 export default function RecipeHomeCard({ recipe }: { recipe: FeaturedRecipe }) {
+  const isPending = recipe.status === 'pending';
   const getDiffBadge = (d?: string) => {
     const map: Record<string, string> = {
       'Dễ': 'bg-emerald-500 text-white ring-1 ring-emerald-300/80 shadow-md dark:bg-emerald-500 dark:text-white dark:ring-emerald-300/50',
@@ -16,7 +17,13 @@ export default function RecipeHomeCard({ recipe }: { recipe: FeaturedRecipe }) {
   const diffLabel = recipe.difficulty || 'Trung bình';
 
   return (
-    <div className="group overflow-hidden border-b border-gray-200/80 bg-white/95 pb-6 transition-all duration-300 sm:rounded-lg sm:border sm:pb-0 sm:shadow-sm hover:-translate-y-1 hover:border-gray-300 hover:shadow-md dark:border-slate-700/80 dark:bg-slate-900/85 dark:hover:border-slate-600 dark:hover:shadow-none flex flex-col h-full">
+    <div
+      className={`group overflow-hidden border-b pb-6 transition-all duration-300 sm:rounded-lg sm:border sm:pb-0 sm:shadow-sm hover:-translate-y-1 hover:shadow-md dark:hover:shadow-none flex flex-col h-full ${
+        isPending
+          ? 'border-slate-300 bg-slate-100/80 hover:border-slate-400 dark:border-slate-600 dark:bg-slate-800/70'
+          : 'border-gray-200/80 bg-white/95 hover:border-gray-300 dark:border-slate-700/80 dark:bg-slate-900/85 dark:hover:border-slate-600'
+      }`}
+    >
       <div className="relative overflow-hidden">
         <ImageWithFallback
           src={recipe.image_url || '/assets/images/vietnam1.jpg'}
@@ -26,6 +33,11 @@ export default function RecipeHomeCard({ recipe }: { recipe: FeaturedRecipe }) {
         />
 
         <div className="absolute left-4 top-4 flex max-w-[calc(100%-5rem)] flex-wrap items-center gap-2">
+          {isPending && (
+            <span className="inline-flex items-center rounded-full bg-slate-200 px-3 h-7 text-[10px] font-semibold uppercase tracking-wider text-slate-700 shadow-sm dark:bg-slate-700 dark:text-slate-200">
+              Đang chờ duyệt
+            </span>
+          )}
           {recipe.is_featured && (
             <span className="inline-flex items-center gap-1 rounded-full bg-rose-500 px-3 h-7 text-xs font-bold text-white shadow-lg">
               <Star className="h-3 w-3 fill-current" />

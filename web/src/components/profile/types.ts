@@ -16,12 +16,14 @@ export interface ProfileRecipe {
   title: string;
   image_url?: string | null;
   category_name?: string;
+  status?: 'pending' | 'approved' | 'rejected';
 }
 
 export interface ProfilePost {
   id: number;
   title: string;
   category_name?: string;
+  status?: 'pending' | 'approved' | 'rejected';
 }
 
 export interface ProfilePlan {

@@ -7,4 +7,5 @@ export interface FeaturedRecipe {
   cooking_time?: number | null;
   is_featured?: boolean;
   image_url?: string;
+  status?: 'pending' | 'approved' | 'rejected';
 }

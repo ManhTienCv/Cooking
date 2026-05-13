@@ -179,7 +179,7 @@ export default function Profile() {
     notifyAuthChanged();
     setUser(null);
     setStats(null);
-    navigate('/', { replace: true });
+    window.location.replace('/');
   };
 
   const handleDeleteRecipe = async (id: number) => {
@@ -273,8 +273,17 @@ export default function Profile() {
                     ) : (
                       <>
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                          {myRecipes.map((r) => (
-                            <div key={r.id} className="group overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-800">
+                          {myRecipes.map((r) => {
+                            const isPending = r.status === 'pending';
+                            return (
+                            <div
+                              key={r.id}
+                              className={`group overflow-hidden rounded-xl border transition-shadow hover:shadow-md ${
+                                isPending
+                                  ? 'border-slate-300 bg-slate-100/80 dark:border-slate-600 dark:bg-slate-800/70'
+                                  : 'border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800'
+                              }`}
+                            >
                               {r.image_url ? (
                                 <img src={r.image_url} alt={r.title} className="h-40 w-full object-cover" />
                               ) : (
@@ -283,6 +292,11 @@ export default function Profile() {
                                 </div>
                               )}
                               <div className="p-4 relative">
+                                {isPending && (
+                                  <span className="absolute right-3 top-3 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                                    Đang chờ duyệt
+                                  </span>
+                                )}
                                 <h4 className="line-clamp-1 font-bold text-gray-900 dark:text-white pr-16">{r.title}</h4>
                                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{r.category_name}</p>
                                 <div className="mt-3 flex items-center justify-between">
@@ -300,7 +314,8 @@ export default function Profile() {
                                 </div>
                               </div>
                             </div>
-                          ))}
+                          );
+                          })}
                         </div>
                         <Pagination currentPage={pageByTab.recipes} totalItems={totalByTab.recipes} pageSize={PROFILE_PAGE_SIZE} onPageChange={(page) => handleProfilePageChange('recipes', page)} />
                       </>
@@ -321,8 +336,22 @@ export default function Profile() {
                     ) : (
                       <>
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                          {myPosts.map((p) => (
-                            <div key={p.id} className="rounded-xl border border-gray-200 bg-white p-5 transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-800">
+                          {myPosts.map((p) => {
+                            const isPending = p.status === 'pending';
+                            return (
+                            <div
+                              key={p.id}
+                              className={`relative rounded-xl border p-5 transition-shadow hover:shadow-md ${
+                                isPending
+                                  ? 'border-slate-300 bg-slate-100/80 dark:border-slate-600 dark:bg-slate-800/70'
+                                  : 'border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800'
+                              }`}
+                            >
+                              {isPending && (
+                                <span className="absolute right-4 top-4 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                                  Đang chờ duyệt
+                                </span>
+                              )}
                               <div className="flex justify-between items-start">
                                 <span className="text-xs font-semibold text-yellow-600 dark:text-yellow-500">{p.category_name}</span>
                                 <div className="flex space-x-2">
@@ -339,7 +368,8 @@ export default function Profile() {
                                 Đọc bài &rarr;
                               </Link>
                             </div>
-                          ))}
+                          );
+                          })}
                         </div>
                         <Pagination currentPage={pageByTab.posts} totalItems={totalByTab.posts} pageSize={PROFILE_PAGE_SIZE} onPageChange={(page) => handleProfilePageChange('posts', page)} />
                       </>

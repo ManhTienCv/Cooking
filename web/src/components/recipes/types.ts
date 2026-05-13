@@ -6,6 +6,7 @@ export interface RecipeListRow {
   difficulty?: string | null;
   cooking_time?: number | null;
   is_featured?: boolean | number;
+  status?: 'pending' | 'approved' | 'rejected';
 }
 
 export interface RecipeCategory {

@@ -6,6 +6,7 @@ export interface BlogPostRow {
   category_name?: string | null;
   created_at?: string | null;
   author_name?: string | null;
+  status?: 'pending' | 'approved' | 'rejected';
 }
 
 export interface BlogCategory {

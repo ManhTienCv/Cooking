@@ -133,6 +133,23 @@ export default function OrderDetail() {
     }
   };
 
+  const completeOrder = async () => {
+    if (!window.confirm('Xác nhận bạn đã nhận được hàng và hoàn thành đơn?')) return;
+    try {
+      const response = await apiFetch(`/api/marketplace/orders/${order.id}/complete`, {
+        method: 'PUT',
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({})) as { message?: string };
+        throw new Error(data.message || 'Không thể xác nhận');
+      }
+      toast.success('Đã xác nhận hoàn thành đơn hàng');
+      setOrder(prev => prev ? { ...prev, status: 'completed' } : null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Đã có lỗi xảy ra');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 transition-colors">
       <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border-b border-white/20 dark:border-slate-800/20">
@@ -186,6 +203,19 @@ export default function OrderDetail() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+            
+            {!isCancelled && order.status === 'delivered' && (
+              <div className="mt-8 text-center border-t border-gray-100 dark:border-slate-700/50 pt-6">
+                <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">Vui lòng xác nhận khi bạn đã nhận được hàng.</p>
+                <button
+                  type="button"
+                  onClick={completeOrder}
+                  className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded-full font-bold transition-all transform hover:scale-105 shadow-md hover:shadow-lg shadow-amber-500/30"
+                >
+                  Xác nhận đã nhận hàng
+                </button>
               </div>
             )}
           </div>

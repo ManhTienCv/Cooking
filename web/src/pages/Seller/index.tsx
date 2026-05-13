@@ -238,20 +238,68 @@ export default function SellerDashboard() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-bold text-red-600 dark:text-red-400">{formatPrice(o.total_amount)}</span>
-                        {!['completed', 'cancelled'].includes(o.status) && (
-                          <select value="" onChange={e => { if (e.target.value) void handleOrderStatus(o.id, e.target.value); }}
-                            className="text-xs border border-gray-200 dark:border-slate-600 rounded-lg py-1 px-2 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200">
-                            <option value="">Chuyển →</option>
-                            <option value="confirmed">Xác nhận</option>
-                            <option value="preparing">Chuẩn bị</option>
-                            <option value="shipping">Giao hàng</option>
-                            <option value="delivered">Đã giao</option>
-                          </select>
-                        )}
+                        {(() => {
+                          if (['completed', 'cancelled'].includes(o.status)) return null;
+                          const nextStatusMap: Record<string, { val: string; label: string }> = {
+                            pending: { val: 'confirmed', label: 'Xác nhận đơn' },
+                            confirmed: { val: 'preparing', label: 'Bắt đầu chuẩn bị' },
+                            preparing: { val: 'shipping', label: 'Bắt đầu giao hàng' },
+                            shipping: { val: 'delivered', label: 'Đánh dấu đã giao' },
+                          };
+                          const next = nextStatusMap[o.status];
+                          if (!next) return null;
+                          return (
+                            <button
+                              onClick={() => void handleOrderStatus(o.id, next.val)}
+                              className="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors"
+                            >
+                              {next.label}
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Giao cho: {o.shipping_name} · Trạng thái: <span className="font-semibold">{o.status}</span>
+                    
+                    {/* Status Tracker */}
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
+                      <div className="flex items-center justify-between text-xs font-medium text-gray-500 dark:text-gray-400 relative">
+                        {/* Connecting Line */}
+                        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gray-200 dark:bg-slate-700 -z-10 -translate-y-1/2"></div>
+                        
+                        {['pending', 'confirmed', 'preparing', 'shipping', 'delivered'].map((step) => {
+                          const steps = ['pending', 'confirmed', 'preparing', 'shipping', 'delivered'];
+                          const currentIdx = steps.indexOf(o.status);
+                          const isCompleted = steps.indexOf(step) <= currentIdx;
+                          const isCurrent = step === o.status;
+                          
+                          const labels: Record<string, string> = {
+                            pending: 'Chờ duyệt',
+                            confirmed: 'Xác nhận',
+                            preparing: 'Chuẩn bị',
+                            shipping: 'Giao hàng',
+                            delivered: 'Đã giao'
+                          };
+                          
+                          return (
+                            <div key={step} className="flex flex-col items-center gap-1.5 bg-white dark:bg-slate-800 px-2">
+                              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                isCurrent ? 'border-amber-500 bg-amber-500 text-white' :
+                                isCompleted ? 'border-amber-500 bg-amber-500' : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800'
+                              }`}>
+                                {isCompleted && !isCurrent && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
+                                {isCurrent && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
+                              </div>
+                              <span className={isCurrent ? 'text-amber-600 dark:text-amber-400 font-bold' : isCompleted ? 'text-gray-900 dark:text-gray-200' : ''}>
+                                {labels[step]}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
+                      Giao cho: <span className="font-semibold text-gray-800 dark:text-gray-200">{o.shipping_name}</span>
                     </p>
                   </div>
                 ))

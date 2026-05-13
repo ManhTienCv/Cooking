@@ -151,6 +151,11 @@ marketplaceRouter.get('/orders/:id', requireAuth, wrap(async (req, res) => {
   res.json(ok(result));
 }));
 
+marketplaceRouter.put('/orders/:id/complete', requireAuth, wrap(async (req, res) => {
+  const result = await marketplaceService.buyerCompleteOrder(req.session.userId!, req.params.id);
+  res.json(ok(result));
+}));
+
 marketplaceRouter.get('/orders/:id/reviews', requireAuth, wrap(async (req, res) => {
   const result = await marketplaceService.getOrderReviews(req.session.userId!, req.params.id);
   res.json(ok(result));

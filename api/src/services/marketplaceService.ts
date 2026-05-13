@@ -183,6 +183,9 @@ export async function addToCart(userId: number, body: Record<string, unknown>) {
   if (!product.is_available || product.status !== 'approved') {
     throw { status: 400, message: 'Sản phẩm hiện không khả dụng.' };
   }
+  if (product.seller_id === userId) {
+    throw { status: 400, message: 'Bạn không thể mua sản phẩm của chính mình.' };
+  }
   if (product.stock < quantity) {
     throw { status: 400, message: `Chỉ còn ${product.stock} sản phẩm trong kho.` };
   }
@@ -233,6 +236,10 @@ export async function createOrder(userId: number, body: Record<string, unknown>)
   if (cartItems.length === 0) {
     throw { status: 400, message: 'Giỏ hàng trống.' };
   }
+  
+  if (cartItems.some(item => item.seller_id === userId)) {
+    throw { status: 400, message: 'Bạn không thể mua sản phẩm của chính mình.' };
+  }
 
   // Tính tổng server-side (không trust client)
   let totalAmount = 0;
@@ -281,6 +288,23 @@ export async function getOrderDetail(userId: number, idRaw: unknown) {
   }
 
   return { order };
+}
+
+export async function buyerCompleteOrder(userId: number, idRaw: unknown) {
+  const id = Number(idRaw);
+  if (!id) throw { status: 400, message: 'Invalid order ID' };
+
+  const order = await marketplaceRepo.getOrderById(id);
+  if (!order) throw { status: 404, message: 'Đơn hàng không tồn tại.' };
+  if (order.buyer_id !== userId) {
+    throw { status: 403, message: 'Chỉ người mua mới có quyền xác nhận.' };
+  }
+  if (order.status !== 'delivered') {
+    throw { status: 400, message: 'Chỉ có thể xác nhận hoàn thành khi đơn hàng đã được giao.' };
+  }
+
+  await marketplaceRepo.updateOrderStatus(id, 'completed');
+  return { message: 'Đã xác nhận hoàn thành đơn hàng.' };
 }
 
 export async function getOrderReviews(userId: number, idRaw: unknown) {

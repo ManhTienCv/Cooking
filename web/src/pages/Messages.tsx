@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { apiJson } from '../lib/api';
 
 type MeState =
-  | { authenticated: false }
+  | { authenticated: false; user?: never }
   | {
       authenticated: true;
       user: {

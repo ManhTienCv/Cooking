@@ -10,7 +10,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useCart } from '../contexts/CartContext';
 
 type MeState =
-  | { authenticated: false }
+  | { authenticated: false; user?: never }
   | {
       authenticated: true;
       user: {

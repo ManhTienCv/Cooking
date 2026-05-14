@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search, X, SlidersHorizontal, Store, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 import ProductCard from '../../components/shop/ProductCard';
@@ -29,12 +30,23 @@ export default function Shop() {
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   /* Filters */
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
-  const [productType, setProductType] = useState('');
+  const [search, setSearch] = useState(searchParams.get('q') || '');
+  const [category, setCategory] = useState(searchParams.get('category') || '');
+  const [productType, setProductType] = useState(searchParams.get('type') || '');
   const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const q = searchParams.get('q');
+    const c = searchParams.get('category');
+    const t = searchParams.get('type');
+    if (q !== null) setSearch(q);
+    if (c !== null) setCategory(c);
+    if (t !== null) setProductType(t);
+  }, [searchParams]);
 
   /* Load categories */
   useEffect(() => {
@@ -82,6 +94,7 @@ export default function Shop() {
   };
 
   const clearFilters = () => {
+    setSearchParams({});
     setSearch('');
     setCategory('');
     setProductType('');

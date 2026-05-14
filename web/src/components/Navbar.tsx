@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChefHat, Menu, LogOut, Moon, Sun, ShoppingCart, Store, MessageCircle, ClipboardList } from 'lucide-react';
 import AuthModal from './AuthModal';
@@ -44,7 +44,7 @@ export default function Navbar() {
   const { isDark, toggleTheme } = useTheme();
   const { count: cartCount } = useCart();
   const location = useLocation();
-  const navigate = useNavigate();
+
   const currentPage = location.pathname;
 
   const refreshMe = useCallback(async () => {

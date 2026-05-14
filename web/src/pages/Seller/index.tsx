@@ -42,7 +42,7 @@ export default function SellerDashboard() {
   const [notSeller, setNotSeller] = useState(false);
   const [regForm, setRegForm] = useState({ store_name: '', store_description: '', phone: '', address: '' });
   const [registering, setRegistering] = useState(false);
-  const [stats, setStats] = useState({ totalOrders: 0, pendingOrders: 0, totalRevenue: 0 });
+
   const [editingProduct, setEditingProduct] = useState<EditingProduct | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 

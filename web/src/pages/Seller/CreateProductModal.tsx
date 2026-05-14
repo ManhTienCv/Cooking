@@ -24,12 +24,28 @@ const BLANK = {
   product_type: 'food', category_id: '', stock: '', unit: 'cái',
 };
 
-export default function CreateProductModal({ open, onClose, onCreated }: Props) {
+export interface EditingProduct {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number;
+  sale_price: number | null;
+  image_url: string | null;
+  product_type: string;
+  category_id: number;
+  stock: number;
+  unit: string;
+  specs: Record<string, string>;
+}
+
+export default function CreateProductModal({ open, onClose, onCreated, product }: Props & { product?: EditingProduct | null }) {
   const [form, setForm] = useState({ ...BLANK });
   const [categories, setCategories] = useState<Category[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [specs, setSpecs] = useState<{ key: string; value: string }[]>([]);
   const [imageName, setImageName] = useState('');
+
+  const isEdit = !!product;
 
   useEffect(() => {
     if (!open) return;
@@ -42,12 +58,30 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
     if (open) {
       document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
+      if (product) {
+        setForm({
+          name: product.name || '',
+          description: product.description || '',
+          price: product.price ? String(product.price) : '',
+          sale_price: product.sale_price ? String(product.sale_price) : '',
+          image_url: product.image_url || '',
+          product_type: product.product_type || 'food',
+          category_id: product.category_id ? String(product.category_id) : '',
+          stock: product.stock ? String(product.stock) : '0',
+          unit: product.unit || 'cái',
+        });
+        const sp = product.specs || {};
+        setSpecs(Object.entries(sp).map(([k, v]) => ({ key: k, value: String(v) })));
+      } else {
+        setForm({ ...BLANK });
+        setSpecs([]);
+      }
     }
     return () => {
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
     };
-  }, [open]);
+  }, [open, product]);
 
   const set = (key: string, val: string) => setForm(f => ({ ...f, [key]: val }));
 
@@ -110,10 +144,13 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
       const specsObj: Record<string, string> = {};
       specs.forEach(s => { if (s.key.trim()) specsObj[s.key.trim()] = s.value.trim(); });
 
-      await apiJson('/api/marketplace/seller/products', {
-        method: 'POST',
+      const endpoint = isEdit ? `/api/marketplace/seller/products/${product.id}` : '/api/marketplace/seller/products';
+      const method = isEdit ? 'PUT' : 'POST';
+
+      await apiJson(endpoint, {
+        method,
         body: JSON.stringify({
-          name: form.name.trim(),
+          ...(isEdit ? {} : { name: form.name.trim() }), // name cannot be edited
           description: form.description.trim() || null,
           price: Number(form.price),
           sale_price: form.sale_price ? Number(form.sale_price) : null,
@@ -126,7 +163,7 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
           specs: specsObj,
         }),
       });
-      toast.success('Đã tạo sản phẩm! Đang chờ admin duyệt.');
+      toast.success(isEdit ? 'Đã cập nhật sản phẩm!' : 'Đã tạo sản phẩm! Đang chờ admin duyệt.');
       setForm({ ...BLANK });
       setSpecs([]);
       setImageName('');
@@ -152,7 +189,9 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
 
             {/* Header */}
             <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Thêm sản phẩm mới</h2>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                {isEdit ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm mới'}
+              </h2>
               <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
                 <X className="w-5 h-5 text-gray-400" />
               </button>
@@ -165,14 +204,16 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
                 <div className="flex gap-2">
                   {PRODUCT_TYPES.map(t => (
                     <button key={t.value} onClick={() => {
+                      if (isEdit) return; // Prevent changing type in edit mode
                       set('product_type', t.value);
                       set('category_id', '');
                       set('unit', t.value === 'food' ? 'phần' : t.value === 'ingredient' ? 'kg' : 'cái');
                     }}
+                      disabled={isEdit}
                       className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all border ${form.product_type === t.value
                         ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white'
                         : 'bg-white dark:bg-slate-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-slate-600'
-                        }`}>
+                        } ${isEdit ? 'opacity-60 cursor-not-allowed' : ''}`}>
                       {t.label}
                     </button>
                   ))}
@@ -195,7 +236,8 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
                 <label className={labelCls}>Tên sản phẩm *</label>
                 <input value={form.name} onChange={e => set('name', e.target.value)}
                   placeholder={form.product_type === 'food' ? 'VD: Phở bò tái chín, Bánh tráng trộn...' : form.product_type === 'ingredient' ? 'VD: Bột mì Hàn Quốc 1kg, Nước mắm Phú Quốc...' : 'VD: Chảo chống dính 28cm, Máy xay sinh tố...'}
-                  className={inputCls} />
+                  disabled={isEdit}
+                  className={`${inputCls} ${isEdit ? 'bg-gray-100 dark:bg-slate-800 text-gray-500 cursor-not-allowed opacity-70 border-dashed' : ''}`} />
               </div>
 
               {/* Category */}
@@ -402,13 +444,14 @@ export default function CreateProductModal({ open, onClose, onCreated }: Props) 
             </div>
 
             {/* Footer */}
-            <div className="sticky bottom-0 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 px-6 py-4 flex gap-3">
-              <button onClick={onClose} className="flex-1 py-3 rounded-full border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-all">
+            <div className="sticky bottom-0 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 px-6 py-4 flex justify-end gap-3 rounded-b-3xl z-10">
+              <button onClick={onClose}
+                className="px-5 py-2.5 rounded-xl font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
                 Hủy
               </button>
-              <button onClick={handleSubmit} disabled={submitting}
-                className="flex-1 py-3 rounded-full bg-black dark:bg-white text-white dark:text-black font-bold hover:opacity-80 disabled:opacity-50 transition-all">
-                {submitting ? 'Đang tạo...' : 'Tạo sản phẩm'}
+              <button onClick={() => void handleSubmit()} disabled={submitting}
+                className="px-6 py-2.5 rounded-xl font-semibold bg-black dark:bg-white text-white dark:text-black hover:opacity-80 transition-opacity disabled:opacity-50">
+                {submitting ? 'Đang xử lý...' : isEdit ? 'Lưu thay đổi' : 'Tạo sản phẩm'}
               </button>
             </div>
           </motion.div>

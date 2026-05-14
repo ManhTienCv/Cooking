@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, Package, ShoppingBag, Plus, Trash2, Eye, TrendingUp } from 'lucide-react';
+import { Store, Package, ShoppingBag, Plus, Trash2, Eye, TrendingUp, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiJson, apiFetch } from '../../lib/api';
-import CreateProductModal from './CreateProductModal';
+import CreateProductModal, { type EditingProduct } from './CreateProductModal';
 import { NotificationProvider } from '../../contexts/NotificationContext';
 import NotificationBell from '../../components/ui/NotificationBell';
 
@@ -11,6 +11,7 @@ interface SellerProduct {
   id: number; name: string; slug: string; price: number; sale_price: number | null;
   status: string; stock: number; total_sold: number; image_url: string | null;
   category_name: string; product_type: string; created_at: string;
+  description: string | null; category_id: number; unit: string; specs: Record<string, string>;
 }
 interface SellerOrder {
   id: number; total_amount: number; status: string; shipping_name: string;
@@ -41,6 +42,8 @@ export default function SellerDashboard() {
   const [notSeller, setNotSeller] = useState(false);
   const [regForm, setRegForm] = useState({ store_name: '', store_description: '', phone: '', address: '' });
   const [registering, setRegistering] = useState(false);
+  const [stats, setStats] = useState({ totalOrders: 0, pendingOrders: 0, totalRevenue: 0 });
+  const [editingProduct, setEditingProduct] = useState<EditingProduct | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -187,7 +190,12 @@ export default function SellerDashboard() {
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-black dark:bg-white text-white dark:text-black rounded-full font-semibold hover:opacity-80 transition-all shadow-md">
                 <Plus className="w-4 h-4" /> Thêm sản phẩm
               </button>
-              <CreateProductModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => void loadData()} />
+              <CreateProductModal 
+                open={showCreate || !!editingProduct} 
+                product={editingProduct}
+                onClose={() => { setShowCreate(false); setEditingProduct(null); }} 
+                onCreated={() => void loadData()} 
+              />
               {products.length === 0 ? (
                 <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 text-center border border-gray-100 dark:border-slate-700">
                   <Package className="w-12 h-12 text-gray-300 dark:text-slate-600 mx-auto mb-3" />
@@ -195,7 +203,7 @@ export default function SellerDashboard() {
                 </div>
               ) : (
                 products.map(p => (
-                  <div key={p.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
+                  <div key={p.id} className={`bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 flex items-center gap-4 hover:shadow-md transition-shadow ${p.stock === 0 ? 'opacity-60 grayscale' : ''}`}>
                     <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-slate-700 overflow-hidden flex-shrink-0">
                       {p.image_url ? <img src={p.image_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-2xl">📦</div>}
                     </div>
@@ -207,12 +215,19 @@ export default function SellerDashboard() {
                         </span>
                       </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {formatPrice(p.sale_price ?? p.price)} · Kho: {p.stock} · Đã bán: {p.total_sold}
+                        {formatPrice(p.sale_price ?? p.price)} · {p.stock === 0 ? <span className="text-red-500 font-medium">Hết hàng</span> : `Kho: ${p.stock}`} · Đã bán: {p.total_sold}
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <Link to={`/shop/${p.slug}`} className="p-2 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"><Eye className="w-4 h-4" /></Link>
-                      <button onClick={() => handleDelete(p.id)} className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"><Trash2 className="w-4 h-4" /></button>
+                      <Link to={`/shop/${p.slug}`} className="p-2 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all" title="Xem chi tiết">
+                        <Eye className="w-4 h-4" />
+                      </Link>
+                      <button onClick={() => setEditingProduct(p)} className="p-2 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all" title="Sửa sản phẩm">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(p.id)} className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" title="Xóa sản phẩm">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 ))

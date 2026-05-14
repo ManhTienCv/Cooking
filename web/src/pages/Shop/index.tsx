@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search, X, SlidersHorizontal, Store, ChevronDown } from 'lucide-react';
+import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -28,7 +29,12 @@ export default function Shop() {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return !!(params.get('q') || params.get('category') || params.get('type'));
+  });
+
+  const filterRef = useRef<HTMLDivElement>(null);
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -46,6 +52,13 @@ export default function Shop() {
     if (q !== null) setSearch(q);
     if (c !== null) setCategory(c);
     if (t !== null) setProductType(t);
+
+    if (q || c || t) {
+      setShowFilters(true);
+      setTimeout(() => {
+        filterRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
   }, [searchParams]);
 
   /* Load categories */
@@ -54,6 +67,22 @@ export default function Shop() {
       .then((d) => setCategories(d.categories ?? []))
       .catch(() => {});
   }, []);
+
+  const handleProductType = (typeVal: string) => {
+    setProductType(typeVal);
+    setPage(1);
+    const params = new URLSearchParams(searchParams);
+    if (typeVal) params.set('type', typeVal); else params.delete('type');
+    setSearchParams(params);
+  };
+
+  const handleCategory = (catVal: string) => {
+    setCategory(catVal);
+    setPage(1);
+    const params = new URLSearchParams(searchParams);
+    if (catVal) params.set('category', catVal); else params.delete('category');
+    setSearchParams(params);
+  };
 
   /* Fetch products */
   const fetchProducts = useCallback(async () => {
@@ -128,7 +157,7 @@ export default function Shop() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" ref={filterRef}>
         {/* Search + Filter Bar */}
         <div className="flex flex-col md:flex-row items-center gap-4 mb-8">
           {/* Search */}
@@ -205,7 +234,7 @@ export default function Shop() {
                     ].map((t) => (
                       <button
                         key={t.value}
-                        onClick={() => { setProductType(t.value); setPage(1); }}
+                        onClick={() => handleProductType(t.value)}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${
                           productType === t.value
                             ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white'
@@ -223,7 +252,7 @@ export default function Shop() {
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Danh mục</h3>
                   <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={() => { setCategory(''); setPage(1); }}
+                      onClick={() => handleCategory('')}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
                         !category
                           ? 'bg-amber-500 text-white border-amber-500'
@@ -235,7 +264,7 @@ export default function Shop() {
                     {(productType === 'equipment' ? equipCategories : productType === '' ? categories : foodCategories).map((c) => (
                       <button
                         key={c.slug}
-                        onClick={() => { setCategory(c.slug); setPage(1); }}
+                        onClick={() => handleCategory(c.slug)}
                         className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
                           category === c.slug
                             ? 'bg-amber-500 text-white border-amber-500'

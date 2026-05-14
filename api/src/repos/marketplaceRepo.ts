@@ -262,7 +262,7 @@ export async function updateProduct(
 
 export async function deleteProduct(id: number, sellerId: number): Promise<boolean> {
   const { rowCount } = await pool.query(
-    'DELETE FROM products WHERE id = $1 AND seller_id = $2',
+    `UPDATE products SET status = 'deleted', is_available = FALSE WHERE id = $1 AND seller_id = $2`,
     [id, sellerId]
   );
   return (rowCount ?? 0) > 0;
@@ -278,12 +278,12 @@ export async function getProductsBySeller(
       `SELECT p.*, pc.name AS category_name
        FROM products p
        LEFT JOIN product_categories pc ON p.category_id = pc.id
-       WHERE p.seller_id = $1
+       WHERE p.seller_id = $1 AND p.status != 'deleted'
        ORDER BY p.created_at DESC
        LIMIT $2 OFFSET $3`,
       [sellerId, limit, offset]
     ),
-    pool.query('SELECT COUNT(*) AS total FROM products WHERE seller_id = $1', [sellerId]),
+    pool.query(`SELECT COUNT(*) AS total FROM products WHERE seller_id = $1 AND status != 'deleted'`, [sellerId]),
   ]);
   return {
     rows: dataResult.rows as Product[],

@@ -6,6 +6,7 @@ import { apiJson, apiFetch } from '../../lib/api';
 import CreateProductModal, { type EditingProduct } from './CreateProductModal';
 import { NotificationProvider } from '../../contexts/NotificationContext';
 import NotificationBell from '../../components/ui/NotificationBell';
+import Pagination from '../../components/ui/Pagination';
 
 interface SellerProduct {
   id: number; name: string; slug: string; price: number; sale_price: number | null;
@@ -46,6 +47,10 @@ export default function SellerDashboard() {
   const [editingProduct, setEditingProduct] = useState<EditingProduct | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
+  const [productPage, setProductPage] = useState(1);
+  const [productTotal, setProductTotal] = useState(0);
+  const PRODUCT_PAGE_SIZE = 10;
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -53,14 +58,15 @@ export default function SellerDashboard() {
       if (!p.profile) { setNotSeller(true); setLoading(false); return; }
       setProfile(p.profile);
       const [prods, ords] = await Promise.all([
-        apiJson<{ products: SellerProduct[] }>('/api/marketplace/seller/products?limit=50'),
+        apiJson<{ products: SellerProduct[], total: number }>(`/api/marketplace/seller/products?limit=${PRODUCT_PAGE_SIZE}&offset=${(productPage - 1) * PRODUCT_PAGE_SIZE}`),
         apiJson<{ orders: SellerOrder[] }>('/api/marketplace/seller/orders?limit=50'),
       ]);
       setProducts(prods.products ?? []);
+      setProductTotal(prods.total ?? 0);
       setOrders(ords.orders ?? []);
     } catch { setNotSeller(true); }
     finally { setLoading(false); }
-  }, []);
+  }, [productPage]);
 
   useEffect(() => { void loadData(); }, [loadData]);
 
@@ -231,6 +237,16 @@ export default function SellerDashboard() {
                     </div>
                   </div>
                 ))
+              )}
+              {productTotal > PRODUCT_PAGE_SIZE && (
+                <div className="mt-8 flex justify-center">
+                  <Pagination
+                    currentPage={productPage}
+                    totalItems={productTotal}
+                    pageSize={PRODUCT_PAGE_SIZE}
+                    onPageChange={setProductPage}
+                  />
+                </div>
               )}
             </div>
           )}

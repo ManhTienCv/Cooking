@@ -60,7 +60,7 @@ export default function Profile() {
     const getPageQuery = (pagedTab: string) => {
       const q = new URLSearchParams();
       q.set('limit', String(PROFILE_PAGE_SIZE));
-      // @ts-ignore
+      // @ts-expect-error - ignore index signature
       q.set('offset', String(((pageByTab[pagedTab] || 1) - 1) * PROFILE_PAGE_SIZE));
       return q.toString();
     };
@@ -208,7 +208,7 @@ export default function Profile() {
   };
 
   const handleProfilePageChange = (tab: string, page: number) => {
-    // @ts-ignore
+    // @ts-expect-error - ignore index signature
     setPageByTab((prev) => ({ ...prev, [tab]: page }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

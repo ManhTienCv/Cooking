@@ -45,8 +45,8 @@ export default function Profile() {
   const [sellerProducts, setSellerProducts] = useState<{ id: number; name: string; price: number; status: string; stock: number; total_sold: number; image_url: string | null }[]>([]);
   const [sellerNotRegistered, setSellerNotRegistered] = useState(false);
 
-  const [pageByTab, setPageByTab] = useState<Record<PagedTab, number>>({ recipes: 1, posts: 1, saved: 1, wishlist: 1 });
-  const [totalByTab, setTotalByTab] = useState<Record<PagedTab, number>>({ recipes: 0, posts: 0, saved: 0, wishlist: 0 });
+  const [pageByTab, setPageByTab] = useState<Record<PagedTab | 'shop', number>>({ recipes: 1, posts: 1, saved: 1, wishlist: 1, shop: 1 });
+  const [totalByTab, setTotalByTab] = useState<Record<PagedTab | 'shop', number>>({ recipes: 0, posts: 0, saved: 0, wishlist: 0, shop: 0 });
 
   // Edit post modal
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
@@ -57,10 +57,11 @@ export default function Profile() {
   const [recipeCategories, setRecipeCategories] = useState<RecipeCategory[]>([]);
 
   const loadTabData = useCallback(async (tab: string) => {
-    const getPageQuery = (pagedTab: PagedTab) => {
+    const getPageQuery = (pagedTab: string) => {
       const q = new URLSearchParams();
       q.set('limit', String(PROFILE_PAGE_SIZE));
-      q.set('offset', String((pageByTab[pagedTab] - 1) * PROFILE_PAGE_SIZE));
+      // @ts-ignore
+      q.set('offset', String(((pageByTab[pagedTab] || 1) - 1) * PROFILE_PAGE_SIZE));
       return q.toString();
     };
 
@@ -94,8 +95,9 @@ export default function Profile() {
           else {
             setSellerProfile(p.profile);
             setSellerNotRegistered(false);
-            const prods = await apiJson<{ products: typeof sellerProducts }>('/api/marketplace/seller/products?limit=20');
+            const prods = await apiJson<{ products: typeof sellerProducts, total: number }>(`/api/marketplace/seller/products?${getPageQuery('shop')}`);
             setSellerProducts(prods.products ?? []);
+            setTotalByTab((prev) => ({ ...prev, shop: prods.total ?? 0 }));
           }
         } catch { setSellerNotRegistered(true); }
       }
@@ -112,6 +114,9 @@ export default function Profile() {
       } else if (tab === 'wishlist') {
         setWishlistItems([]);
         setTotalByTab((prev) => ({ ...prev, wishlist: 0 }));
+      } else if (tab === 'shop') {
+        setSellerProducts([]);
+        setTotalByTab((prev) => ({ ...prev, shop: 0 }));
       }
     } finally {
       setIsDataLoading(false);
@@ -202,7 +207,8 @@ export default function Profile() {
     }
   };
 
-  const handleProfilePageChange = (tab: PagedTab, page: number) => {
+  const handleProfilePageChange = (tab: string, page: number) => {
+    // @ts-ignore
     setPageByTab((prev) => ({ ...prev, [tab]: page }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -218,10 +224,10 @@ export default function Profile() {
 
   const tabs = [
     { id: 'shop', label: 'Cửa hàng', icon: Store },
+    { id: 'wishlist', label: 'Món yêu thích', icon: Heart },
     { id: 'recipes', label: 'Công thức của tôi', icon: BookOpen },
     { id: 'posts', label: 'Bài viết của tôi', icon: PenTool },
     { id: 'saved', label: 'Đã lưu', icon: Bookmark },
-    { id: 'wishlist', label: 'Món yêu thích', icon: Heart },
     { id: 'health', label: 'Kế hoạch', icon: Activity },
     { id: 'settings', label: 'Cài đặt', icon: Settings },
   ];
@@ -430,9 +436,10 @@ export default function Profile() {
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           {wishlistItems.map((item) => {
                             const price = item.product_sale_price ?? item.product_price;
+                            const isUnavailable = item.product_status !== 'approved' || !item.product_is_available || item.product_stock <= 0;
                             return (
-                              <div key={item.id} className="overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-800">
-                                <Link to={`/shop/${item.product_slug}`} className="block">
+                              <div key={item.id} className={`overflow-hidden rounded-xl border border-gray-200 transition-shadow dark:border-slate-700 ${isUnavailable ? 'bg-gray-50/50 dark:bg-slate-800/50 opacity-60 grayscale' : 'bg-white hover:shadow-md dark:bg-slate-800'}`}>
+                                <Link to={`/shop/${item.product_slug}`} className={`block relative ${isUnavailable ? 'pointer-events-none' : ''}`}>
                                   {item.product_image ? (
                                     <img src={item.product_image} alt={item.product_name} className="h-40 w-full object-cover" />
                                   ) : (
@@ -440,10 +447,17 @@ export default function Profile() {
                                       <Package className="h-8 w-8 text-gray-300 dark:text-slate-500" />
                                     </div>
                                   )}
+                                  {isUnavailable && (
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                      <span className="bg-black/70 text-white font-bold py-1.5 px-4 rounded-full text-sm">
+                                        {item.product_status !== 'approved' || !item.product_is_available ? 'Hàng không còn' : 'Hàng đã hết'}
+                                      </span>
+                                    </div>
+                                  )}
                                 </Link>
                                 <div className="space-y-3 p-4">
                                   <div>
-                                    <Link to={`/shop/${item.product_slug}`} className="line-clamp-1 font-bold text-gray-900 hover:text-amber-600 dark:text-white dark:hover:text-amber-400">
+                                    <Link to={`/shop/${item.product_slug}`} className={`line-clamp-1 font-bold text-gray-900 dark:text-white ${isUnavailable ? 'pointer-events-none' : 'hover:text-amber-600 dark:hover:text-amber-400'}`}>
                                       {item.product_name}
                                     </Link>
                                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{item.store_name || 'Cửa hàng'}</p>
@@ -584,6 +598,12 @@ export default function Profile() {
                                 </span>
                               </div>
                             ))}
+                          </div>
+                        )}
+                        
+                        {totalByTab.shop > PROFILE_PAGE_SIZE && (
+                          <div className="mt-8 flex justify-center">
+                            <Pagination currentPage={pageByTab.shop} totalItems={totalByTab.shop} pageSize={PROFILE_PAGE_SIZE} onPageChange={(page) => handleProfilePageChange('shop', page)} />
                           </div>
                         )}
                       </>

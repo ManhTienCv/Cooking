@@ -579,6 +579,7 @@ export async function getWishlist(userId: number): Promise<WishlistItem[]> {
             p.price AS product_price, p.sale_price AS product_sale_price,
             p.unit AS product_unit, p.stock AS product_stock,
             p.rating AS product_rating, p.total_reviews AS product_total_reviews,
+            p.status AS product_status, p.is_available AS product_is_available,
             sp.store_name
      FROM wishlist_items wi
      JOIN products p ON p.id = wi.product_id

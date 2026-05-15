@@ -109,5 +109,7 @@ export interface WishlistItem {
   product_stock: number;
   product_rating: number;
   product_total_reviews: number;
+  product_status: string;
+  product_is_available: boolean;
   store_name: string | null;
 }

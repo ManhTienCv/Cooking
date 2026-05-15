@@ -216,6 +216,43 @@ adminRouter.post('/marketplace/products/:id/reject', requireAdmin, requireCsrf, 
   res.json({ success: true });
 }));
 
+// GET /api/admin/marketplace/sellers — list sellers
+adminRouter.get('/marketplace/sellers', requireAdmin, asyncHandler(async (req, res) => {
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  
+  const { pool } = await import('../db/pool.js');
+  const dataResult = await pool.query(
+    `SELECT sp.*, u.full_name, u.email 
+     FROM seller_profiles sp
+     JOIN users u ON u.id = sp.user_id
+     ORDER BY sp.created_at DESC
+     LIMIT $1 OFFSET $2`,
+    [limit, offset]
+  );
+  
+  const countResult = await pool.query(`SELECT COUNT(*) AS total FROM seller_profiles`);
+  
+  res.json({
+    sellers: dataResult.rows,
+    total: Number(countResult.rows[0]?.total || 0),
+    limit,
+    offset
+  });
+}));
+
+// POST /api/admin/marketplace/sellers/:id/verify
+adminRouter.post('/marketplace/sellers/:id/verify', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
+  const isVerified = Boolean(req.body.is_verified);
+  const { pool } = await import('../db/pool.js');
+  const { rowCount } = await pool.query(
+    `UPDATE seller_profiles SET is_verified = $1, updated_at = NOW() WHERE user_id = $2`,
+    [isVerified, Number(req.params.id)]
+  );
+  if (!rowCount) { res.status(404).json({ success: false, message: 'Người bán không tồn tại.' }); return; }
+  res.json({ success: true });
+}));
+
 // GET /api/admin/marketplace/orders — list all orders (admin view)
 adminRouter.get('/marketplace/orders', requireAdmin, asyncHandler(async (req, res) => {
   const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));

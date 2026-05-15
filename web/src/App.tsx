@@ -29,6 +29,7 @@ const CommentsTab = lazy(() => import('./pages/Admin/tabs/CommentsTab'));
 const CategoriesTab = lazy(() => import('./pages/Admin/tabs/CategoriesTab'));
 const MarketProductsTab = lazy(() => import('./pages/Admin/tabs/MarketProductsTab'));
 const MarketOrdersTab = lazy(() => import('./pages/Admin/tabs/MarketOrdersTab'));
+const SellersTab = lazy(() => import('./pages/Admin/tabs/SellersTab'));
 
 /* Marketplace */
 const Shop = lazy(() => import('./pages/Shop'));
@@ -79,6 +80,7 @@ export default function App() {
               <Route path="feedback" element={<FeedbackTab />} />
               <Route path="market-products" element={<MarketProductsTab />} />
               <Route path="market-orders" element={<MarketOrdersTab />} />
+              <Route path="market-sellers" element={<SellersTab />} />
             </Route>
           </Routes>
         </Suspense>

@@ -19,8 +19,14 @@ interface SellerOrder {
   created_at: string; items: { product_name: string; quantity: number }[];
 }
 interface SellerProfile {
-  store_name: string; store_description: string | null; phone: string | null;
-  address: string | null; full_name: string;
+  id: number;
+  user_id: number;
+  store_name: string;
+  store_description: string | null;
+  is_verified: boolean;
+  phone: string | null;
+  address: string | null;
+  full_name: string;
 }
 
 function formatPrice(n: number) { return n.toLocaleString('vi-VN') + 'đ'; }
@@ -49,7 +55,10 @@ export default function SellerDashboard() {
 
   const [productPage, setProductPage] = useState(1);
   const [productTotal, setProductTotal] = useState(0);
+  const [orderPage, setOrderPage] = useState(1);
+  const [orderTotal, setOrderTotal] = useState(0);
   const PRODUCT_PAGE_SIZE = 10;
+  const ORDER_PAGE_SIZE = 10;
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -59,14 +68,15 @@ export default function SellerDashboard() {
       setProfile(p.profile);
       const [prods, ords] = await Promise.all([
         apiJson<{ products: SellerProduct[], total: number }>(`/api/marketplace/seller/products?limit=${PRODUCT_PAGE_SIZE}&offset=${(productPage - 1) * PRODUCT_PAGE_SIZE}`),
-        apiJson<{ orders: SellerOrder[] }>('/api/marketplace/seller/orders?limit=50'),
+        apiJson<{ orders: SellerOrder[], total: number }>(`/api/marketplace/seller/orders?limit=${ORDER_PAGE_SIZE}&offset=${(orderPage - 1) * ORDER_PAGE_SIZE}`),
       ]);
       setProducts(prods.products ?? []);
       setProductTotal(prods.total ?? 0);
       setOrders(ords.orders ?? []);
+      setOrderTotal(ords.total ?? 0);
     } catch { setNotSeller(true); }
     finally { setLoading(false); }
-  }, [productPage]);
+  }, [productPage, orderPage]);
 
   useEffect(() => { void loadData(); }, [loadData]);
 
@@ -173,6 +183,18 @@ export default function SellerDashboard() {
                 </div>
               ))}
             </div>
+
+            {!profile?.is_verified && (
+              <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl flex items-start gap-3">
+                <div className="p-2 bg-red-100 dark:bg-red-900/40 rounded-full shrink-0">
+                  <Store className="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-red-800 dark:text-red-300">Tài khoản chưa được xác duyệt</h3>
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-1">Cửa hàng của bạn đang chờ quản trị viên xác duyệt. Bạn tạm thời không thể đăng sản phẩm mới. Quá trình này thường mất từ 1-2 ngày làm việc.</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -192,8 +214,15 @@ export default function SellerDashboard() {
           {tab === 'products' && (
             <div className="space-y-4">
               {/* Create button */}
-              <button onClick={() => setShowCreate(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-black dark:bg-white text-white dark:text-black rounded-full font-semibold hover:opacity-80 transition-all shadow-md">
+              <button onClick={() => {
+                  if (!profile?.is_verified) {
+                    toast.error('Tài khoản của bạn chưa được xác duyệt.');
+                    return;
+                  }
+                  setShowCreate(true);
+                }}
+                disabled={!profile?.is_verified}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-black dark:bg-white text-white dark:text-black rounded-full font-semibold hover:opacity-80 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
                 <Plus className="w-4 h-4" /> Thêm sản phẩm
               </button>
               <CreateProductModal 
@@ -228,7 +257,13 @@ export default function SellerDashboard() {
                       <Link to={`/shop/${p.slug}`} className="p-2 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all" title="Xem chi tiết">
                         <Eye className="w-4 h-4" />
                       </Link>
-                      <button onClick={() => setEditingProduct(p)} className="p-2 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all" title="Sửa sản phẩm">
+                      <button onClick={() => {
+                        if (!profile?.is_verified) {
+                          toast.error('Tài khoản của bạn chưa được xác duyệt.');
+                          return;
+                        }
+                        setEditingProduct(p);
+                      }} className="p-2 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all" title="Sửa sản phẩm">
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDelete(p.id)} className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" title="Xóa sản phẩm">
@@ -334,6 +369,16 @@ export default function SellerDashboard() {
                     </p>
                   </div>
                 ))
+              )}
+              {orderTotal > ORDER_PAGE_SIZE && (
+                <div className="mt-8 flex justify-center">
+                  <Pagination
+                    currentPage={orderPage}
+                    totalItems={orderTotal}
+                    pageSize={ORDER_PAGE_SIZE}
+                    onPageChange={setOrderPage}
+                  />
+                </div>
               )}
             </div>
           )}

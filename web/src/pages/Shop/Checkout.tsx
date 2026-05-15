@@ -232,6 +232,7 @@ export default function Checkout() {
                   {[
                     { value: 'cod', label: 'Thanh toán khi nhận hàng (COD)', emoji: '💰' },
                     { value: 'bank_transfer', label: 'Chuyển khoản ngân hàng', emoji: '🏦' },
+                    { value: 'qr', label: 'Thanh toán qua mã QR', emoji: '📱' },
                   ].map((pm) => (
                     <label
                       key={pm.value}
@@ -295,6 +296,15 @@ export default function Checkout() {
                       )}
                     </div>
                   )}
+                  {form.payment_method === 'qr' && (
+                    <div className="rounded-xl border border-amber-100 bg-amber-50/70 p-6 text-center dark:border-amber-900/40 dark:bg-amber-900/10">
+                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-3">Quét mã QR để thanh toán trực tiếp</p>
+                      <div className="bg-white p-2 rounded-xl inline-block shadow-sm">
+                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PAYMENT_${total}`} alt="QR Code" className="w-32 h-32" />
+                      </div>
+                      <p className="text-xs text-amber-600 dark:text-amber-500 mt-3">Mã QR chứa sẵn số tiền cần thanh toán. Hệ thống sẽ tự động xác nhận sau khi chuyển khoản thành công.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </Reveal>
@@ -335,6 +345,10 @@ export default function Checkout() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Vận chuyển</span>
                   <span className="text-green-600 font-medium">Miễn phí</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Dự kiến nhận hàng</span>
+                  <span className="text-gray-900 dark:text-gray-300 font-medium">2 - 3 ngày</span>
                 </div>
                 <div className="border-t border-gray-100 dark:border-slate-700 pt-3 flex justify-between">
                   <span className="font-bold text-gray-900 dark:text-white">Tổng</span>

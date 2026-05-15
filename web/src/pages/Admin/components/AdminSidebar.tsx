@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ChefHat, LayoutDashboard, CheckCircle, Users, Utensils, FileText, MessageSquare, LogOut, MessageCircle, FolderTree, ShoppingBag, ClipboardList } from 'lucide-react';
+import { ChefHat, LayoutDashboard, CheckCircle, Users, Utensils, FileText, MessageSquare, LogOut, MessageCircle, FolderTree, ShoppingBag, ClipboardList, Store } from 'lucide-react';
 import { apiJson } from '../../../lib/api';
 
 export default function AdminSidebar({ pendingCount, pendingProducts }: { pendingCount: number; pendingProducts: number }) {
@@ -71,6 +71,10 @@ export default function AdminSidebar({ pendingCount, pendingProducts }: { pendin
         <div className="pt-6 pb-3 px-4 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
           Marketplace
         </div>
+
+        <Link to="/admin/market-sellers" className={navClass(path === '/admin/market-sellers')}>
+          <Store className="w-6 h-6" /> Người bán
+        </Link>
 
         <Link to="/admin/market-products" className={navClass(path === '/admin/market-products')}>
           <ShoppingBag className="w-6 h-6" /> Sản phẩm shop

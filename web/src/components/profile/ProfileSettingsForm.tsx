@@ -12,10 +12,12 @@ import {
   Shield,
   Trash2,
   User,
+  Moon,
 } from 'lucide-react';
 import { Skeleton } from '../ui/Skeleton';
 import type { ProfileUser } from './types';
 import { apiFetch } from '../../lib/api';
+import { useTheme } from '../../hooks/useTheme';
 import {
   loadProfilePreferences,
   saveProfilePreferences,
@@ -82,6 +84,7 @@ function SettingRow({
 
 export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, initialView = 'main' }: ProfileSettingsFormProps) {
   const navigate = useNavigate();
+  const { isDark, toggleTheme } = useTheme();
   const [view, setView] = useState<SettingsView>(initialView);
   const [profileMsg, setProfileMsg] = useState<Notice>(null);
   const [passMsg, setPassMsg] = useState<Notice>(null);
@@ -234,6 +237,27 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
         <div className={sectionTitleClass}>Cài đặt</div>
         <SettingRow icon={MessageCircle} label="Cài đặt Chat" detail="Mở tin nhắn với cửa hàng" onClick={() => navigate('/messages')} />
         <SettingRow icon={Bell} label="Cài đặt Thông báo" detail="Nhận thông báo đơn hàng và tài khoản" />
+        <div className="flex w-full items-center justify-between gap-3 border-b border-gray-100 px-4 py-4 text-left transition-colors last:border-b-0 hover:bg-gray-50 dark:border-slate-800 dark:hover:bg-slate-800/60">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Moon className="h-5 w-5 shrink-0 text-gray-400 dark:text-slate-500" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-gray-900 dark:text-white">Giao diện tối</p>
+              <p className="mt-0.5 truncate text-sm text-gray-500 dark:text-slate-400">Bật/tắt chế độ ban đêm</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isDark ? true : false}
+            onClick={toggleTheme}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${isDark ? 'bg-amber-500' : 'bg-gray-200 dark:bg-slate-700'}`}
+          >
+            <span className="sr-only">Bật giao diện tối</span>
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isDark ? 'translate-x-5' : 'translate-x-0'}`}
+            />
+          </button>
+        </div>
         <SettingRow icon={Lock} label="Cài đặt riêng tư" detail="Quản lý hiển thị hồ sơ" />
       </div>
     );

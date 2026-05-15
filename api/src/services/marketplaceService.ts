@@ -86,8 +86,9 @@ export async function getSellerProducts(userId: number, limitRaw: unknown, offse
 }
 
 export async function createProduct(userId: number, body: Record<string, unknown>) {
-  const seller = await marketplaceRepo.isSeller(userId);
-  if (!seller) throw { status: 403, message: 'Bạn chưa đăng ký bán hàng.' };
+  const profile = await marketplaceRepo.getSellerProfile(userId);
+  if (!profile) throw { status: 403, message: 'Bạn chưa đăng ký bán hàng.' };
+  if (!profile.is_verified) throw { status: 403, message: 'Tài khoản bán hàng của bạn đang chờ quản trị viên xác duyệt. Vui lòng chờ trước khi đăng sản phẩm.' };
 
   const name = String(body?.name ?? '').trim();
   const price = Number(body?.price ?? 0);
@@ -128,6 +129,11 @@ export async function updateProduct(userId: number, idRaw: unknown, body: Record
   const existing = await marketplaceRepo.getProductById(id);
   if (!existing || existing.seller_id !== userId) {
     throw { status: 403, message: 'Bạn không có quyền chỉnh sửa sản phẩm này.' };
+  }
+
+  const profile = await marketplaceRepo.getSellerProfile(userId);
+  if (!profile?.is_verified) {
+    throw { status: 403, message: 'Tài khoản bán hàng của bạn chưa được xác duyệt hoặc đã bị khóa.' };
   }
 
   const data: Record<string, unknown> = {};

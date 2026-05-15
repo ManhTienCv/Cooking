@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChefHat, Menu, LogOut, Moon, Sun, ShoppingCart, Store, MessageCircle, ClipboardList } from 'lucide-react';
+import { ChefHat, Menu, LogOut, ShoppingCart, Store, MessageCircle, ClipboardList } from 'lucide-react';
 import AuthModal from './AuthModal';
 import { apiFetch, apiJson, resetCsrfCache } from '../lib/api';
 import { AUTH_CHANGE_EVENT, notifyAuthChanged } from '../lib/authEvents';
 import { scrollWindowToTop } from '../lib/scroll';
-import { useTheme } from '../hooks/useTheme';
 import { useCart } from '../contexts/CartContext';
 
 type MeState =
@@ -41,7 +40,6 @@ export default function Navbar() {
   const [authInitialSignUp, setAuthInitialSignUp] = useState(false);
   const [me, setMe] = useState<MeState | null>(null);
   const [messageUnreadCount, setMessageUnreadCount] = useState(0);
-  const { isDark, toggleTheme } = useTheme();
   const { count: cartCount } = useCart();
   const location = useLocation();
 
@@ -285,14 +283,6 @@ export default function Navbar() {
                 </>
               )}
 
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors duration-300"
-                aria-label="Chuyển chế độ sáng tối"
-                title="Chuyển chế độ sáng tối"
-              >
-                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </button>
               
               <div className="hidden md:flex items-center space-x-2">
                 {me === null ? (

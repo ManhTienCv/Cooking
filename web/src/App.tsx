@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 import { CartProvider } from './contexts/CartContext';
 import { scrollWindowToTop } from './lib/scroll';
+import { useTheme } from './hooks/useTheme';
 
 const Home = lazy(() => import('./pages/Home'));
 const About = lazy(() => import('./pages/About'));
@@ -55,6 +56,7 @@ export default function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
   const reduceMotion = useReducedMotion();
+  useTheme(); // Initialize theme globally
 
   /* Chỉ cuộn về đầu khi đổi pathname, tránh nháy khi đổi query (filter) */
   useLayoutEffect(() => {

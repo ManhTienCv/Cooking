@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 import AuthModal from '../../components/AuthModal';
 import { apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
-import { AUTH_CHANGE_EVENT } from '../../lib/authEvents';
+import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../../lib/authEvents';
 
 import HealthFeatures from '../../components/health/HealthFeatures';
 import HealthTabs from '../../components/health/HealthTabs';
@@ -69,7 +69,13 @@ export default function Health() {
   useEffect(() => {
     void loadPlans();
     
-    const onAuthChange = () => {
+    const onAuthChange = (event: Event) => {
+      const detail = getAuthChangeDetail(event);
+      if (detail.authenticated === false) {
+        setPlans([]);
+        setIsLoading(false);
+        return;
+      }
       void loadPlans();
     };
     window.addEventListener(AUTH_CHANGE_EVENT, onAuthChange);

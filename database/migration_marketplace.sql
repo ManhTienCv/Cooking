@@ -99,6 +99,26 @@ CREATE TABLE IF NOT EXISTS order_items (
   subtotal DECIMAL(12,2) NOT NULL
 );
 
+-- Repair path for databases where these tables existed before marketplace
+-- ownership columns were introduced. CREATE TABLE IF NOT EXISTS does not add
+-- columns to existing tables, so keep this migration idempotent.
+ALTER TABLE products
+  ADD COLUMN IF NOT EXISTS seller_id INT REFERENCES users(id) ON DELETE CASCADE;
+
+ALTER TABLE order_items
+  ADD COLUMN IF NOT EXISTS seller_id INT REFERENCES users(id) ON DELETE CASCADE;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM products WHERE seller_id IS NULL) THEN
+    ALTER TABLE products ALTER COLUMN seller_id SET NOT NULL;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM order_items WHERE seller_id IS NULL) THEN
+    ALTER TABLE order_items ALTER COLUMN seller_id SET NOT NULL;
+  END IF;
+END $$;
+
 -- 7. Đánh giá sản phẩm
 CREATE TABLE IF NOT EXISTS product_reviews (
   id SERIAL PRIMARY KEY,

@@ -118,3 +118,29 @@ export const sellerProductRateLimit = rateLimit({
     });
   },
 });
+
+export const sellerSecurityRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({
+      success: false,
+      message: 'Qua nhieu lan xac thuc. Vui long thu lai sau.',
+    });
+  },
+});
+
+export const sellerOtpRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({
+      success: false,
+      message: 'Qua nhieu yeu cau OTP. Vui long thu lai sau.',
+    });
+  },
+});

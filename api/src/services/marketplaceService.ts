@@ -77,7 +77,12 @@ export async function getSellerProfile(userId: number) {
   const profile = await marketplaceRepo.getSellerProfile(userId);
   let stats = null;
   if (profile) {
-    stats = await marketplaceRepo.getSellerStats(userId);
+    try {
+      stats = await marketplaceRepo.getSellerStats(userId);
+    } catch (error) {
+      console.error('[marketplace] getSellerStats failed', { userId, error });
+      stats = null;
+    }
   }
   return { profile, stats };
 }

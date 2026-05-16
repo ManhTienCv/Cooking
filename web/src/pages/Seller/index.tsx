@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, Package, ShoppingBag, Plus, Trash2, Eye, TrendingUp, Pencil } from 'lucide-react';
+import { Store, Package, ShoppingBag, Plus, Trash2, Eye, TrendingUp, Pencil, Settings, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiJson, apiFetch } from '../../lib/api';
 import CreateProductModal, { type EditingProduct } from './CreateProductModal';
 import { NotificationProvider } from '../../contexts/NotificationContext';
 import NotificationBell from '../../components/ui/NotificationBell';
 import Pagination from '../../components/ui/Pagination';
-import { AUTH_CHANGE_EVENT } from '../../lib/authEvents';
+import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../../lib/authEvents';
 
 interface SellerProduct {
   id: number; name: string; slug: string; price: number; sale_price: number | null;
@@ -37,6 +37,14 @@ interface SellerStats {
 }
 
 function formatPrice(n: number) { return n.toLocaleString('vi-VN') + 'đ'; }
+function isNotSellerError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return (
+    message.includes('bạn chưa đăng ký bán hàng') ||
+    message.includes('ban chua dang ky ban hang')
+  );
+}
 
 const STATUS_LABEL: Record<string, string> = {
   pending: 'Chờ duyệt', approved: 'Đang bán', rejected: 'Bị từ chối',
@@ -46,6 +54,15 @@ const STATUS_COLOR: Record<string, string> = {
   approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
+
+const ORDER_STATUS_STEPS = [
+  { key: 'pending', label: 'Chờ xác nhận' },
+  { key: 'confirmed', label: 'Xác nhận' },
+  { key: 'preparing', label: 'Chuẩn bị' },
+  { key: 'shipping', label: 'Đang giao' },
+  { key: 'delivered', label: 'Đã giao' },
+  { key: 'completed', label: 'Hoàn thành' },
+];
 
 export default function SellerDashboard() {
   const [tab, setTab] = useState<'products' | 'orders'>('products');
@@ -72,27 +89,76 @@ export default function SellerDashboard() {
     setLoading(true);
     try {
       const p = await apiJson<{ profile: SellerProfile | null, stats?: SellerStats | null }>('/api/marketplace/seller/profile');
-      if (!p.profile) { setNotSeller(true); setLoading(false); return; }
+      if (!p.profile) {
+        setNotSeller(true);
+        setProfile(null);
+        setProducts([]);
+        setOrders([]);
+        setProductTotal(0);
+        setOrderTotal(0);
+        return;
+      }
       setNotSeller(false);
       setProfile(p.profile);
       if (p.stats) setStats(p.stats);
       
-      const [prods, ords] = await Promise.all([
+      const [prodsResult, ordsResult] = await Promise.allSettled([
         apiJson<{ products: SellerProduct[], total: number }>(`/api/marketplace/seller/products?limit=${PRODUCT_PAGE_SIZE}&offset=${(productPage - 1) * PRODUCT_PAGE_SIZE}`),
         apiJson<{ orders: SellerOrder[], total: number }>(`/api/marketplace/seller/orders?limit=${ORDER_PAGE_SIZE}&offset=${(orderPage - 1) * ORDER_PAGE_SIZE}`),
       ]);
-      setProducts(prods.products ?? []);
-      setProductTotal(prods.total ?? 0);
-      setOrders(ords.orders ?? []);
-      setOrderTotal(ords.total ?? 0);
-    } catch { setNotSeller(true); }
+
+      if (prodsResult.status === 'fulfilled') {
+        setProducts(prodsResult.value.products ?? []);
+        setProductTotal(prodsResult.value.total ?? 0);
+      } else if (isNotSellerError(prodsResult.reason)) {
+        setNotSeller(true);
+        setProfile(null);
+      } else {
+        setProducts([]);
+        setProductTotal(0);
+      }
+
+      if (ordsResult.status === 'fulfilled') {
+        setOrders(ordsResult.value.orders ?? []);
+        setOrderTotal(ordsResult.value.total ?? 0);
+      } else if (isNotSellerError(ordsResult.reason)) {
+        setNotSeller(true);
+        setProfile(null);
+      } else {
+        setOrders([]);
+        setOrderTotal(0);
+      }
+    } catch (error) {
+      if (isNotSellerError(error)) {
+        setNotSeller(true);
+        setProfile(null);
+        setProducts([]);
+        setOrders([]);
+        setProductTotal(0);
+        setOrderTotal(0);
+      } else {
+        setNotSeller(true);
+      }
+    }
     finally { setLoading(false); }
   }, [productPage, orderPage]);
 
   useEffect(() => { 
     void loadData(); 
     
-    const onAuthChange = () => {
+    const onAuthChange = (event: Event) => {
+      const detail = getAuthChangeDetail(event);
+      if (detail.authenticated === false) {
+        setNotSeller(true);
+        setProfile(null);
+        setProducts([]);
+        setOrders([]);
+        setProductTotal(0);
+        setOrderTotal(0);
+        setStats(null);
+        setLoading(false);
+        return;
+      }
       void loadData();
     };
     window.addEventListener(AUTH_CHANGE_EVENT, onAuthChange);
@@ -181,7 +247,15 @@ export default function SellerDashboard() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">Xin chào, {profile?.full_name}</p>
               </div>
               <div className="ml-auto">
-                <NotificationBell />
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/seller/settings"
+                    className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                  >
+                    <Settings className="h-4 w-4" /> Cai dat
+                  </Link>
+                  <NotificationBell />
+                </div>
               </div>
             </div>
             {/* Stats */}
@@ -343,36 +417,33 @@ export default function SellerDashboard() {
                     </div>
                     
                     {/* Status Tracker */}
-                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
-                      <div className="flex items-center justify-between text-xs font-medium text-gray-500 dark:text-gray-400 relative">
-                        {/* Connecting Line */}
-                        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gray-200 dark:bg-slate-700 -z-10 -translate-y-1/2"></div>
-                        
-                        {['pending', 'confirmed', 'preparing', 'shipping', 'delivered'].map((step) => {
-                          const steps = ['pending', 'confirmed', 'preparing', 'shipping', 'delivered'];
-                          const currentIdx = steps.indexOf(o.status);
-                          const isCompleted = steps.indexOf(step) <= currentIdx;
-                          const isCurrent = step === o.status;
-                          
-                          const labels: Record<string, string> = {
-                            pending: 'Chờ duyệt',
-                            confirmed: 'Xác nhận',
-                            preparing: 'Chuẩn bị',
-                            shipping: 'Giao hàng',
-                            delivered: 'Đã giao'
-                          };
-                          
+                    <div className="mt-5 pt-5 border-t border-gray-100 dark:border-slate-700">
+                      <div className="flex items-center justify-between px-1 sm:px-6">
+                        {ORDER_STATUS_STEPS.map((step, i) => {
+                          const stepIndex = ORDER_STATUS_STEPS.findIndex((s) => s.key === o.status);
+                          const done = stepIndex >= 0 && i <= stepIndex;
+                          const current = i === stepIndex;
+
                           return (
-                            <div key={step} className="flex flex-col items-center gap-1.5 bg-white dark:bg-slate-800 px-2">
-                              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                isCurrent ? 'border-amber-500 bg-amber-500 text-white' :
-                                isCompleted ? 'border-amber-500 bg-amber-500' : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800'
-                              }`}>
-                                {isCompleted && !isCurrent && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
-                                {isCurrent && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
+                            <div key={step.key} className="relative flex min-w-0 flex-1 flex-col items-center">
+                              {i > 0 && (
+                                <div className={`absolute top-4 right-1/2 h-0.5 w-full -translate-y-1/2 ${
+                                  i <= stepIndex ? 'bg-green-500' : 'bg-gray-200 dark:bg-slate-700'
+                                }`} />
+                              )}
+                              <div className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                                done
+                                  ? 'bg-green-500 text-white'
+                                  : 'bg-gray-200 text-gray-400 dark:bg-slate-700 dark:text-gray-500'
+                              } ${current ? 'ring-4 ring-green-200 dark:ring-green-900' : ''}`}>
+                                {done ? <CheckCircle className="h-4 w-4" /> : i + 1}
                               </div>
-                              <span className={isCurrent ? 'text-amber-600 dark:text-amber-400 font-bold' : isCompleted ? 'text-gray-900 dark:text-gray-200' : ''}>
-                                {labels[step]}
+                              <span className={`mt-2 max-w-full truncate text-center text-[10px] ${
+                                done
+                                  ? 'font-semibold text-green-600 dark:text-green-400'
+                                  : 'text-gray-400 dark:text-gray-500'
+                              }`}>
+                                {step.label}
                               </span>
                             </div>
                           );

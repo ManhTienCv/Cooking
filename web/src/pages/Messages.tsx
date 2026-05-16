@@ -5,7 +5,7 @@ import { MessageCircle, Send, Store, User, ShoppingBag } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { apiJson } from '../lib/api';
-import { AUTH_CHANGE_EVENT } from '../lib/authEvents';
+import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../lib/authEvents';
 
 type MeState =
   | { authenticated: false; user?: never }
@@ -108,7 +108,15 @@ export default function Messages() {
   useEffect(() => {
     void loadConversations();
     
-    const onAuthChange = () => {
+    const onAuthChange = (event: Event) => {
+      const detail = getAuthChangeDetail(event);
+      if (detail.authenticated === false) {
+        setMe({ authenticated: false });
+        setConversations([]);
+        setActiveId(null);
+        setLoading(false);
+        return;
+      }
       void loadConversations();
     };
     window.addEventListener(AUTH_CHANGE_EVENT, onAuthChange);

@@ -5,5 +5,8 @@ declare module 'express-session' {
     userId?: number;
     adminId?: number;
     csrfToken?: string;
+    sellerSecurityVerifiedAt?: number;
+    sellerOtpVerifiedAt?: number;
+    sellerOtpPurpose?: string;
   }
 }

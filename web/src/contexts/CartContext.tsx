@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { apiJson, apiFetch } from '../lib/api';
-import { AUTH_CHANGE_EVENT } from '../lib/authEvents';
+import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../lib/authEvents';
 import type { CartItem } from '../types/marketplace';
 
 interface CartCtx {
@@ -52,7 +52,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   /* Re-fetch khi auth thay đổi */
   useEffect(() => {
-    const handler = () => void refresh();
+    const handler = (event: Event) => {
+      const detail = getAuthChangeDetail(event);
+      if (detail.authenticated === false) {
+        setItems([]);
+        setCount(0);
+        setTotal(0);
+        return;
+      }
+      void refresh();
+    };
     window.addEventListener(AUTH_CHANGE_EVENT, handler);
     return () => window.removeEventListener(AUTH_CHANGE_EVENT, handler);
   }, [refresh]);

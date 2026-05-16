@@ -112,7 +112,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
         return;
       }
       resetCsrfCache();
-      notifyAuthChanged();
+      notifyAuthChanged({ authenticated: true });
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -167,7 +167,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
         return;
       }
       resetCsrfCache();
-      notifyAuthChanged();
+      notifyAuthChanged({ authenticated: true });
       onSuccess?.();
       onClose();
     } catch (err) {

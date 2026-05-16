@@ -41,10 +41,24 @@ export async function getCategories(type?: string): Promise<ProductCategory[]> {
 
 export async function getSellerProfile(userId: number): Promise<SellerProfileWithUser | null> {
   const { rows } = await pool.query(
-    `SELECT sp.*, u.full_name, u.avatar_url, u.email
-     FROM seller_profiles sp
-     JOIN users u ON u.id = sp.user_id
-     WHERE sp.user_id = $1`,
+    `SELECT
+       u.id AS user_id,
+       COALESCE(sp.store_name, u.full_name) AS store_name,
+       sp.store_description,
+       sp.phone,
+       sp.address,
+       COALESCE(sp.is_verified, TRUE) AS is_verified,
+       COALESCE(sp.total_sales, 0) AS total_sales,
+       COALESCE(sp.rating, 0) AS rating,
+       COALESCE(sp.created_at, u.created_at) AS created_at,
+       COALESCE(sp.updated_at, u.updated_at, u.created_at) AS updated_at,
+       u.full_name,
+       u.avatar_url,
+       u.email
+     FROM users u
+     LEFT JOIN seller_profiles sp ON sp.user_id = u.id
+     WHERE u.id = $1
+       AND sp.user_id IS NOT NULL`,
     [userId]
   );
   return (rows[0] as SellerProfileWithUser) ?? null;
@@ -56,8 +70,13 @@ export async function getSellerStats(userId: number) {
      FROM products WHERE seller_id = $1`, [userId]
   );
   const orderRes = await pool.query(
-    `SELECT COUNT(id) as total_orders, COALESCE(SUM(total_amount), 0) as total_revenue
-     FROM orders WHERE seller_id = $1 AND status != 'cancelled'`, [userId]
+    `SELECT
+        COUNT(DISTINCT o.id) AS total_orders,
+        COALESCE(SUM(oi.subtotal), 0) AS total_revenue
+     FROM order_items oi
+     JOIN orders o ON o.id = oi.order_id
+     WHERE oi.seller_id = $1 AND o.status != 'cancelled'`,
+    [userId]
   );
   return {
     total_products: Number(prodRes.rows[0]?.total_products || 0),
@@ -87,7 +106,12 @@ export async function createSellerProfile(
 
 export async function isSeller(userId: number): Promise<boolean> {
   const { rows } = await pool.query(
-    'SELECT user_id FROM seller_profiles WHERE user_id = $1',
+    `SELECT 1
+     FROM users u
+     LEFT JOIN seller_profiles sp ON sp.user_id = u.id
+     WHERE u.id = $1
+       AND sp.user_id IS NOT NULL
+     LIMIT 1`,
     [userId]
   );
   return rows.length > 0;

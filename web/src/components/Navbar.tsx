@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChefHat, Menu, LogOut, ShoppingCart, Store, MessageCircle, ClipboardList } from 'lucide-react';
 import AuthModal from './AuthModal';
 import { apiFetch, apiJson, resetCsrfCache } from '../lib/api';
-import { AUTH_CHANGE_EVENT, notifyAuthChanged } from '../lib/authEvents';
+import { AUTH_CHANGE_EVENT, getAuthChangeDetail, notifyAuthChanged } from '../lib/authEvents';
 import { scrollWindowToTop } from '../lib/scroll';
 import { useCart } from '../contexts/CartContext';
 
@@ -42,6 +42,7 @@ export default function Navbar() {
   const [messageUnreadCount, setMessageUnreadCount] = useState(0);
   const { count: cartCount } = useCart();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const currentPage = location.pathname;
 
@@ -84,7 +85,15 @@ export default function Navbar() {
   }, [me, loadMessageUnread]);
 
   useEffect(() => {
-    const onAuth = () => void refreshMe();
+    const onAuth = (event: Event) => {
+      const detail = getAuthChangeDetail(event);
+      if (detail.authenticated === false) {
+        setMe({ authenticated: false });
+        setMessageUnreadCount(0);
+        return;
+      }
+      void refreshMe();
+    };
     window.addEventListener(AUTH_CHANGE_EVENT, onAuth);
     return () => window.removeEventListener(AUTH_CHANGE_EVENT, onAuth);
   }, [refreshMe]);
@@ -128,9 +137,11 @@ export default function Navbar() {
     resetCsrfCache();
     setMe({ authenticated: false });
     setMessageUnreadCount(0);
-    notifyAuthChanged();
+    notifyAuthChanged({ authenticated: false });
     setIsMenuOpen(false);
-    window.location.replace('/');
+    if (location.pathname !== '/') {
+      navigate('/', { replace: true });
+    }
   };
 
   const userInitials = (name: string) => {

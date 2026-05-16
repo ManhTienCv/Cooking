@@ -8,7 +8,7 @@ import { apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
 import { scrollWindowToTop } from '../../lib/scroll';
 import { loadProfilePreferences, type LinkedBankAccount, type SavedAddress } from '../../lib/profilePreferences';
-import { AUTH_CHANGE_EVENT } from '../../lib/authEvents';
+import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../../lib/authEvents';
 
 function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
@@ -63,7 +63,15 @@ export default function Checkout() {
   useEffect(() => {
     void loadMe();
     
-    const onAuthChange = () => {
+    const onAuthChange = (event: Event) => {
+      const detail = getAuthChangeDetail(event);
+      if (detail.authenticated === false) {
+        setSavedAddresses([]);
+        setLinkedBanks([]);
+        setSelectedAddressId('');
+        setSelectedBankId('');
+        return;
+      }
       void loadMe();
     };
     window.addEventListener(AUTH_CHANGE_EVENT, onAuthChange);

@@ -40,6 +40,7 @@ const Checkout = lazy(() => import('./pages/Shop/Checkout'));
 const OrdersPage = lazy(() => import('./pages/Shop/Orders'));
 const OrderDetailPage = lazy(() => import('./pages/Shop/OrderDetail'));
 const SellerDashboard = lazy(() => import('./pages/Seller'));
+const SellerSettings = lazy(() => import('./pages/Seller/Settings'));
 const Messages = lazy(() => import('./pages/Messages'));
 
 const EASE_PAGE = [0.22, 1, 0.36, 1] as const;
@@ -154,6 +155,7 @@ export default function App() {
                 <Route path="/orders" element={<OrdersPage />} />
                 <Route path="/orders/:id" element={<OrderDetailPage />} />
                 <Route path="/seller" element={<SellerDashboard />} />
+                <Route path="/seller/settings" element={<SellerSettings />} />
                 <Route path="/messages" element={<Messages />} />
               </Routes>
             </Suspense>

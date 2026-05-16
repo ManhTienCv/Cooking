@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Activity, BookOpen, Bookmark, CheckCircle, PenTool, Settings, X, Edit, Trash2, Store, Package, Heart, Star } from 'lucide-react';
 import { apiFetch, apiJson, resetCsrfCache } from '../../lib/api';
-import { notifyAuthChanged } from '../../lib/authEvents';
+import { AUTH_CHANGE_EVENT, getAuthChangeDetail, notifyAuthChanged } from '../../lib/authEvents';
 import { Reveal } from '../../components/motion/ScrollReveal';
 import Pagination from '../../components/ui/Pagination';
 
@@ -15,7 +15,6 @@ import ProfileSidebar from '../../components/profile/ProfileSidebar';
 import ProfileSettingsForm from '../../components/profile/ProfileSettingsForm';
 import EditPostModal from '../../components/blog/EditPostModal';
 import EditRecipeModal from '../../components/recipes/EditRecipeModal';
-import { AUTH_CHANGE_EVENT } from '../../lib/authEvents';
 
 const PROFILE_PAGE_SIZE = 6;
 type PagedTab = 'recipes' | 'posts' | 'saved' | 'wishlist';
@@ -161,7 +160,13 @@ export default function Profile() {
   useEffect(() => {
     void loadMe();
     
-    const onAuthChange = () => {
+    const onAuthChange = (event: Event) => {
+      const detail = getAuthChangeDetail(event);
+      if (detail.authenticated === false) {
+        setUser(null);
+        setStats(null);
+        return;
+      }
       void loadMe();
     };
     window.addEventListener(AUTH_CHANGE_EVENT, onAuthChange);
@@ -190,10 +195,10 @@ export default function Profile() {
       /* vẫn thoát UI */
     }
     resetCsrfCache();
-    notifyAuthChanged();
+    notifyAuthChanged({ authenticated: false });
     setUser(null);
     setStats(null);
-    window.location.replace('/');
+    navigate('/', { replace: true });
   };
 
   const handleDeleteRecipe = async (id: number) => {

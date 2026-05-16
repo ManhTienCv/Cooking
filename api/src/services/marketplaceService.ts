@@ -75,7 +75,11 @@ export async function registerSeller(
 
 export async function getSellerProfile(userId: number) {
   const profile = await marketplaceRepo.getSellerProfile(userId);
-  return { profile };
+  let stats = null;
+  if (profile) {
+    stats = await marketplaceRepo.getSellerStats(userId);
+  }
+  return { profile, stats };
 }
 
 export async function getSellerProducts(userId: number, limitRaw: unknown, offsetRaw: unknown) {

@@ -28,6 +28,12 @@ interface SellerProfile {
   address: string | null;
   full_name: string;
 }
+interface SellerStats {
+  total_products: number;
+  total_sold: number;
+  total_orders: number;
+  total_revenue: number;
+}
 
 function formatPrice(n: number) { return n.toLocaleString('vi-VN') + 'đ'; }
 
@@ -45,6 +51,7 @@ export default function SellerDashboard() {
   const [profile, setProfile] = useState<SellerProfile | null>(null);
   const [products, setProducts] = useState<SellerProduct[]>([]);
   const [orders, setOrders] = useState<SellerOrder[]>([]);
+  const [stats, setStats] = useState<SellerStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [notSeller, setNotSeller] = useState(false);
   const [regForm, setRegForm] = useState({ store_name: '', store_description: '', phone: '', address: '' });
@@ -63,9 +70,11 @@ export default function SellerDashboard() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const p = await apiJson<{ profile: SellerProfile | null }>('/api/marketplace/seller/profile');
+      const p = await apiJson<{ profile: SellerProfile | null, stats?: SellerStats | null }>('/api/marketplace/seller/profile');
       if (!p.profile) { setNotSeller(true); setLoading(false); return; }
       setProfile(p.profile);
+      if (p.stats) setStats(p.stats);
+      
       const [prods, ords] = await Promise.all([
         apiJson<{ products: SellerProduct[], total: number }>(`/api/marketplace/seller/products?limit=${PRODUCT_PAGE_SIZE}&offset=${(productPage - 1) * PRODUCT_PAGE_SIZE}`),
         apiJson<{ orders: SellerOrder[], total: number }>(`/api/marketplace/seller/orders?limit=${ORDER_PAGE_SIZE}&offset=${(orderPage - 1) * ORDER_PAGE_SIZE}`),
@@ -147,9 +156,6 @@ export default function SellerDashboard() {
     </div>
   );
 
-  const totalRevenue = orders.reduce((s, o) => s + (o.status !== 'cancelled' ? o.total_amount : 0), 0);
-  const totalSold = products.reduce((s, p) => s + p.total_sold, 0);
-
   return (
     <NotificationProvider role="seller">
       <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 transition-colors">
@@ -171,10 +177,10 @@ export default function SellerDashboard() {
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Sản phẩm', value: products.length, icon: Package, color: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' },
-                { label: 'Đã bán', value: totalSold, icon: ShoppingBag, color: 'text-green-600 bg-green-50 dark:bg-green-900/20' },
-                { label: 'Đơn hàng', value: orders.length, icon: TrendingUp, color: 'text-purple-600 bg-purple-50 dark:bg-purple-900/20' },
-                { label: 'Doanh thu', value: formatPrice(totalRevenue), icon: TrendingUp, color: 'text-red-600 bg-red-50 dark:bg-red-900/20' },
+                { label: 'Sản phẩm', value: stats?.total_products ?? 0, icon: Package, color: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' },
+                { label: 'Đã bán', value: stats?.total_sold ?? 0, icon: ShoppingBag, color: 'text-green-600 bg-green-50 dark:bg-green-900/20' },
+                { label: 'Đơn hàng', value: stats?.total_orders ?? 0, icon: TrendingUp, color: 'text-purple-600 bg-purple-50 dark:bg-purple-900/20' },
+                { label: 'Doanh thu', value: formatPrice(stats?.total_revenue ?? 0), icon: TrendingUp, color: 'text-red-600 bg-red-50 dark:bg-red-900/20' },
               ].map(({ label, value, icon: Icon, color }) => (
                 <div key={label} className={`${color} rounded-2xl p-4`}>
                   <Icon className="w-5 h-5 mb-1" />

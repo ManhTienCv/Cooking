@@ -50,6 +50,23 @@ export async function getSellerProfile(userId: number): Promise<SellerProfileWit
   return (rows[0] as SellerProfileWithUser) ?? null;
 }
 
+export async function getSellerStats(userId: number) {
+  const prodRes = await pool.query(
+    `SELECT COUNT(id) as total_products, COALESCE(SUM(total_sold), 0) as total_sold
+     FROM products WHERE seller_id = $1`, [userId]
+  );
+  const orderRes = await pool.query(
+    `SELECT COUNT(id) as total_orders, COALESCE(SUM(total_amount), 0) as total_revenue
+     FROM orders WHERE seller_id = $1 AND status != 'cancelled'`, [userId]
+  );
+  return {
+    total_products: Number(prodRes.rows[0]?.total_products || 0),
+    total_sold: Number(prodRes.rows[0]?.total_sold || 0),
+    total_orders: Number(orderRes.rows[0]?.total_orders || 0),
+    total_revenue: Number(orderRes.rows[0]?.total_revenue || 0)
+  };
+}
+
 export async function createSellerProfile(
   userId: number,
   data: { store_name: string; store_description: string | null; phone: string | null; address: string | null }

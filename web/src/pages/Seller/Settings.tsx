@@ -584,10 +584,10 @@ export default function SellerSettings() {
                 <Bell className="h-5 w-5 text-purple-500" />
                 <h2 className="text-lg font-bold">Thông báo & Riêng tư</h2>
               </div>
-              <ToggleRow icon={MessageCircle} title="Chat với khách hàng" detail="Cho phép người mua mở tin nhắn với cửa hàng" checked={preferences.chat_enabled} onChange={(v) => void savePreferences({ ...preferences, chat_enabled: v })} />
-              <ToggleRow icon={Bell} title="Thông báo đơn hàng" detail="Nhận thông báo khi có đơn hàng và cập nhật trạng thái" checked={preferences.order_notifications} onChange={(v) => void savePreferences({ ...preferences, order_notifications: v })} />
-              <ToggleRow icon={MailCheck} title="Thông báo tài khoản" detail="Nhận email về bảo mật và hồ sơ người bán" checked={preferences.account_notifications} onChange={(v) => void savePreferences({ ...preferences, account_notifications: v })} />
-              <ToggleRow icon={preferences.profile_visible ? Eye : EyeOff} title="Hiển thị hồ sơ cửa hàng" detail="Cho phép người mua xem trang của cửa hàng công khai" checked={preferences.profile_visible} onChange={(v) => void savePreferences({ ...preferences, profile_visible: v })} />
+              <ToggleRow icon={MessageCircle} title="Chat với khách hàng" detail="Cho phép người mua mở tin nhắn với cửa hàng" checked={preferences.chat_enabled} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), chat_enabled: v })} />
+              <ToggleRow icon={Bell} title="Thông báo đơn hàng" detail="Nhận thông báo khi có đơn hàng và cập nhật trạng thái" checked={preferences.order_notifications} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), order_notifications: v })} />
+              <ToggleRow icon={MailCheck} title="Thông báo tài khoản" detail="Nhận email về bảo mật và hồ sơ người bán" checked={preferences.account_notifications} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), account_notifications: v })} />
+              <ToggleRow icon={preferences.profile_visible ? Eye : EyeOff} title="Hiển thị hồ sơ cửa hàng" detail="Cho phép người mua xem trang của cửa hàng công khai" checked={preferences.profile_visible} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), profile_visible: v })} />
             </section>
           </main>
 

@@ -534,7 +534,6 @@ export default function SellerSettings() {
             </section>
 
             <section className={panelClass}>
-            <section className={panelClass}>
               <div className="mb-5 flex items-center gap-3">
                 <CreditCard className="h-5 w-5 text-blue-500" />
                 <h2 className="text-lg font-bold">Tài khoản ngân hàng</h2>

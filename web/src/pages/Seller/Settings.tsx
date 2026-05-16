@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -110,7 +111,7 @@ function ToggleRow({
   checked,
   onChange,
 }: {
-  icon: typeof Bell;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   title: string;
   detail: string;
   checked: boolean;
@@ -208,7 +209,9 @@ export default function SellerSettings() {
     const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
     if (!siteKey) return;
     if (typeof window === 'undefined') return;
-    if ((window as any).grecaptcha) return;
+    // safe-check grecaptcha without using `any`
+    type Grecaptcha = { execute: (siteKey: string, opts?: { action?: string }) => Promise<string> };
+    if ((window as unknown as { grecaptcha?: Grecaptcha }).grecaptcha) return;
     const s = document.createElement('script');
     s.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
     s.async = true;
@@ -221,10 +224,11 @@ export default function SellerSettings() {
     const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
     if (!siteKey) return undefined;
     try {
-      const gre = (window as any).grecaptcha;
-      if (!gre || !gre.execute) return undefined;
+      type Grecaptcha = { execute: (siteKey: string, opts?: { action?: string }) => Promise<string> };
+      const gre = (window as unknown as { grecaptcha?: Grecaptcha }).grecaptcha;
+      if (!gre || typeof gre.execute !== 'function') return undefined;
       const token = await gre.execute(siteKey, { action });
-      return token as string;
+      return token;
     } catch (e) {
       console.warn('reCAPTCHA token error', e);
       return undefined;

@@ -73,6 +73,7 @@ export default function SellerDashboard() {
     try {
       const p = await apiJson<{ profile: SellerProfile | null, stats?: SellerStats | null }>('/api/marketplace/seller/profile');
       if (!p.profile) { setNotSeller(true); setLoading(false); return; }
+      setNotSeller(false);
       setProfile(p.profile);
       if (p.stats) setStats(p.stats);
       

@@ -6,6 +6,8 @@ import { adminRepo } from '../repos/adminRepo.js';
 import * as adminService from '../services/adminService.js';
 import * as marketplaceRepo from '../repos/marketplaceRepo.js';
 import * as marketplaceService from '../services/marketplaceService.js';
+import * as sellerRepo from '../repos/sellerSettingsRepo.js';
+import { sendSellerStatusEmail } from '../services/mailService.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 
 export const adminRouter = Router();
@@ -245,11 +247,18 @@ adminRouter.get('/marketplace/sellers', requireAdmin, asyncHandler(async (req, r
 adminRouter.post('/marketplace/sellers/:id/verify', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
   const isVerified = Boolean(req.body.is_verified);
   const { pool } = await import('../db/pool.js');
+  const sellerId = Number(req.params.id);
   const { rowCount } = await pool.query(
     `UPDATE seller_profiles SET is_verified = $1, updated_at = NOW() WHERE user_id = $2`,
-    [isVerified, Number(req.params.id)]
+    [isVerified, sellerId]
   );
   if (!rowCount) { res.status(404).json({ success: false, message: 'Người bán không tồn tại.' }); return; }
+  try {
+    const profile = await sellerRepo.getSellerProfileSettings(sellerId);
+    if (profile?.email) await sendSellerStatusEmail(profile.email, profile.store_name, isVerified);
+  } catch (e) {
+    console.warn('Failed to send seller status email', e);
+  }
   res.json({ success: true });
 }));
 

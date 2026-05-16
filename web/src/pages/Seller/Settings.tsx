@@ -203,6 +203,34 @@ export default function SellerSettings() {
     void loadSettings();
   }, [loadSettings]);
 
+  // Load reCAPTCHA script if site key is provided
+  useEffect(() => {
+    const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+    if (!siteKey) return;
+    if (typeof window === 'undefined') return;
+    if ((window as any).grecaptcha) return;
+    const s = document.createElement('script');
+    s.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
+    s.async = true;
+    s.defer = true;
+    document.head.appendChild(s);
+    return () => { document.head.removeChild(s); };
+  }, []);
+
+  async function getRecaptchaToken(action = 'seller_verification') {
+    const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+    if (!siteKey) return undefined;
+    try {
+      const gre = (window as any).grecaptcha;
+      if (!gre || !gre.execute) return undefined;
+      const token = await gre.execute(siteKey, { action });
+      return token as string;
+    } catch (e) {
+      console.warn('reCAPTCHA token error', e);
+      return undefined;
+    }
+  }
+
   const needsOtp = useMemo(() => !security?.otpVerified, [security?.otpVerified]);
   const needsPassword = useMemo(() => !security?.passwordVerified, [security?.passwordVerified]);
 
@@ -283,9 +311,11 @@ export default function SellerSettings() {
     }
     setSaving(true);
     try {
+      const recaptchaToken = await getRecaptchaToken('seller_verification');
+      const body = { ...verificationForm, recaptcha_token: recaptchaToken };
       const data = await apiJson<{ profile: SellerProfileSettings }>('/api/marketplace/seller/settings/verification', {
         method: 'PUT',
-        body: JSON.stringify(verificationForm),
+        body: JSON.stringify(body),
       });
       setProfile(data.profile);
       // exit edit mode after submit

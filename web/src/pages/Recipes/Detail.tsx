@@ -1,14 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Clock, User, Eye, ArrowLeft, Bookmark, BookmarkCheck, ChefHat, Flame, Drumstick, Wheat, Droplets, Timer, Lock } from 'lucide-react';
+import { Clock, User, Eye, ArrowLeft, Bookmark, BookmarkCheck, ChefHat, Flame, Drumstick, Wheat, Droplets, Lock } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { apiFetch, apiJson } from '../../lib/api';
 import ImageWithFallback from '../../lib/ImageWithFallback';
 import AuthModal from '../../components/AuthModal';
-import { HeroEnter, Reveal, RevealStaggerItem } from '../../components/motion/ScrollReveal';
+import { HeroEnter, Reveal } from '../../components/motion/ScrollReveal';
 import { AUTH_CHANGE_EVENT } from '../../lib/authEvents';
 import BuyIngredientsPanel from '../../components/shop/BuyIngredientsPanel';
 import AiRecommendations from '../../components/shop/AiRecommendations';
+import RecipeInstructions from '../../components/recipes/RecipeInstructions';
+import IngredientList from '../../components/recipes/IngredientList';
+import NutritionBox from '../../components/recipes/NutritionBox';
 
 interface RecipeRow {
   id: number;
@@ -245,125 +248,25 @@ export default function RecipeDetail() {
               </Reveal>
             )}
 
-            {/* Instructions with Timer */}
-            <Reveal y={20}>
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700">
-                <h2 className="text-2xl font-serif font-bold text-black dark:text-white mb-6 flex items-center gap-2">
-                  <ChefHat className="h-6 w-6 text-amber-500" />
-                  Hướng dẫn nấu ăn
-                </h2>
-                <div className="space-y-5">
-                  {instructionLines.length === 0 ? (
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">Chưa có hướng dẫn.</p>
-                  ) : (
-                    instructionLines.map((instruction, index) => {
-                      const mins = extractMinutes(instruction);
-                      const isTimerActive = activeTimer?.step === index;
-                      return (
-                        <RevealStaggerItem key={index} index={index} stagger={0.04} maxStaggerIndex={14}>
-                          <div className={`flex gap-4 p-3 rounded-xl transition-colors ${isTimerActive ? 'bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-400/50' : 'hover:bg-gray-50 dark:hover:bg-slate-700/50'}`}>
-                            <div className="flex-shrink-0 w-9 h-9 bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-xl flex items-center justify-center font-bold text-sm shadow-md">
-                              {index + 1}
-                            </div>
-                            <div className="flex-1 pt-1">
-                              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{instruction}</p>
-                              {/* Timer button */}
-                              {mins && (
-                                <div className="mt-2 flex items-center gap-2">
-                                  {isTimerActive ? (
-                                    <span className="inline-flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-mono text-sm font-bold bg-amber-100 dark:bg-amber-500/20 px-3 py-1 rounded-full animate-pulse">
-                                      <Timer className="h-3.5 w-3.5" />
-                                      {formatTimer(activeTimer!.seconds)}
-                                    </span>
-                                  ) : (
-                                    <button
-                                      onClick={() => setActiveTimer({ step: index, seconds: mins * 60 })}
-                                      className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 rounded-full hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors font-medium"
-                                    >
-                                      <Timer className="h-3.5 w-3.5" />
-                                      Bấm giờ {mins} phút
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </RevealStaggerItem>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            </Reveal>
+            <RecipeInstructions
+              instructions={instructionLines}
+              activeTimer={activeTimer}
+              onStartTimer={(step, seconds) => setActiveTimer({ step, seconds })}
+              formatTimer={formatTimer}
+              extractMinutes={extractMinutes}
+            />
           </div>
 
           {/* â”€â”€ Sidebar â”€â”€ */}
           <div className="space-y-6">
 
-            {/* Nutrition Box */}
-            <Reveal y={18} delay={0.03}>
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700">
-                <h3 className="text-lg font-bold text-black dark:text-white mb-4 flex items-center gap-2">
-                  <Flame className="h-5 w-5 text-orange-500" />
-                  Dinh dưỡng (ước tính)
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { icon: Flame, label: 'Calories', value: `${nutrition.calories}`, unit: 'kcal', color: 'text-orange-500 bg-orange-50 dark:bg-orange-500/10' },
-                    { icon: Drumstick, label: 'Protein', value: `${nutrition.protein}`, unit: 'g', color: 'text-red-500 bg-red-50 dark:bg-red-500/10' },
-                    { icon: Wheat, label: 'Carbs', value: `${nutrition.carbs}`, unit: 'g', color: 'text-amber-600 bg-amber-50 dark:bg-amber-500/10' },
-                    { icon: Droplets, label: 'Fat', value: `${nutrition.fat}`, unit: 'g', color: 'text-blue-500 bg-blue-50 dark:bg-blue-500/10' },
-                  ].map(({ icon: Icon, label, value, unit, color }) => (
-                    <div key={label} className={`${color} rounded-xl p-3 text-center`}>
-                      <Icon className="h-5 w-5 mx-auto mb-1" />
-                      <p className="text-lg font-bold">{value}<span className="text-xs font-normal ml-0.5">{unit}</span></p>
-                      <p className="text-xs opacity-70">{label}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Reveal>
+            <NutritionBox nutrition={nutrition} />
 
-            {/* Ingredients Checklist */}
-            <Reveal y={18} delay={0.05}>
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-black dark:text-white">Nguyên liệu</h2>
-                  <span className="text-xs text-gray-400 dark:text-gray-500">{checkedIngredients.size}/{ingredientLines.length}</span>
-                </div>
-                {/* Progress bar */}
-                {ingredientLines.length > 0 && (
-                  <div className="w-full h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full mb-4 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full transition-all duration-500"
-                      style={{ width: `${(checkedIngredients.size / ingredientLines.length) * 100}%` }}
-                    />
-                  </div>
-                )}
-                <ul className="space-y-1.5">
-                  {ingredientLines.length === 0 ? (
-                    <li className="text-gray-500 dark:text-gray-400 text-sm">Chưa có danh sách.</li>
-                  ) : (
-                    ingredientLines.map((ingredient, index) => {
-                      const checked = checkedIngredients.has(index);
-                      return (
-                        <RevealStaggerItem key={index} index={index} stagger={0.03} maxStaggerIndex={16}>
-                          <li
-                            onClick={() => toggleIngredient(index)}
-                            className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 ${checked ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'hover:bg-gray-50 dark:hover:bg-slate-700/50'}`}
-                          >
-                            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 flex-shrink-0 ${checked ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 dark:border-slate-600'}`}>
-                              {checked && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                            </div>
-                            <span className={`text-sm transition-all duration-200 ${checked ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>{ingredient}</span>
-                          </li>
-                        </RevealStaggerItem>
-                      );
-                    })
-                  )}
-                </ul>
-              </div>
-            </Reveal>
+            <IngredientList
+              ingredients={ingredientLines}
+              checkedIngredients={checkedIngredients}
+              onToggleIngredient={toggleIngredient}
+            />
 
             {/* Buy Ingredients — Smart Feature */}
             {ingredientLines.length > 0 && (

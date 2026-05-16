@@ -5,16 +5,22 @@ import { Reveal } from '../../components/motion/ScrollReveal';
 import AuthModal from '../../components/AuthModal';
 
 import type { BlogPostRow, BlogCategory } from '../../components/blog/types';
-import BlogFilterBar from '../../components/blog/BlogFilterBar';
+import { FilterBar } from '../../components/ui/FilterBar';
 import BlogList from '../../components/blog/BlogList';
 import CreatePostModal from '../../components/blog/CreatePostModal';
 import Pagination from '../../components/ui/Pagination';
-import { useBlogFilters } from '../../hooks/useBlogFilters';
+import { useFilters } from '../../hooks/useFilters';
 import { BLOG_PAGE_SIZE, LEGACY_BLOG_CATEGORIES } from '../../constants/blog';
 
 export default function Blog() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+
+  const [categoryOptions, setCategoryOptions] = useState<BlogCategory[]>([]);
+  const categories = useMemo(() => {
+    const dbNames = categoryOptions.map((c) => c.name);
+    return ['Tất cả', ...(dbNames.length ? dbNames : LEGACY_BLOG_CATEGORIES)];
+  }, [categoryOptions]);
 
   const {
     searchQuery,
@@ -24,13 +30,7 @@ export default function Blog() {
     currentPage,
     setCurrentPage,
     clearFilters
-  } = useBlogFilters();
-
-  const [categoryOptions, setCategoryOptions] = useState<BlogCategory[]>([]);
-  const categories = useMemo(() => {
-    const dbNames = categoryOptions.map((c) => c.name);
-    return ['Tất cả', ...(dbNames.length ? dbNames : LEGACY_BLOG_CATEGORIES)];
-  }, [categoryOptions]);
+  } = useFilters({ categories, pageSize: BLOG_PAGE_SIZE });
   
   const [posts, setPosts] = useState<BlogPostRow[]>([]);
   const [totalPosts, setTotalPosts] = useState(0);
@@ -145,10 +145,10 @@ export default function Blog() {
         </div>
       </div>
 
-      <BlogFilterBar
+      <FilterBar
         categories={categories}
         selectedCategory={selectedCategory}
-        setSelectedCategory={setSelectedCategory}
+        onCategoryChange={setSelectedCategory}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

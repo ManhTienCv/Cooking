@@ -68,21 +68,21 @@ export default function Shop() {
       .catch(() => {});
   }, []);
 
-  const handleProductType = (typeVal: string) => {
+  const handleProductType = useCallback((typeVal: string) => {
     setProductType(typeVal);
     setPage(1);
     const params = new URLSearchParams(searchParams);
     if (typeVal) params.set('type', typeVal); else params.delete('type');
     setSearchParams(params);
-  };
+  }, [searchParams, setSearchParams]);
 
-  const handleCategory = (catVal: string) => {
+  const handleCategory = useCallback((catVal: string) => {
     setCategory(catVal);
     setPage(1);
     const params = new URLSearchParams(searchParams);
     if (catVal) params.set('category', catVal); else params.delete('category');
     setSearchParams(params);
-  };
+  }, [searchParams, setSearchParams]);
 
   /* Fetch products */
   const fetchProducts = useCallback(async () => {
@@ -103,6 +103,7 @@ export default function Shop() {
       setTotal(data.total ?? 0);
     } catch {
       setProducts([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -113,28 +114,36 @@ export default function Shop() {
     return () => clearTimeout(t);
   }, [fetchProducts]);
 
-  const handleAddToCart = async (productId: number) => {
+  const handleAddToCart = useCallback(async (productId: number) => {
     try {
       await addItem(productId);
       toast.success('Đã thêm vào giỏ hàng!');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Không thể thêm vào giỏ');
     }
-  };
+  }, [addItem]);
 
-  const clearFilters = () => {
+  const onClearFilters = useCallback(() => {
     setSearchParams({});
     setSearch('');
     setCategory('');
     setProductType('');
     setSort('newest');
     setPage(1);
-  };
+  }, [setSearchParams]);
 
-  const hasActiveFilters = search || category || productType || sort !== 'newest';
+  const hasActiveFilters = useMemo(() => 
+    !!(search || category || productType || sort !== 'newest'),
+    [search, category, productType, sort]
+  );
 
-  const foodCategories = categories.filter((c) => c.type === 'food');
-  const equipCategories = categories.filter((c) => c.type === 'equipment');
+  const foodCategories = useMemo(() => categories.filter((c) => c.type === 'food'), [categories]);
+  const equipCategories = useMemo(() => categories.filter((c) => c.type === 'equipment'), [categories]);
+  const activeCategories = useMemo(() => {
+    if (productType === 'equipment') return equipCategories;
+    if (productType === 'food') return foodCategories;
+    return categories;
+  }, [productType, categories, foodCategories, equipCategories]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
@@ -205,7 +214,7 @@ export default function Shop() {
           </button>
 
           {hasActiveFilters && (
-            <button onClick={clearFilters} className="text-sm text-amber-600 dark:text-amber-400 hover:underline font-medium">
+            <button onClick={onClearFilters} className="text-sm text-amber-600 dark:text-amber-400 hover:underline font-medium">
               Xóa lọc
             </button>
           )}
@@ -261,7 +270,7 @@ export default function Shop() {
                     >
                       Tất cả
                     </button>
-                    {(productType === 'equipment' ? equipCategories : productType === '' ? categories : foodCategories).map((c) => (
+                    {activeCategories.map((c) => (
                       <button
                         key={c.slug}
                         onClick={() => handleCategory(c.slug)}
@@ -306,7 +315,7 @@ export default function Shop() {
               Thử thay đổi từ khóa hoặc bộ lọc
             </p>
             {hasActiveFilters && (
-              <button onClick={clearFilters} className="px-6 py-2.5 bg-black dark:bg-white text-white dark:text-black rounded-full font-semibold hover:opacity-80 transition-opacity">
+              <button onClick={onClearFilters} className="px-6 py-2.5 bg-black dark:bg-white text-white dark:text-black rounded-full font-semibold hover:opacity-80 transition-opacity">
                 Xóa bộ lọc
               </button>
             )}

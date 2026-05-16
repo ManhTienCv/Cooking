@@ -7,57 +7,61 @@ export default function UsersTab() {
   const [users, setUsers] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = async () => {
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
     try {
-      const u = await apiJson<{ users: Record<string, unknown>[] }>('/api/admin/users');
-      setUsers(u.users ?? []);
+      const data = await apiJson<{ users: Record<string, unknown>[] }>('/api/admin/users');
+      setUsers(data.users ?? []);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    void load();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa người dùng này?')) {
-      try {
-        await apiJson(`/api/admin/users/${id}`, { method: 'DELETE' });
-        toast.success('Đã xóa người dùng thành công!');
-        await load();
-      } catch {
-        toast.error('Lỗi khi xóa người dùng');
-      }
+  useEffect(() => {
+    void loadUsers();
+  }, [loadUsers]);
+
+  const onDeleteUser = useCallback(async (id: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa người dùng này?')) return;
+    try {
+      await apiJson(`/api/admin/users/${id}`, { method: 'DELETE' });
+      toast.success('Đã xóa người dùng thành công!');
+      void loadUsers();
+    } catch {
+      toast.error('Lỗi khi xóa người dùng');
     }
-  };
+  }, [loadUsers]);
 
   if (loading) return <div className="text-slate-500">Đang tải...</div>;
+
+  const columns = useMemo(() => [
+    { key: 'id', label: 'ID' },
+    { key: 'full_name', label: 'Họ tên' },
+    { key: 'email', label: 'Email' },
+    {
+      key: 'created_at',
+      label: 'Ngày tham gia',
+      render: (val: unknown) => new Date(String(val)).toLocaleDateString('vi-VN'),
+    },
+  ], []);
+
+  const actions = useCallback((row: Record<string, unknown>) => (
+    <button
+      onClick={() => void onDeleteUser(String(row.id))}
+      className="text-red-600 hover:text-red-800 font-medium text-sm"
+    >
+      Xóa
+    </button>
+  ), [onDeleteUser]);
 
   return (
     <DataTableTab
       title="Người dùng"
       rows={users}
-      columns={[
-        { key: 'id', label: 'ID' },
-        { key: 'full_name', label: 'Họ tên' },
-        { key: 'email', label: 'Email' },
-        {
-          key: 'created_at',
-          label: 'Ngày tham gia',
-          render: (val) => new Date(String(val)).toLocaleDateString('vi-VN'),
-        },
-      ]}
-      actions={(row) => (
-        <button
-          onClick={() => void handleDelete(String(row.id))}
-          className="text-red-600 hover:text-red-800 font-medium text-sm"
-        >
-          Xóa
-        </button>
-      )}
+      columns={columns}
+      actions={actions}
     />
   );
 }

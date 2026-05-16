@@ -158,5 +158,95 @@ export const adminRepo = {
 
   async deleteCategory(table: string, id: number) {
     await pool.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
+  },
+
+  async getMarketplaceProducts(status: string, limit: number, offset: number) {
+    let where = '';
+    const params: (string | number)[] = [limit, offset];
+    
+    if (status !== 'all') {
+      params.push(status);
+      where = 'WHERE p.status = $3';
+    }
+
+    const rows = await pool.query(
+      `SELECT p.*, pc.name AS category_name, pc.slug AS category_slug,
+              u.full_name AS seller_name, u.avatar_url AS seller_avatar,
+              sp.store_name
+       FROM products p
+       LEFT JOIN product_categories pc ON p.category_id = pc.id
+       LEFT JOIN users u ON p.seller_id = u.id
+       LEFT JOIN seller_profiles sp ON p.seller_id = sp.user_id
+       ${where}
+       ORDER BY p.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      params
+    );
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*) AS total FROM products p ${where}`,
+      status !== 'all' ? [status] : []
+    );
+
+    return {
+      products: rows.rows,
+      total: Number(countResult.rows[0]?.total ?? 0)
+    };
+  },
+
+  async getSellers(limit: number, offset: number) {
+    const dataResult = await pool.query(
+      `SELECT sp.*, u.full_name, u.email 
+       FROM seller_profiles sp
+       JOIN users u ON u.id = sp.user_id
+       ORDER BY sp.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    
+    const countResult = await pool.query(`SELECT COUNT(*) AS total FROM seller_profiles`);
+    
+    return {
+      sellers: dataResult.rows,
+      total: Number(countResult.rows[0]?.total || 0)
+    };
+  },
+
+  async verifySeller(sellerId: number, isVerified: boolean) {
+    const { rowCount } = await pool.query(
+      `UPDATE seller_profiles SET is_verified = $1, updated_at = NOW() WHERE user_id = $2`,
+      [isVerified, sellerId]
+    );
+    return rowCount > 0;
+  },
+
+  async getMarketplaceOrders(status: string, limit: number, offset: number) {
+    const conditions = ['1=1'];
+    const params: (string | number)[] = [];
+
+    if (status) {
+      params.push(status);
+      conditions.push(`o.status = $${params.length}`);
+    }
+
+    const where = conditions.join(' AND ');
+    const dataResult = await pool.query(
+      `SELECT o.*, u.full_name AS buyer_name, u.email AS buyer_email
+       FROM orders o
+       LEFT JOIN users u ON o.buyer_id = u.id
+       WHERE ${where}
+       ORDER BY o.created_at DESC
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
+    );
+    const countResult = await pool.query(
+      `SELECT COUNT(*) AS total FROM orders o WHERE ${where}`,
+      params
+    );
+
+    return {
+      orders: dataResult.rows,
+      total: Number(countResult.rows[0]?.total ?? 0)
+    };
   }
 };

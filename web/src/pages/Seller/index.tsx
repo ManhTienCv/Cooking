@@ -165,7 +165,7 @@ export default function SellerDashboard() {
     return () => window.removeEventListener(AUTH_CHANGE_EVENT, onAuthChange);
   }, [loadData]);
 
-  const handleRegister = async () => {
+  const onRegisterSeller = useCallback(async () => {
     if (!regForm.store_name.trim()) { toast.error('Nhập tên cửa hàng'); return; }
     setRegistering(true);
     try {
@@ -174,30 +174,30 @@ export default function SellerDashboard() {
       });
       toast.success('Đăng ký thành công!');
       setNotSeller(false);
-      await loadData();
+      void loadData();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Lỗi đăng ký');
     } finally { setRegistering(false); }
-  };
+  }, [regForm, loadData]);
 
-  const handleDelete = async (id: number) => {
+  const onDeleteProduct = useCallback(async (id: number) => {
     if (!window.confirm('Xóa sản phẩm này?')) return;
     try {
       await apiFetch(`/api/marketplace/seller/products/${id}`, { method: 'DELETE' });
       toast.success('Đã xóa!');
       setProducts(prev => prev.filter(p => p.id !== id));
     } catch { toast.error('Lỗi xóa sản phẩm'); }
-  };
+  }, []);
 
-  const handleOrderStatus = async (id: number, status: string) => {
+  const onUpdateOrderStatus = useCallback(async (id: number, status: string) => {
     try {
       await apiJson(`/api/marketplace/seller/orders/${id}/status`, {
         method: 'PUT', body: JSON.stringify({ status }),
       });
       toast.success('Đã cập nhật!');
-      await loadData();
+      void loadData();
     } catch { toast.error('Lỗi cập nhật'); }
-  };
+  }, [loadData]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800">
@@ -223,7 +223,7 @@ export default function SellerDashboard() {
             placeholder="Số điện thoại" className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
           <input value={regForm.address} onChange={e => setRegForm(f => ({ ...f, address: e.target.value }))}
             placeholder="Địa chỉ" className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
-          <button onClick={handleRegister} disabled={registering}
+          <button onClick={onRegisterSeller} disabled={registering}
             className="w-full py-3.5 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold hover:opacity-80 disabled:opacity-50 transition-all">
             {registering ? 'Đang xử lý...' : 'Đăng ký ngay'}
           </button>
@@ -252,7 +252,7 @@ export default function SellerDashboard() {
                     to="/seller/settings"
                     className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                   >
-                    <Settings className="h-4 w-4" /> Cai dat
+                    <Settings className="h-4 w-4" /> Cài đặt
                   </Link>
                   <NotificationBell />
                 </div>
@@ -356,9 +356,10 @@ export default function SellerDashboard() {
                       }} className="p-2 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all" title="Sửa sản phẩm">
                         <Pencil className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(p.id)} className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" title="Xóa sản phẩm">
-                        <Trash2 className="w-4 h-4" />
+                      <button onClick={() => void onDeleteProduct(p.id)} className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" title="Xóa sản phẩm">
+                        <Trash2 className="h-4 w-4" />
                       </button>
+
                     </div>
                   </div>
                 ))
@@ -406,7 +407,7 @@ export default function SellerDashboard() {
                           if (!next) return null;
                           return (
                             <button
-                              onClick={() => void handleOrderStatus(o.id, next.val)}
+                              onClick={() => void onUpdateOrderStatus(o.id, next.val)}
                               className="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors"
                             >
                               {next.label}

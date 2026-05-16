@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Users, Utensils, FileText, Clock, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiJson } from '../../../lib/api';
@@ -8,26 +8,28 @@ export default function DashboardTab() {
   const [stats, setStats] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const d = await apiJson<Record<string, number>>('/api/admin/dashboard');
-        setStats(d);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    void load();
+  const loadStats = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiJson<Record<string, number>>('/api/admin/dashboard');
+      setStats(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  if (loading) return <div className="text-slate-500">Đang tải...</div>;
+  useEffect(() => {
+    void loadStats();
+  }, [loadStats]);
 
-  const pendingCount = (stats.pendingRecipes ?? 0) + (stats.pendingBlogs ?? 0);
+  const pendingCount = useMemo(() => 
+    (stats.pendingRecipes ?? 0) + (stats.pendingBlogs ?? 0),
+    [stats.pendingRecipes, stats.pendingBlogs]
+  );
 
-  // Fake growth data
-  const growthData = [
+  const growthData = useMemo(() => [
     { name: 'Th 2', access: 12, newUsers: 2 },
     { name: 'Th 3', access: 19, newUsers: 5 },
     { name: 'Th 4', access: 15, newUsers: 3 },
@@ -35,12 +37,14 @@ export default function DashboardTab() {
     { name: 'Th 6', access: 22, newUsers: 5 },
     { name: 'Th 7', access: 30, newUsers: 10 },
     { name: 'CN', access: 45, newUsers: 15 },
-  ];
+  ], []);
 
-  const contentData = [
+  const contentData = useMemo(() => [
     { name: 'Công thức', value: stats.recipes ?? 0, color: '#f97316' },
     { name: 'Bài viết', value: stats.blogs ?? 0, color: '#a855f7' },
-  ];
+  ], [stats.recipes, stats.blogs]);
+
+  if (loading) return <div className="p-12 text-center text-slate-500">Đang tải...</div>;
 
   return (
     <div>
@@ -77,7 +81,7 @@ export default function DashboardTab() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
           <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-4">Thống kê tăng trưởng</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -94,7 +98,7 @@ export default function DashboardTab() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
           <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-4">Tỷ lệ nội dung</h3>
           <div className="h-64 flex justify-center">
             <ResponsiveContainer width="100%" height="100%">

@@ -5,13 +5,13 @@ import AuthModal from '../../components/AuthModal';
 import { apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
 
-import RecipeFilterBar from '../../components/recipes/RecipeFilterBar';
+import { FilterBar } from '../../components/ui/FilterBar';
 import RecipeList from '../../components/recipes/RecipeList';
 import CreateRecipeModal from '../../components/recipes/CreateRecipeModal';
 import Pagination from '../../components/ui/Pagination';
 import type { RecipeListRow, RecipeCategory } from '../../components/recipes/types';
 import { LEGACY_RECIPE_CATEGORIES } from '../../constants/recipes';
-import { useRecipeFilters } from '../../hooks/useRecipeFilters';
+import { useFilters } from '../../hooks/useFilters';
 
 const PAGE_SIZE = 6;
 
@@ -30,7 +30,7 @@ export default function Recipes() {
     currentPage,
     setCurrentPage,
     clearFilters
-  } = useRecipeFilters(categories);
+  } = useFilters({ categories, pageSize: PAGE_SIZE });
 
   const [recipes, setRecipes] = useState<RecipeListRow[]>([]);
   const [totalRecipes, setTotalRecipes] = useState(0);
@@ -124,10 +124,10 @@ export default function Recipes() {
         </div>
       </div>
 
-      <RecipeFilterBar 
+      <FilterBar 
         categories={categories}
         selectedCategory={selectedCategory}
-        setSelectedCategory={setSelectedCategory}
+        onCategoryChange={setSelectedCategory}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

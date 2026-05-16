@@ -16,16 +16,16 @@ export default function Cart() {
   const { items, total, loading, updateItem, removeItem, clearAll } = useCart();
   const [removing, setRemoving] = useState<number | null>(null);
 
-  const handleQuantity = async (itemId: number, newQty: number) => {
+  const handleQuantity = useCallback(async (itemId: number, newQty: number) => {
     if (newQty < 1) return;
     try {
       await updateItem(itemId, newQty);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Lỗi cập nhật');
     }
-  };
+  }, [updateItem]);
 
-  const handleRemove = async (itemId: number) => {
+  const handleRemove = useCallback(async (itemId: number) => {
     setRemoving(itemId);
     try {
       await removeItem(itemId);
@@ -35,9 +35,9 @@ export default function Cart() {
     } finally {
       setRemoving(null);
     }
-  };
+  }, [removeItem]);
 
-  const handleClear = async () => {
+  const handleClear = useCallback(async () => {
     if (!confirm('Xóa toàn bộ giỏ hàng?')) return;
     try {
       await clearAll();
@@ -45,15 +45,15 @@ export default function Cart() {
     } catch {
       toast.error('Lỗi xóa giỏ');
     }
-  };
+  }, [clearAll]);
 
   /* Group items by seller */
-  const grouped = items.reduce<Record<string, typeof items>>((acc, item) => {
+  const grouped = useMemo(() => items.reduce<Record<string, typeof items>>((acc, item) => {
     const key = item.store_name || `seller-${item.seller_id}`;
     if (!acc[key]) acc[key] = [];
     acc[key].push(item);
     return acc;
-  }, {});
+  }, {}), [items]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 transition-colors">

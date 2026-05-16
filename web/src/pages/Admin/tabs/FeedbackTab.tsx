@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import DataTableTab from './DataTableTab';
 import { apiJson } from '../../../lib/api';
 import toast from 'react-hot-toast';
@@ -7,34 +7,34 @@ export default function FeedbackTab() {
   const [feedback, setFeedback] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = async () => {
+  const loadFeedback = useCallback(async () => {
+    setLoading(true);
     try {
-      const f = await apiJson<{ feedback: Record<string, unknown>[] }>('/api/admin/feedback');
-      setFeedback(f.feedback ?? []);
+      const data = await apiJson<{ feedback: Record<string, unknown>[] }>('/api/admin/feedback');
+      setFeedback(data.feedback ?? []);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    void load();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa phản hồi này?')) {
-      try {
-        await apiJson(`/api/admin/feedback/${id}`, { method: 'DELETE' });
-        toast.success('Đã xóa phản hồi thành công!');
-        await load();
-      } catch {
-        toast.error('Lỗi khi xóa phản hồi');
-      }
-    }
-  };
+  useEffect(() => {
+    void loadFeedback();
+  }, [loadFeedback]);
 
-  if (loading) return <div className="text-slate-500">Đang tải...</div>;
+  const onDeleteFeedback = useCallback(async (id: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa phản hồi này?')) return;
+    try {
+      await apiJson(`/api/admin/feedback/${id}`, { method: 'DELETE' });
+      toast.success('Đã xóa phản hồi thành công!');
+      void loadFeedback();
+    } catch {
+      toast.error('Lỗi khi xóa phản hồi');
+    }
+  }, [loadFeedback]);
+
+  if (loading) return <div className="p-12 text-center text-slate-500">Đang tải...</div>;
 
   return (
     <DataTableTab
@@ -53,7 +53,7 @@ export default function FeedbackTab() {
       ]}
       actions={(row) => (
         <button
-          onClick={() => void handleDelete(String(row.id))}
+          onClick={() => void onDeleteFeedback(String(row.id))}
           className="text-red-600 hover:text-red-800 font-medium text-sm"
         >
           Xóa

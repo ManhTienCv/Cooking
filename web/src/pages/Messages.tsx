@@ -87,10 +87,14 @@ export default function Messages() {
   }, []);
 
   const loadConversations = useCallback(async () => {
-    const data = await apiJson<{ conversations: ConversationSummary[] }>('/api/messages/conversations');
-    const list = data.conversations ?? [];
-    setConversations(list);
-    setActiveId((prev) => prev ?? list[0]?.id ?? null);
+    try {
+      const data = await apiJson<{ conversations: ConversationSummary[] }>('/api/messages/conversations');
+      const list = data.conversations ?? [];
+      setConversations(list);
+      setActiveId((prev) => prev ?? list[0]?.id ?? null);
+    } catch {
+      setConversations([]);
+    }
   }, []);
 
   const markRead = useCallback(async (conversationId: number) => {
@@ -140,7 +144,7 @@ export default function Messages() {
       })
         .then((d) => {
           setActiveId(d.conversation.id);
-          return loadConversations();
+          void loadConversations();
         })
         .catch((err) => {
           const msg = err instanceof Error ? err.message : 'Không thể mở cuộc trò chuyện';
@@ -226,17 +230,17 @@ export default function Messages() {
     [activeId, conversations]
   );
 
-  const getConversationName = (conversation: ConversationSummary) => {
+  const getConversationName = useCallback((conversation: ConversationSummary) => {
     if (!meUser) return '';
     const isSeller = conversation.seller_id === meUser.id;
     if (isSeller) return conversation.buyer_name;
     return conversation.seller_store_name || conversation.seller_name;
-  };
+  }, [meUser]);
 
-  const getConversationSubtitle = (conversation: ConversationSummary) =>
-    conversation.product_name || 'Trao đổi chung';
+  const getConversationSubtitle = useCallback((conversation: ConversationSummary) =>
+    conversation.product_name || 'Trao đổi chung', []);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const onSendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!activeConversation || !draft.trim()) return;
 

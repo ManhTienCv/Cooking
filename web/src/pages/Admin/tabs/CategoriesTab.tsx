@@ -1,119 +1,194 @@
-import { useCallback, useEffect, useState } from 'react';
-import DataTableTab from './DataTableTab';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { apiJson } from '../../../lib/api';
 import toast from 'react-hot-toast';
 
+interface Category {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 export default function CategoriesTab() {
   const [type, setType] = useState<'recipe' | 'blog'>('recipe');
-  const [categories, setCategories] = useState<Record<string, unknown>[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Category | null>(null);
+  const [newName, setNewName] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const load = useCallback(async () => {
+  const loadCategories = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const c = await apiJson<{ categories: Record<string, unknown>[] }>(`/api/admin/categories/${type}`);
-      setCategories(c.categories ?? []);
-    } catch (err) {
-      console.error(err);
-      toast.error('Lỗi khi tải danh mục');
+      const data = await apiJson<{ categories: Category[] }>(`/api/admin/categories/${type}`);
+      setCategories(data.categories ?? []);
+    } catch {
+      toast.error('Không tải được danh mục');
     } finally {
       setLoading(false);
     }
   }, [type]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadCategories();
+  }, [loadCategories]);
 
-  const handleAdd = async () => {
-    const name = window.prompt('Nhập tên danh mục mới:');
-    if (!name) return;
+  const onCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    setBusy(true);
     try {
-      await apiJson(`/api/admin/categories/${type}`, { method: 'POST', body: JSON.stringify({ name }) });
-      toast.success('Đã thêm danh mục mới');
-      await load();
-    } catch {
-      toast.error('Lỗi khi thêm danh mục');
+      await apiJson(`/api/admin/categories/${type}`, {
+        method: 'POST',
+        body: JSON.stringify({ name: newName.trim() }),
+      });
+      setNewName('');
+      toast.success('Đã thêm danh mục');
+      void loadCategories();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi khi tạo');
+    } finally {
+      setBusy(false);
     }
   };
 
-  const handleEdit = async (id: string, currentName: string) => {
-    const name = window.prompt('Nhập tên mới:', currentName);
-    if (!name || name === currentName) return;
+  const onUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editing || !newName.trim()) return;
+    setBusy(true);
     try {
-      await apiJson(`/api/admin/categories/${type}/${id}`, { method: 'PUT', body: JSON.stringify({ name }) });
-      toast.success('Cập nhật thành công');
-      await load();
-    } catch {
-      toast.error('Lỗi khi cập nhật danh mục');
+      await apiJson(`/api/admin/categories/${type}/${editing.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name: newName.trim() }),
+      });
+      setEditing(null);
+      setNewName('');
+      toast.success('Đã cập nhật');
+      void loadCategories();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi khi cập nhật');
+    } finally {
+      setBusy(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa danh mục này? Nó có thể ảnh hưởng đến bài viết đang sử dụng.')) {
-      try {
-        await apiJson(`/api/admin/categories/${type}/${id}`, { method: 'DELETE' });
-        toast.success('Xóa danh mục thành công');
-        await load();
-      } catch {
-        toast.error('Lỗi khi xóa. Vui lòng kiểm tra lại');
-      }
+  const onDelete = async (id: number) => {
+    if (!window.confirm('Xóa danh mục này?')) return;
+    try {
+      await apiJson(`/api/admin/categories/${type}/${id}`, { method: 'DELETE' });
+      toast.success('Đã xóa');
+      void loadCategories();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi khi xóa');
     }
   };
+
+  const startEdit = (cat: Category) => {
+    setEditing(cat);
+    setNewName(cat.name);
+  };
+
+  const cancelEdit = () => {
+    setEditing(null);
+    setNewName('');
+  };
+
+  const tabs = useMemo(() => [
+    { key: 'recipe', label: 'Công thức' },
+    { key: 'blog', label: 'Bài viết' },
+  ], []);
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div className="flex bg-white dark:bg-slate-800 rounded-lg p-1 shadow-sm border border-slate-200 dark:border-slate-700">
-          <button
-            onClick={() => setType('recipe')}
-            className={`px-4 py-2 rounded-md text-sm font-semibold transition ${type === 'recipe' ? 'bg-black text-white dark:bg-white dark:text-black' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-          >
-            Công thức
-          </button>
-          <button
-            onClick={() => setType('blog')}
-            className={`px-4 py-2 rounded-md text-sm font-semibold transition ${type === 'blog' ? 'bg-black text-white dark:bg-white dark:text-black' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-          >
-            Bài viết
-          </button>
-        </div>
-        <button
-          onClick={() => void handleAdd()}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition"
-        >
-          + Thêm danh mục
-        </button>
+    <div className="max-w-4xl">
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Quản lý danh mục</h2>
+        <p className="text-slate-500 dark:text-slate-400">Thêm, sửa, xóa các danh mục nội dung.</p>
       </div>
 
-      {loading ? (
-        <div className="text-slate-500">Đang tải...</div>
-      ) : (
-        <DataTableTab
-          title={`Danh mục ${type === 'recipe' ? 'Công thức' : 'Bài viết'}`}
-          rows={categories}
-          columns={[
-            { key: 'id', label: 'ID' },
-            { key: 'name', label: 'Tên danh mục' },
-          ]}
-          actions={(row) => (
-            <div className="flex justify-end gap-3 text-sm font-medium">
-              <button
-                onClick={() => void handleEdit(String(row.id), String(row.name))}
-                className="text-blue-600 hover:text-blue-800"
-              >
-                Sửa
-              </button>
-              <button
-                onClick={() => void handleDelete(String(row.id))}
-                className="text-red-600 hover:text-red-800"
-              >
-                Xóa
-              </button>
-            </div>
+      {/* Type Switcher */}
+      <div className="flex gap-2 mb-8 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl w-fit">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => { setType(tab.key as 'recipe' | 'blog'); cancelEdit(); }}
+            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${
+              type === tab.key
+                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Form */}
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm mb-8">
+        <form onSubmit={editing ? onUpdate : onCreate} className="flex gap-4">
+          <div className="flex-1">
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder={editing ? 'Tên danh mục mới' : 'Tên danh mục cần thêm'}
+              className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 focus:ring-2 focus:ring-blue-400/20 outline-none"
+              disabled={busy}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={busy || !newName.trim()}
+            className={`px-6 py-2 rounded-xl font-bold text-sm text-white transition-all flex items-center gap-2 ${
+              editing ? 'bg-amber-500 hover:bg-amber-600' : 'bg-blue-600 hover:bg-blue-700'
+            } disabled:opacity-50`}
+          >
+            {editing ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {editing ? 'Cập nhật' : 'Thêm mới'}
+          </button>
+          {editing && (
+            <button
+              type="button"
+              onClick={cancelEdit}
+              className="px-6 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+            >
+              Hủy
+            </button>
           )}
-        />
-      )}
+        </form>
+      </div>
+
+      {/* List */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-slate-500">Đang tải...</div>
+        ) : categories.length === 0 ? (
+          <div className="p-8 text-center text-slate-500">Chưa có danh mục nào.</div>
+        ) : (
+          <div className="divide-y divide-slate-50 dark:divide-slate-700">
+            {categories.map((cat) => (
+              <div key={cat.id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <div>
+                  <p className="font-bold text-slate-800 dark:text-white">{cat.name}</p>
+                  <p className="text-xs text-slate-400">{cat.slug}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => startEdit(cat)}
+                    className="p-2 text-slate-400 hover:text-amber-500 transition-colors"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => void onDelete(cat.id)}
+                    className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

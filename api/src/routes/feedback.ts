@@ -1,12 +1,13 @@
 import { Router } from 'express';
-import { pool } from '../db/pool.js';
 import { requireCsrf } from '../middleware/csrf.js';
 import { feedbackSubmitRateLimit } from '../middleware/rateLimits.js';
 import { sendFeedbackEmail } from '../services/mailService.js';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { feedbackRepo } from '../repos/feedbackRepo.js';
 
 export const feedbackRouter = Router();
 
-feedbackRouter.post('/', feedbackSubmitRateLimit, requireCsrf, async (req, res) => {
+feedbackRouter.post('/', feedbackSubmitRateLimit, requireCsrf, asyncHandler(async (req, res) => {
   const userId = req.session.userId ?? null;
   const name = String(req.body?.name ?? '').trim();
   const email = String(req.body?.email ?? '').trim();
@@ -17,21 +18,13 @@ feedbackRouter.post('/', feedbackSubmitRateLimit, requireCsrf, async (req, res) 
     return;
   }
 
-  try {
-    await pool.query(
-      'INSERT INTO feedback (user_id, name, email, message) VALUES ($1, $2, $3, $4)',
-      [userId, name, email, message]
-    );
+  await feedbackRepo.createFeedback(userId, name, email, message);
 
-    // Send confirmation email if email is provided
-    if (email && email.includes('@')) {
-      // Async so it doesn't block the response
-      sendFeedbackEmail(email, name).catch(console.error);
-    }
-
-    res.json({ success: true, message: 'Đã gửi phản hồi thành công.' });
-  } catch (error) {
-    console.error('Feedback insert error:', error);
-    res.status(500).json({ success: false, message: 'Lỗi server khi lưu phản hồi.' });
+  // Send confirmation email if email is provided
+  if (email && email.includes('@')) {
+    // Async so it doesn't block the response
+    sendFeedbackEmail(email, name).catch(console.error);
   }
-});
+
+  res.json({ success: true, message: 'Đã gửi phản hồi thành công.' });
+}));

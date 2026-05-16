@@ -5,6 +5,7 @@ import { generateContent } from '../services/aiService.js';
 import { pool } from '../db/pool.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { ensureCsrfToken, requireCsrf } from '../middleware/csrf.js';
+import { asyncHandler } from '../lib/asyncHandler.js';
 
 export const healthRouter = Router();
 
@@ -47,17 +48,12 @@ function fallbackCalories(input: {
   return Math.max(1000, Math.min(6000, Math.round(adjusted)));
 }
 
-healthRouter.get('/dashboard', requireAuth, async (req, res) => {
-  try {
-    const stats = await healthRepo.getNutritionDashboardStats(pool, req.session.userId!);
-    res.json({ success: true, stats });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ success: false, message: 'Lỗi khi lấy dữ liệu dashboard.' });
-  }
-});
+healthRouter.get('/dashboard', requireAuth, asyncHandler(async (req, res) => {
+  const stats = await healthRepo.getNutritionDashboardStats(pool, req.session.userId!);
+  res.json({ success: true, stats });
+}));
 
-healthRouter.post('/ai/calorie-target', requireAuth, requireCsrf, async (req, res) => {
+healthRouter.post('/ai/calorie-target', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
   const age = normalizePositiveNumber(req.body?.age);
   const heightCm = normalizePositiveNumber(req.body?.height_cm);
   const weightKg = normalizePositiveNumber(req.body?.weight_kg);
@@ -113,30 +109,30 @@ healthRouter.post('/ai/calorie-target', requireAuth, requireCsrf, async (req, re
       source: aiTarget ? 'gemini' : 'fallback',
     },
   });
-});
+}));
 
-healthRouter.get('/plans', requireAuth, async (req, res) => {
+healthRouter.get('/plans', requireAuth, asyncHandler(async (req, res) => {
   const userId = req.session.userId!;
   const plans = await healthRepo.getUserPlans(pool, userId);
-  res.json({ plans });
-});
+  res.json({ success: true, plans });
+}));
 
-healthRouter.get('/plans/:id', requireAuth, async (req, res) => {
+healthRouter.get('/plans/:id', requireAuth, asyncHandler(async (req, res) => {
   const userId = req.session.userId!;
   const planId = Number(req.params.id);
   if (!planId) {
-    res.status(400).json({ error: 'Invalid id' });
+    res.status(400).json({ success: false, message: 'ID không hợp lệ.' });
     return;
   }
   const plan = await healthRepo.getPlanById(pool, planId, userId);
   if (!plan) {
-    res.status(404).json({ error: 'not found' });
+    res.status(404).json({ success: false, message: 'Không tìm thấy kế hoạch.' });
     return;
   }
-  res.json({ plan });
-});
+  res.json({ success: true, plan });
+}));
 
-healthRouter.post('/plans', requireAuth, requireCsrf, async (req, res) => {
+healthRouter.post('/plans', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
   const userId = req.session.userId!;
   const body = req.body ?? {} as Record<string, unknown>;
   const id = await healthRepo.createPlan(pool, userId, body);
@@ -162,9 +158,9 @@ healthRouter.post('/plans', requireAuth, requireCsrf, async (req, res) => {
   }
 
   res.json({ success: true, id, aiMessage });
-});
+}));
 
-healthRouter.delete('/plans/:id', requireAuth, requireCsrf, async (req, res) => {
+healthRouter.delete('/plans/:id', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
   const userId = req.session.userId!;
   const planId = Number(req.params.id);
   const ok = await healthRepo.deletePlan(pool, planId, userId);
@@ -173,94 +169,86 @@ healthRouter.delete('/plans/:id', requireAuth, requireCsrf, async (req, res) => 
     return;
   }
   res.json({ success: true });
-});
+}));
 
 /** Compatible with PHP meal_plan_api.php (POST + action + csrf_token in body) */
-healthRouter.post('/meal-plan', requireAuth, requireCsrf, async (req, res) => {
+healthRouter.post('/meal-plan', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
   const userId = req.session.userId!;
   const body = req.body as Record<string, unknown>;
   const action = String(body.action ?? '');
   const planId = Number(body.plan_id ?? 0);
 
   if (!planId) {
-    res.json({ success: false, message: 'Thiếu plan_id.' });
+    res.status(400).json({ success: false, message: 'Thiếu plan_id.' });
     return;
   }
 
   const plan = await healthRepo.getPlanById(pool, planId, userId);
   if (!plan) {
-    res.json({ success: false, message: 'Kế hoạch không tồn tại.' });
+    res.status(404).json({ success: false, message: 'Kế hoạch không tồn tại.' });
     return;
   }
 
   const handler = new MealPlanHandler(pool, userId, planId);
 
-  try {
-    switch (action) {
-      case 'add_recipe': {
-        const date = String(body.date ?? '');
-        const mealType = String(body.meal_type ?? '');
-        const recipe = {
-          id: String(body.recipe_id ?? ''),
-          name: String(body.recipe_name ?? ''),
-          note: String(body.recipe_note ?? ''),
-          isCustom: body.is_custom === true || body.is_custom === 'true' || body.is_custom === '1',
-        };
-        const result = await handler.addRecipe(date, mealType, recipe);
-        res.json(result);
-        return;
-      }
-      case 'remove_recipe': {
-        const date = String(body.date ?? '');
-        const mealType = String(body.meal_type ?? '');
-        const idMeal = Number(body.id ?? 0);
-        const result = await handler.removeRecipe(date, mealType, idMeal);
-        res.json(result);
-        return;
-      }
-      case 'add_shopping_item': {
-        const name = String(body.name ?? '');
-        const quantity = String(body.quantity ?? '');
-        const result = await handler.addShoppingItem(name, quantity);
-        res.json(result);
-        return;
-      }
-      case 'toggle_shopping_item': {
-        const itemId = Number(body.item_id ?? 0);
-        const result = await handler.toggleShoppingItem(itemId);
-        res.json(result);
-        return;
-      }
-      case 'remove_shopping_item': {
-        const itemId = Number(body.item_id ?? 0);
-        const result = await handler.removeShoppingItem(itemId);
-        res.json(result);
-        return;
-      }
-      case 'get_meal_plan': {
-        const mealPlan = await handler.getMealPlan();
-        res.json({
-          success: true,
-          mealPlan,
-          nutritionTotals: healthRepo.getNutritionTotalsFromMeals(mealPlan),
-        });
-        return;
-      }
-      case 'get_shopping_list': {
-        res.json({
-          success: true,
-          shoppingList: await handler.getShoppingList(),
-        });
-        return;
-      }
-      default:
-        res.json({ success: false, message: 'Action không hợp lệ!' });
+  switch (action) {
+    case 'add_recipe': {
+      const date = String(body.date ?? '');
+      const mealType = String(body.meal_type ?? '');
+      const recipe = {
+        id: String(body.recipe_id ?? ''),
+        name: String(body.recipe_name ?? ''),
+        note: String(body.recipe_note ?? ''),
+        isCustom: body.is_custom === true || body.is_custom === 'true' || body.is_custom === '1',
+      };
+      const result = await handler.addRecipe(date, mealType, recipe);
+      res.json(result);
+      break;
     }
-  } catch (e) {
-    console.error(e);
-    res.json({
-      success: false,
-      message: 'Có lỗi xảy ra. Vui lòng thử lại sau.',
-    });
+    case 'remove_recipe': {
+      const date = String(body.date ?? '');
+      const mealType = String(body.meal_type ?? '');
+      const idMeal = Number(body.id ?? 0);
+      const result = await handler.removeRecipe(date, mealType, idMeal);
+      res.json(result);
+      break;
+    }
+    case 'add_shopping_item': {
+      const name = String(body.name ?? '');
+      const quantity = String(body.quantity ?? '');
+      const result = await handler.addShoppingItem(name, quantity);
+      res.json(result);
+      break;
+    }
+    case 'toggle_shopping_item': {
+      const itemId = Number(body.item_id ?? 0);
+      const result = await handler.toggleShoppingItem(itemId);
+      res.json(result);
+      break;
+    }
+    case 'remove_shopping_item': {
+      const itemId = Number(body.item_id ?? 0);
+      const result = await handler.removeShoppingItem(itemId);
+      res.json(result);
+      break;
+    }
+    case 'get_meal_plan': {
+      const mealPlan = await handler.getMealPlan();
+      res.json({
+        success: true,
+        mealPlan,
+        nutritionTotals: healthRepo.getNutritionTotalsFromMeals(mealPlan),
+      });
+      break;
+    }
+    case 'get_shopping_list': {
+      res.json({
+        success: true,
+        shoppingList: await handler.getShoppingList(),
+      });
+      break;
+    }
+    default:
+      res.status(400).json({ success: false, message: 'Action không hợp lệ!' });
   }
-});
+}));

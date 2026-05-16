@@ -1,6 +1,6 @@
 import { useState, type KeyboardEvent, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, X, ChefHat, Info, Clock, Users, ArrowRight } from 'lucide-react';
+import { Search, X, ChefHat, Info, Clock, Users, ArrowRight, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiJson } from '../../lib/api';
 
@@ -196,7 +196,7 @@ export default function FridgeSearch() {
                         )}
                         {recipe.match_count && (
                           <span className="bg-emerald-500/90 backdrop-blur-sm text-xs font-bold px-2.5 py-1 rounded-full text-white shadow-sm flex items-center gap-1">
-                            <CheckIcon className="h-3 w-3" />
+                            <Check className="h-3 w-3" />
                             Khớp {recipe.match_count}/{ingredients.length}
                           </span>
                         )}

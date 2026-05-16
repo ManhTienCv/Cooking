@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   Bell,
   Building2,
   CheckCircle2,
+  ChevronDown,
   CreditCard,
   Eye,
   EyeOff,
@@ -74,6 +75,57 @@ interface SettingsResponse {
 }
 
 const panelClass = 'rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900';
+
+function AccordionSection({
+  id,
+  title,
+  icon: Icon,
+  iconColor,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  id: string;
+  title: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  iconColor: string;
+  isOpen: boolean;
+  onToggle: (id: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => onToggle(id)}
+        className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+      >
+        <div className="flex items-center gap-3">
+          <Icon className={`h-5 w-5 ${iconColor}`} />
+          <h2 className="text-lg font-bold">{title}</h2>
+        </div>
+        <ChevronDown
+          className={`h-5 w-5 text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+          >
+            <div className="border-t border-slate-100 p-5 dark:border-slate-800">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 const inputClass =
   'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white';
 const labelClass = 'mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-200';
@@ -129,7 +181,7 @@ function ToggleRow({
       <button
         type="button"
         role="switch"
-        aria-checked={checked}
+        aria-checked={checked ? 'true' : 'false'}
         onClick={() => onChange(!checked)}
         className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${checked ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'}`}
       >
@@ -151,6 +203,9 @@ export default function SellerSettings() {
   const [otp, setOtp] = useState('');
   const [securityBusy, setSecurityBusy] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [openSection, setOpenSection] = useState<string | null>('store');
+
+  const toggleSection = (id: string) => setOpenSection(openSection === id ? null : id);
 
   const [storeForm, setStoreForm] = useState({
     store_name: '',
@@ -398,7 +453,7 @@ export default function SellerSettings() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 px-4 py-10 dark:bg-slate-950">
+      <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 px-4 py-10 transition-colors duration-300">
         <div className="mx-auto max-w-6xl space-y-4">
           <div className="h-10 w-64 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
           <div className="h-64 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
@@ -409,7 +464,7 @@ export default function SellerSettings() {
 
   if (!profile || !preferences) {
     return (
-      <div className="min-h-screen bg-slate-50 px-4 py-10 dark:bg-slate-950">
+      <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 px-4 py-10 transition-colors duration-300">
         <div className="mx-auto max-w-3xl rounded-lg border border-slate-200 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900">
           <Store className="mx-auto mb-3 h-10 w-10 text-slate-400" />
           <p className="font-semibold text-slate-900 dark:text-white">Bạn chưa có kênh bán hàng.</p>
@@ -422,7 +477,7 @@ export default function SellerSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-8 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 px-4 py-8 text-slate-900 dark:text-slate-100 transition-colors duration-300">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -433,7 +488,7 @@ export default function SellerSettings() {
             <p className="text-sm text-slate-500 dark:text-slate-400">Bảo mật thông tin cửa hàng, xác minh và tài khoản thanh toán.</p>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900">
-            <span className="font-semibold">Trang thai: </span>
+            <span className="font-semibold">Trạng thái: </span>
             <span className={profile.verification_status === 'verified' ? 'text-emerald-600' : 'text-amber-600'}>
               {statusLabel(profile.verification_status)}
             </span>
@@ -441,12 +496,15 @@ export default function SellerSettings() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-          <main className="space-y-6">
-            <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={panelClass}>
-              <div className="mb-5 flex items-center gap-3">
-                <Store className="h-5 w-5 text-amber-500" />
-                <h2 className="text-lg font-bold">Thông tin cửa hàng</h2>
-              </div>
+          <main className="space-y-4">
+            <AccordionSection
+              id="store"
+              title="Thông tin cửa hàng"
+              icon={Store}
+              iconColor="text-amber-500"
+              isOpen={openSection === 'store'}
+              onToggle={toggleSection}
+            >
               <form onSubmit={saveStore} className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className={labelClass}>Tên cửa hàng</label>
@@ -470,13 +528,16 @@ export default function SellerSettings() {
                   </button>
                 </div>
               </form>
-            </motion.section>
+            </AccordionSection>
 
-            <section className={panelClass}>
-              <div className="mb-5 flex items-center gap-3">
-                <ShieldCheck className="h-5 w-5 text-emerald-500" />
-                <h2 className="text-lg font-bold">Xác minh người bán</h2>
-              </div>
+            <AccordionSection
+              id="verification"
+              title="Xác minh người bán"
+              icon={ShieldCheck}
+              iconColor="text-emerald-500"
+              isOpen={openSection === 'verification'}
+              onToggle={toggleSection}
+            >
               {verificationEdit ? (
                 <form onSubmit={submitVerification} className="grid gap-4 md:grid-cols-2">
                   <div>
@@ -503,7 +564,7 @@ export default function SellerSettings() {
                     <button disabled={saving || needsPassword} className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">
                       Gửi hồ sơ xác minh
                     </button>
-                    <button type="button" onClick={() => { setVerificationEdit(false); void loadSettings(); }} className="rounded-md border px-4 py-2 text-sm">
+                    <button type="button" onClick={() => { setVerificationEdit(false); void loadSettings(); }} className="rounded-md border px-4 py-2 text-sm dark:border-slate-700">
                       Hủy
                     </button>
                     {needsPassword && <span className="text-sm text-amber-600">Cần xác thực mật khẩu trước.</span>}
@@ -531,17 +592,20 @@ export default function SellerSettings() {
                     <button type="button" onClick={() => setVerificationEdit(true)} className="rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-white">
                       Chỉnh sửa
                     </button>
-                    <p className="text-sm text-slate-500">Hồ sơ sẽ được gửi đến đội kiểm duyệt Marketplace.</p>
+                    <p className="text-sm text-slate-500">Hồ sơ sẽ được kiểm duyệt.</p>
                   </div>
                 </div>
               )}
-            </section>
+            </AccordionSection>
 
-            <section className={panelClass}>
-              <div className="mb-5 flex items-center gap-3">
-                <CreditCard className="h-5 w-5 text-blue-500" />
-                <h2 className="text-lg font-bold">Tài khoản ngân hàng</h2>
-              </div>
+            <AccordionSection
+              id="payout"
+              title="Tài khoản ngân hàng"
+              icon={CreditCard}
+              iconColor="text-blue-500"
+              isOpen={openSection === 'payout'}
+              onToggle={toggleSection}
+            >
               <div className="mb-5 space-y-3">
                 {payouts.length === 0 ? (
                   <p className="rounded-md bg-slate-50 p-4 text-sm text-slate-500 dark:bg-slate-950 dark:text-slate-400">Chưa có tài khoản thanh toán.</p>
@@ -577,18 +641,23 @@ export default function SellerSettings() {
                   {(needsPassword || needsOtp) && <span className="ml-3 text-sm text-amber-600">Cần xác thực mật khẩu và OTP.</span>}
                 </div>
               </form>
-            </section>
+            </AccordionSection>
 
-            <section className={panelClass}>
-              <div className="mb-2 flex items-center gap-3">
-                <Bell className="h-5 w-5 text-purple-500" />
-                <h2 className="text-lg font-bold">Thông báo & Riêng tư</h2>
+            <AccordionSection
+              id="privacy"
+              title="Thông báo & Riêng tư"
+              icon={Bell}
+              iconColor="text-purple-500"
+              isOpen={openSection === 'privacy'}
+              onToggle={toggleSection}
+            >
+              <div className="space-y-1">
+                <ToggleRow icon={MessageCircle} title="Chat với khách hàng" detail="Cho phép người mua mở tin nhắn với cửa hàng" checked={preferences.chat_enabled} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), chat_enabled: v })} />
+                <ToggleRow icon={Bell} title="Thông báo đơn hàng" detail="Nhận thông báo khi có đơn hàng và cập nhật trạng thái" checked={preferences.order_notifications} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), order_notifications: v })} />
+                <ToggleRow icon={MailCheck} title="Thông báo tài khoản" detail="Nhận email về bảo mật và hồ sơ người bán" checked={preferences.account_notifications} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), account_notifications: v })} />
+                <ToggleRow icon={preferences.profile_visible ? Eye : EyeOff} title="Hiển thị hồ sơ cửa hàng" detail="Cho phép người mua xem trang của cửa hàng công khai" checked={preferences.profile_visible} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), profile_visible: v })} />
               </div>
-              <ToggleRow icon={MessageCircle} title="Chat với khách hàng" detail="Cho phép người mua mở tin nhắn với cửa hàng" checked={preferences.chat_enabled} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), chat_enabled: v })} />
-              <ToggleRow icon={Bell} title="Thông báo đơn hàng" detail="Nhận thông báo khi có đơn hàng và cập nhật trạng thái" checked={preferences.order_notifications} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), order_notifications: v })} />
-              <ToggleRow icon={MailCheck} title="Thông báo tài khoản" detail="Nhận email về bảo mật và hồ sơ người bán" checked={preferences.account_notifications} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), account_notifications: v })} />
-              <ToggleRow icon={preferences.profile_visible ? Eye : EyeOff} title="Hiển thị hồ sơ cửa hàng" detail="Cho phép người mua xem trang của cửa hàng công khai" checked={preferences.profile_visible} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), profile_visible: v })} />
-            </section>
+            </AccordionSection>
           </main>
 
           <aside className="space-y-6">
@@ -628,7 +697,7 @@ export default function SellerSettings() {
             <section className={panelClass}>
               <div className="mb-4 flex items-center gap-3">
                 <Building2 className="h-5 w-5 text-slate-500" />
-                <h2 className="text-lg font-bold">Tom tat</h2>
+                <h2 className="text-lg font-bold">Tóm tắt kênh bán hàng</h2>
               </div>
               <div className="space-y-3 text-sm">
                 <p><span className="text-slate-500">Email:</span> {maskEmail(profile.email)}</p>

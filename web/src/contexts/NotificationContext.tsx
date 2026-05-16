@@ -119,8 +119,16 @@ export function NotificationProvider({ children, role }: { children: ReactNode; 
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  const value = useMemo(() => ({
+    notifications,
+    unreadCount,
+    markRead,
+    markAllRead,
+    clearAll,
+  }), [notifications, unreadCount, markRead, markAllRead, clearAll]);
+
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, markRead, markAllRead, clearAll }}>
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );

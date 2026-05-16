@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireSeller } from '../middleware/requireSeller.js';
 import { requireCsrf } from '../middleware/csrf.js';
@@ -14,73 +13,62 @@ import {
 import * as marketplaceService from '../services/marketplaceService.js';
 import * as sellerSettingsService from '../services/sellerSettingsService.js';
 import * as sellerSecurityService from '../services/sellerSecurityService.js';
+import { asyncHandler } from '../lib/asyncHandler.js';
 
 export const marketplaceRouter = Router();
-
-/* ── Helper: wrap async handlers ───────────────────────── */
-function wrap(fn: (req: Request, res: Response) => Promise<void>) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    fn(req, res).catch(next);
-  };
-}
-
-/** Merge success flag vào response, tránh duplicate key khi service đã trả success */
-function ok(data: Record<string, unknown>) {
-  return { success: true, ...data };
-}
 
 /* ================================================================
  * Public: Products
  * ================================================================ */
 
 // GET /api/marketplace/products — search & browse
-marketplaceRouter.get('/products', wrap(async (req, res) => {
+marketplaceRouter.get('/products', asyncHandler(async (req, res) => {
   const result = await marketplaceService.searchProducts({
-    q: req.query.q,
-    category: req.query.category,
-    type: req.query.type,
-    limit: req.query.limit,
-    offset: req.query.offset,
-    sort: req.query.sort,
+    q: req.query.q as string,
+    category: req.query.category as string,
+    type: req.query.type as string,
+    limit: req.query.limit as string,
+    offset: req.query.offset as string,
+    sort: req.query.sort as string,
   });
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
 // GET /api/marketplace/products/featured
-marketplaceRouter.get('/products/featured', wrap(async (req, res) => {
-  const result = await marketplaceService.getFeaturedProducts(req.query.limit);
-  res.json(ok(result));
+marketplaceRouter.get('/products/featured', asyncHandler(async (req, res) => {
+  const result = await marketplaceService.getFeaturedRecipes(req.query.limit as string);
+  res.json({ success: true, ...result });
 }));
 
 // GET /api/marketplace/products/:slugOrId — detail
-marketplaceRouter.get('/products/:slugOrId', wrap(async (req, res) => {
+marketplaceRouter.get('/products/:slugOrId', asyncHandler(async (req, res) => {
   const result = await marketplaceService.getProductDetail(req.params.slugOrId);
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
 // GET /api/marketplace/categories
-marketplaceRouter.get('/categories', wrap(async (req, res) => {
+marketplaceRouter.get('/categories', asyncHandler(async (req, res) => {
   const type = req.query.type ? String(req.query.type) : undefined;
   const result = await marketplaceService.getCategories(type);
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
 // GET /api/marketplace/products/:id/reviews
-marketplaceRouter.get('/products/:id/reviews', wrap(async (req, res) => {
-  const result = await marketplaceService.getReviews(req.params.id, req.query.limit, req.query.offset);
-  res.json(ok(result));
+marketplaceRouter.get('/products/:id/reviews', asyncHandler(async (req, res) => {
+  const result = await marketplaceService.getReviews(req.params.id, req.query.limit as string, req.query.offset as string);
+  res.json({ success: true, ...result });
 }));
 
 // GET /api/marketplace/bundles
-marketplaceRouter.get('/bundles', wrap(async (req, res) => {
-  const result = await marketplaceService.getActiveBundles(req.query.limit);
-  res.json(ok(result));
+marketplaceRouter.get('/bundles', asyncHandler(async (req, res) => {
+  const result = await marketplaceService.getActiveBundles(req.query.limit as string);
+  res.json({ success: true, ...result });
 }));
 
 // GET /api/marketplace/bundles/:slug
-marketplaceRouter.get('/bundles/:slug', wrap(async (req, res) => {
+marketplaceRouter.get('/bundles/:slug', asyncHandler(async (req, res) => {
   const result = await marketplaceService.getBundleDetail(req.params.slug);
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
 /* ================================================================
@@ -88,52 +76,52 @@ marketplaceRouter.get('/bundles/:slug', wrap(async (req, res) => {
  * ================================================================ */
 
 // POST /api/marketplace/smart/match-ingredients — tìm sản phẩm khớp nguyên liệu
-marketplaceRouter.post('/smart/match-ingredients', wrap(async (req, res) => {
+marketplaceRouter.post('/smart/match-ingredients', asyncHandler(async (req, res) => {
   const result = await marketplaceService.matchRecipeIngredients(req.body?.ingredients);
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
 // GET /api/marketplace/smart/recommend — AI gợi ý sản phẩm (Groq ưu tiên)
-marketplaceRouter.get('/smart/recommend', wrap(async (req, res) => {
+marketplaceRouter.get('/smart/recommend', asyncHandler(async (req, res) => {
   const result = await marketplaceService.getAiRecommendations({
-    recipe_title: req.query.recipe_title,
-    ingredients: req.query.ingredients,
-    context: req.query.context,
+    recipe_title: req.query.recipe_title as string,
+    ingredients: req.query.ingredients as string,
+    context: req.query.context as string,
   });
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
 // GET /api/marketplace/products/:id/related — sản phẩm liên quan
-marketplaceRouter.get('/products/:id/related', wrap(async (req, res) => {
-  const result = await marketplaceService.getRelatedProducts(req.params.id, req.query.limit);
-  res.json(ok(result));
+marketplaceRouter.get('/products/:id/related', asyncHandler(async (req, res) => {
+  const result = await marketplaceService.getRelatedProducts(req.params.id, req.query.limit as string);
+  res.json({ success: true, ...result });
 }));
 
 /* ================================================================
  * Auth Required: Cart
  * ================================================================ */
 
-marketplaceRouter.get('/cart', requireAuth, wrap(async (req, res) => {
+marketplaceRouter.get('/cart', requireAuth, asyncHandler(async (req, res) => {
   const result = await marketplaceService.getCart(req.session.userId!);
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
-marketplaceRouter.post('/cart', requireAuth, wrap(async (req, res) => {
+marketplaceRouter.post('/cart', requireAuth, asyncHandler(async (req, res) => {
   const result = await marketplaceService.addToCart(req.session.userId!, req.body);
   res.json(result);
 }));
 
-marketplaceRouter.put('/cart/:id', requireAuth, wrap(async (req, res) => {
+marketplaceRouter.put('/cart/:id', requireAuth, asyncHandler(async (req, res) => {
   const result = await marketplaceService.updateCartItem(req.session.userId!, req.params.id, req.body);
   res.json(result);
 }));
 
-marketplaceRouter.delete('/cart/:id', requireAuth, wrap(async (req, res) => {
+marketplaceRouter.delete('/cart/:id', requireAuth, asyncHandler(async (req, res) => {
   const result = await marketplaceService.removeCartItem(req.session.userId!, req.params.id);
   res.json(result);
 }));
 
-marketplaceRouter.delete('/cart', requireAuth, wrap(async (req, res) => {
+marketplaceRouter.delete('/cart', requireAuth, asyncHandler(async (req, res) => {
   const result = await marketplaceService.clearCart(req.session.userId!);
   res.json(result);
 }));
@@ -142,36 +130,36 @@ marketplaceRouter.delete('/cart', requireAuth, wrap(async (req, res) => {
  * Auth Required: Orders
  * ================================================================ */
 
-marketplaceRouter.post('/orders', requireAuth, orderCreateRateLimit, wrap(async (req, res) => {
+marketplaceRouter.post('/orders', requireAuth, orderCreateRateLimit, asyncHandler(async (req, res) => {
   const result = await marketplaceService.createOrder(req.session.userId!, req.body);
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
-marketplaceRouter.get('/orders', requireAuth, wrap(async (req, res) => {
-  const result = await marketplaceService.getMyOrders(req.session.userId!, req.query.limit, req.query.offset);
-  res.json(ok(result));
+marketplaceRouter.get('/orders', requireAuth, asyncHandler(async (req, res) => {
+  const result = await marketplaceService.getMyOrders(req.session.userId!, req.query.limit as string, req.query.offset as string);
+  res.json({ success: true, ...result });
 }));
 
-marketplaceRouter.get('/orders/:id', requireAuth, wrap(async (req, res) => {
+marketplaceRouter.get('/orders/:id', requireAuth, asyncHandler(async (req, res) => {
   const result = await marketplaceService.getOrderDetail(req.session.userId!, req.params.id);
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
-marketplaceRouter.put('/orders/:id/complete', requireAuth, wrap(async (req, res) => {
+marketplaceRouter.put('/orders/:id/complete', requireAuth, asyncHandler(async (req, res) => {
   const result = await marketplaceService.buyerCompleteOrder(req.session.userId!, req.params.id);
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
-marketplaceRouter.get('/orders/:id/reviews', requireAuth, wrap(async (req, res) => {
+marketplaceRouter.get('/orders/:id/reviews', requireAuth, asyncHandler(async (req, res) => {
   const result = await marketplaceService.getOrderReviews(req.session.userId!, req.params.id);
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
 /* ================================================================
  * Auth Required: Reviews
  * ================================================================ */
 
-marketplaceRouter.post('/reviews', requireAuth, reviewCreateRateLimit, wrap(async (req, res) => {
+marketplaceRouter.post('/reviews', requireAuth, reviewCreateRateLimit, asyncHandler(async (req, res) => {
   const result = await marketplaceService.createReview(req.session.userId!, req.body);
   res.json(result);
 }));
@@ -180,19 +168,19 @@ marketplaceRouter.post('/reviews', requireAuth, reviewCreateRateLimit, wrap(asyn
  * Auth Required: Wishlist
  * ================================================================ */
 
-marketplaceRouter.get('/wishlist', requireAuth, wrap(async (req, res) => {
+marketplaceRouter.get('/wishlist', requireAuth, asyncHandler(async (req, res) => {
   const result = await marketplaceService.getWishlist(req.session.userId!);
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
-marketplaceRouter.get('/wishlist/:productId', requireAuth, wrap(async (req, res) => {
+marketplaceRouter.get('/wishlist/:productId', requireAuth, asyncHandler(async (req, res) => {
   const result = await marketplaceService.isWishlisted(req.session.userId!, req.params.productId);
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
-marketplaceRouter.post('/wishlist/:productId', requireAuth, wrap(async (req, res) => {
+marketplaceRouter.post('/wishlist/:productId', requireAuth, asyncHandler(async (req, res) => {
   const result = await marketplaceService.toggleWishlist(req.session.userId!, req.params.productId);
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
 /* ================================================================
@@ -200,102 +188,103 @@ marketplaceRouter.post('/wishlist/:productId', requireAuth, wrap(async (req, res
  * ================================================================ */
 
 // Đăng ký seller
-marketplaceRouter.post('/seller/register', requireAuth, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.post('/seller/register', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
   const result = await marketplaceService.registerSeller(req.session.userId!, req.body);
   res.json(result);
 }));
 
 // Lấy seller profile
-marketplaceRouter.get('/seller/profile', requireAuth, wrap(async (req, res) => {
+marketplaceRouter.get('/seller/profile', requireAuth, asyncHandler(async (req, res) => {
   const result = await marketplaceService.getSellerProfile(req.session.userId!);
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
-marketplaceRouter.get('/seller/settings', requireAuth, requireSeller, wrap(async (req, res) => {
+marketplaceRouter.get('/seller/settings', requireAuth, requireSeller, asyncHandler(async (req, res) => {
   const result = await sellerSettingsService.getSettings(req.session.userId!);
-  res.json(ok({
+  res.json({
+    success: true,
     ...result,
     security: sellerSecurityService.getSellerSecurityState(req),
-  }));
+  });
 }));
 
-marketplaceRouter.post('/seller/security/password', requireAuth, requireSeller, sellerSecurityRateLimit, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.post('/seller/security/password', requireAuth, requireSeller, sellerSecurityRateLimit, requireCsrf, asyncHandler(async (req, res) => {
   const result = await sellerSecurityService.verifySellerPassword(req);
   res.json(result);
 }));
 
-marketplaceRouter.post('/seller/security/otp/request', requireAuth, requireSeller, requireSellerStepUp, sellerOtpRateLimit, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.post('/seller/security/otp/request', requireAuth, requireSeller, requireSellerStepUp, sellerOtpRateLimit, requireCsrf, asyncHandler(async (req, res) => {
   const result = await sellerSecurityService.requestSellerOtp(req);
   res.json(result);
 }));
 
-marketplaceRouter.post('/seller/security/otp/verify', requireAuth, requireSeller, requireSellerStepUp, sellerOtpRateLimit, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.post('/seller/security/otp/verify', requireAuth, requireSeller, requireSellerStepUp, sellerOtpRateLimit, requireCsrf, asyncHandler(async (req, res) => {
   const result = await sellerSecurityService.verifySellerOtp(req);
   res.json(result);
 }));
 
-marketplaceRouter.put('/seller/settings/store', requireAuth, requireSeller, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.put('/seller/settings/store', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
   const result = await sellerSettingsService.updateStore(req.session.userId!, req.body);
   res.json(result);
 }));
 
-marketplaceRouter.put('/seller/settings/preferences', requireAuth, requireSeller, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.put('/seller/settings/preferences', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
   const result = await sellerSettingsService.updatePreferences(req.session.userId!, req.body);
   res.json(result);
 }));
 
-marketplaceRouter.put('/seller/settings/verification', requireAuth, requireSeller, requireSellerStepUp, sellerSecurityRateLimit, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.put('/seller/settings/verification', requireAuth, requireSeller, requireSellerStepUp, sellerSecurityRateLimit, requireCsrf, asyncHandler(async (req, res) => {
   const result = await sellerSettingsService.submitVerification(req.session.userId!, req.body);
   res.json(result);
 }));
 
-marketplaceRouter.post('/seller/payout-accounts', requireAuth, requireSeller, requireSellerStepUp, requireSellerOtp, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.post('/seller/payout-accounts', requireAuth, requireSeller, requireSellerStepUp, requireSellerOtp, requireCsrf, asyncHandler(async (req, res) => {
   const result = await sellerSettingsService.createPayoutAccount(req.session.userId!, req.body);
   res.json(result);
 }));
 
-marketplaceRouter.put('/seller/payout-accounts/:id/default', requireAuth, requireSeller, requireSellerStepUp, requireSellerOtp, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.put('/seller/payout-accounts/:id/default', requireAuth, requireSeller, requireSellerStepUp, requireSellerOtp, requireCsrf, asyncHandler(async (req, res) => {
   const result = await sellerSettingsService.setDefaultPayoutAccount(req.session.userId!, req.params.id);
   res.json(result);
 }));
 
-marketplaceRouter.delete('/seller/payout-accounts/:id', requireAuth, requireSeller, requireSellerStepUp, requireSellerOtp, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.delete('/seller/payout-accounts/:id', requireAuth, requireSeller, requireSellerStepUp, requireSellerOtp, requireCsrf, asyncHandler(async (req, res) => {
   const result = await sellerSettingsService.deletePayoutAccount(req.session.userId!, req.params.id);
   res.json(result);
 }));
 
 // Sản phẩm của seller
-marketplaceRouter.get('/seller/products', requireAuth, requireSeller, wrap(async (req, res) => {
-  const result = await marketplaceService.getSellerProducts(req.session.userId!, req.query.limit, req.query.offset);
-  res.json(ok(result));
+marketplaceRouter.get('/seller/products', requireAuth, requireSeller, asyncHandler(async (req, res) => {
+  const result = await marketplaceService.getSellerProducts(req.session.userId!, req.query.limit as string, req.query.offset as string);
+  res.json({ success: true, ...result });
 }));
 
 // Tạo sản phẩm
-marketplaceRouter.post('/seller/products', requireAuth, requireSeller, sellerProductRateLimit, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.post('/seller/products', requireAuth, requireSeller, sellerProductRateLimit, requireCsrf, asyncHandler(async (req, res) => {
   const result = await marketplaceService.createProduct(req.session.userId!, req.body);
-  res.json(ok(result));
+  res.json({ success: true, ...result });
 }));
 
 // Cập nhật sản phẩm
-marketplaceRouter.put('/seller/products/:id', requireAuth, requireSeller, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.put('/seller/products/:id', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
   const result = await marketplaceService.updateProduct(req.session.userId!, req.params.id, req.body);
   res.json(result);
 }));
 
 // Xóa sản phẩm
-marketplaceRouter.delete('/seller/products/:id', requireAuth, requireSeller, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.delete('/seller/products/:id', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
   const result = await marketplaceService.deleteProduct(req.session.userId!, req.params.id);
   res.json(result);
 }));
 
 // Đơn hàng seller nhận
-marketplaceRouter.get('/seller/orders', requireAuth, requireSeller, wrap(async (req, res) => {
-  const result = await marketplaceService.getSellerOrders(req.session.userId!, req.query.limit, req.query.offset);
-  res.json(ok(result));
+marketplaceRouter.get('/seller/orders', requireAuth, requireSeller, asyncHandler(async (req, res) => {
+  const result = await marketplaceService.getSellerOrders(req.session.userId!, req.query.limit as string, req.query.offset as string);
+  res.json({ success: true, ...result });
 }));
 
 // Cập nhật trạng thái đơn hàng (seller)
-marketplaceRouter.put('/seller/orders/:id/status', requireAuth, requireSeller, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.put('/seller/orders/:id/status', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
   const result = await marketplaceService.updateOrderStatus(req.session.userId!, req.params.id, req.body, false);
   res.json(result);
 }));

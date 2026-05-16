@@ -30,8 +30,8 @@ export default function Checkout() {
     note: '',
   });
 
-  const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-    setForm((f) => ({ ...f, [key]: e.target.value }));
+  const set = useCallback((key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+    setForm((f) => ({ ...f, [key]: e.target.value })), []);
 
   const loadMe = useCallback(async () => {
     try {
@@ -78,7 +78,7 @@ export default function Checkout() {
     return () => window.removeEventListener(AUTH_CHANGE_EVENT, onAuthChange);
   }, [loadMe]);
 
-  const selectAddress = (address: SavedAddress) => {
+  const selectAddress = useCallback((address: SavedAddress) => {
     setSelectedAddressId(address.id);
     setForm((f) => ({
       ...f,
@@ -86,9 +86,9 @@ export default function Checkout() {
       shipping_phone: address.phone,
       shipping_address: address.address,
     }));
-  };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (items.length === 0) {
       toast.error('Giỏ hàng trống');
@@ -147,7 +147,7 @@ export default function Checkout() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form onSubmit={handleSubmit} className="grid lg:grid-cols-5 gap-8">
+        <form onSubmit={onSubmitOrder} className="grid lg:grid-cols-5 gap-8">
           {/* Form */}
           <div className="lg:col-span-3 space-y-6">
             <Reveal y={12}>

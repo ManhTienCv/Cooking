@@ -7,6 +7,7 @@ import CreateProductModal, { type EditingProduct } from './CreateProductModal';
 import { NotificationProvider } from '../../contexts/NotificationContext';
 import NotificationBell from '../../components/ui/NotificationBell';
 import Pagination from '../../components/ui/Pagination';
+import { AUTH_CHANGE_EVENT } from '../../lib/authEvents';
 
 interface SellerProduct {
   id: number; name: string; slug: string; price: number; sale_price: number | null;
@@ -87,7 +88,15 @@ export default function SellerDashboard() {
     finally { setLoading(false); }
   }, [productPage, orderPage]);
 
-  useEffect(() => { void loadData(); }, [loadData]);
+  useEffect(() => { 
+    void loadData(); 
+    
+    const onAuthChange = () => {
+      void loadData();
+    };
+    window.addEventListener(AUTH_CHANGE_EVENT, onAuthChange);
+    return () => window.removeEventListener(AUTH_CHANGE_EVENT, onAuthChange);
+  }, [loadData]);
 
   const handleRegister = async () => {
     if (!regForm.store_name.trim()) { toast.error('Nhập tên cửa hàng'); return; }

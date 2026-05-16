@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Building2, CreditCard, MapPin, Phone, User, FileText, ArrowLeft, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -8,6 +8,7 @@ import { apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
 import { scrollWindowToTop } from '../../lib/scroll';
 import { loadProfilePreferences, type LinkedBankAccount, type SavedAddress } from '../../lib/profilePreferences';
+import { AUTH_CHANGE_EVENT } from '../../lib/authEvents';
 
 function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
@@ -32,31 +33,42 @@ export default function Checkout() {
   const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  useEffect(() => {
-    apiJson<{ authenticated: boolean; user?: { email: string; full_name?: string } }>('/api/auth/me')
-      .then((me) => {
-        const prefs = loadProfilePreferences(me.user?.email);
-        setSavedAddresses(prefs.addresses);
-        setLinkedBanks(prefs.banks);
+  const loadMe = useCallback(async () => {
+    try {
+      const me = await apiJson<{ authenticated: boolean; user?: { email: string; full_name?: string } }>('/api/auth/me');
+      const prefs = loadProfilePreferences(me.user?.email);
+      setSavedAddresses(prefs.addresses);
+      setLinkedBanks(prefs.banks);
 
-        const defaultAddress = prefs.addresses.find((item) => item.isDefault) ?? prefs.addresses[0];
-        if (defaultAddress) {
-          setSelectedAddressId(defaultAddress.id);
-          setForm((f) => ({
-            ...f,
-            shipping_name: defaultAddress.name,
-            shipping_phone: defaultAddress.phone,
-            shipping_address: defaultAddress.address,
-          }));
-        } else if (me.user?.full_name) {
-          setForm((f) => ({ ...f, shipping_name: f.shipping_name || me.user?.full_name || '' }));
-        }
+      const defaultAddress = prefs.addresses.find((item) => item.isDefault) ?? prefs.addresses[0];
+      if (defaultAddress) {
+        setSelectedAddressId(defaultAddress.id);
+        setForm((f) => ({
+          ...f,
+          shipping_name: defaultAddress.name,
+          shipping_phone: defaultAddress.phone,
+          shipping_address: defaultAddress.address,
+        }));
+      } else if (me.user?.full_name) {
+        setForm((f) => ({ ...f, shipping_name: f.shipping_name || me.user?.full_name || '' }));
+      }
 
-        const defaultBank = prefs.banks.find((item) => item.isDefault) ?? prefs.banks[0];
-        if (defaultBank) setSelectedBankId(defaultBank.id);
-      })
-      .catch(() => {});
+      const defaultBank = prefs.banks.find((item) => item.isDefault) ?? prefs.banks[0];
+      if (defaultBank) setSelectedBankId(defaultBank.id);
+    } catch {
+      // ignore
+    }
   }, []);
+
+  useEffect(() => {
+    void loadMe();
+    
+    const onAuthChange = () => {
+      void loadMe();
+    };
+    window.addEventListener(AUTH_CHANGE_EVENT, onAuthChange);
+    return () => window.removeEventListener(AUTH_CHANGE_EVENT, onAuthChange);
+  }, [loadMe]);
 
   const selectAddress = (address: SavedAddress) => {
     setSelectedAddressId(address.id);

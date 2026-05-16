@@ -15,6 +15,7 @@ import ProfileSidebar from '../../components/profile/ProfileSidebar';
 import ProfileSettingsForm from '../../components/profile/ProfileSettingsForm';
 import EditPostModal from '../../components/blog/EditPostModal';
 import EditRecipeModal from '../../components/recipes/EditRecipeModal';
+import { AUTH_CHANGE_EVENT } from '../../lib/authEvents';
 
 const PROFILE_PAGE_SIZE = 6;
 type PagedTab = 'recipes' | 'posts' | 'saved' | 'wishlist';
@@ -159,6 +160,12 @@ export default function Profile() {
 
   useEffect(() => {
     void loadMe();
+    
+    const onAuthChange = () => {
+      void loadMe();
+    };
+    window.addEventListener(AUTH_CHANGE_EVENT, onAuthChange);
+
     // Also fetch blog categories for edit modal
     apiJson<{ categories: BlogCategory[] }>('/api/blog/categories')
       .then(d => setBlogCategories(d.categories ?? []))
@@ -166,6 +173,8 @@ export default function Profile() {
     apiJson<{ categories: RecipeCategory[] }>('/api/recipes/categories')
       .then(d => setRecipeCategories(d.categories ?? []))
       .catch(() => {});
+      
+    return () => window.removeEventListener(AUTH_CHANGE_EVENT, onAuthChange);
   }, [loadMe]);
 
   useEffect(() => {

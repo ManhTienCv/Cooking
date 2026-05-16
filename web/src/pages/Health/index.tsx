@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import AuthModal from '../../components/AuthModal';
 import { apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
+import { AUTH_CHANGE_EVENT } from '../../lib/authEvents';
 
 import HealthFeatures from '../../components/health/HealthFeatures';
 import HealthTabs from '../../components/health/HealthTabs';
@@ -67,6 +68,12 @@ export default function Health() {
 
   useEffect(() => {
     void loadPlans();
+    
+    const onAuthChange = () => {
+      void loadPlans();
+    };
+    window.addEventListener(AUTH_CHANGE_EVENT, onAuthChange);
+    return () => window.removeEventListener(AUTH_CHANGE_EVENT, onAuthChange);
   }, [loadPlans]);
 
   const handleDeletePlan = async (id: number) => {

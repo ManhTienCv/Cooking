@@ -244,7 +244,7 @@ marketplaceRouter.put('/seller/settings/preferences', requireAuth, requireSeller
   res.json(result);
 }));
 
-marketplaceRouter.put('/seller/settings/verification', requireAuth, requireSeller, requireSellerStepUp, requireCsrf, wrap(async (req, res) => {
+marketplaceRouter.put('/seller/settings/verification', requireAuth, requireSeller, requireSellerStepUp, sellerSecurityRateLimit, requireCsrf, wrap(async (req, res) => {
   const result = await sellerSettingsService.submitVerification(req.session.userId!, req.body);
   res.json(result);
 }));

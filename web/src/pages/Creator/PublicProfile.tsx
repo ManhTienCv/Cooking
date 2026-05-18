@@ -54,10 +54,6 @@ function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
 }
 
-function namesDiffer(a: string, b: string): boolean {
-  return a.trim().toLowerCase() !== b.trim().toLowerCase();
-}
-
 export default function PublicProfile() {
   const { id } = useParams<{ id: string }>();
   const userId = Number(id);

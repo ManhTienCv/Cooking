@@ -16,7 +16,7 @@ export default function HomeCategories() {
             Khám phá nguồn cảm hứng nấu nướng thông qua các lựa chọn phổ biến nhất.
           </p>
         </Reveal>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="category-grid">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6" id="category-grid">
           {['Món khai vị', 'Món chính', 'Tráng miệng', 'Đồ uống'].map((cat, idx) => {
             const imgMap: Record<string, string> = {
               'Món khai vị': 'monkhaivi.jpg',
@@ -25,27 +25,26 @@ export default function HomeCategories() {
               'Đồ uống': 'douong.jpg',
             };
             return (
-              <RevealStaggerItem key={cat} index={idx} stagger={0.07} y={22}>
-                <div className="h-48 sm:h-64">
-                  <Link
-                    to={`/recipes?category=${encodeURIComponent(cat)}`}
-                    className="block w-full h-full group relative overflow-hidden rounded-sm transition-all duration-500 shadow-sm hover:shadow-xl"
-                  >
+              <RevealStaggerItem key={cat} index={idx} stagger={0.07} y={22} className="h-full">
+                <Link
+                  to={`/recipes?category=${encodeURIComponent(cat)}`}
+                  className="group relative block h-full overflow-hidden rounded-2xl shadow-md ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-lg dark:ring-white/10 dark:hover:shadow-amber-900/20"
+                >
+                  <div className="relative aspect-[3/4] w-full">
                     <img
                       src={`/assets/images/${imgMap[cat]}`}
                       alt={cat}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                       loading="lazy"
                     />
-                    <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-all duration-300"></div>
-                    <div className="absolute inset-0 flex flex-col justify-center items-center p-4 sm:p-6">
-                      <h3 className="text-white text-xl sm:text-2xl font-serif font-bold tracking-widest uppercase mb-2 group-hover:-translate-y-1 transition-transform duration-500">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 p-4 text-center sm:p-6">
+                      <h3 className="font-serif text-sm font-bold uppercase tracking-[0.2em] text-white drop-shadow-sm sm:text-base sm:tracking-[0.25em]">
                         {cat}
                       </h3>
-                      <div className="w-8 h-1 bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-500 mt-2"></div>
                     </div>
-                  </Link>
-                </div>
+                  </div>
+                </Link>
               </RevealStaggerItem>
             );
           })}

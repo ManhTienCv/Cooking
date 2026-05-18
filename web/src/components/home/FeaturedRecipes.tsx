@@ -42,7 +42,7 @@ export default function FeaturedRecipes() {
   const otherRecipes = featuredRecipes.length > 1 ? featuredRecipes.slice(1, 5) : [];
 
   return (
-    <section className="py-16 sm:py-20">
+    <section className="py-10 sm:py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <Reveal className="mb-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div className="max-w-3xl">
@@ -50,7 +50,7 @@ export default function FeaturedRecipes() {
               <Sparkles className="h-4 w-4" />
               Bếp chọn hôm nay
             </span>
-            <h2 className="text-4xl font-serif font-bold text-black dark:text-white md:text-5xl">
+            <h2 className="text-3xl font-serif font-bold text-black dark:text-white sm:text-4xl md:text-5xl">
               Công thức nổi bật
             </h2>
             <p className="mt-4 max-w-2xl text-base font-medium leading-7 text-gray-600 dark:text-slate-300 md:text-lg">
@@ -89,7 +89,7 @@ export default function FeaturedRecipes() {
                 <RevealStaggerItem index={0} stagger={0.08}>
                   <Link
                     to={`/recipes/detail/${mainRecipe.id}`}
-                    className="group relative block min-h-[440px] overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow-sm transition hover:-translate-y-1 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600 dark:hover:shadow-none"
+                    className="group relative block h-full min-h-[320px] overflow-hidden rounded-2xl bg-gray-100 shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:min-h-[420px] lg:min-h-full dark:bg-slate-900 dark:hover:shadow-none"
                   >
                     <ImageWithFallback
                       src={mainRecipe?.image_url || '/assets/images/vietnam1.jpg'}
@@ -109,13 +109,13 @@ export default function FeaturedRecipes() {
                           </span>
                         )}
                       </div>
-                      <h3 className="max-w-3xl text-3xl font-serif font-bold leading-tight md:text-5xl">
+                      <h3 className="max-w-3xl font-serif text-2xl font-bold leading-tight sm:text-3xl md:text-5xl">
                         {mainRecipe.title}
                       </h3>
                       {mainRecipe.description && (
-                        <p className="mt-4 max-w-2xl text-base leading-7 text-white/85 md:text-lg">
-                          {mainRecipe.description.length > 170
-                            ? `${mainRecipe.description.substring(0, 170)}...`
+                        <p className="mt-3 max-w-2xl text-sm leading-7 text-white/85 sm:mt-4 sm:text-base md:text-lg">
+                          {mainRecipe.description.length > 150
+                            ? `${mainRecipe.description.substring(0, 150)}...`
                             : mainRecipe.description}
                         </p>
                       )}
@@ -133,20 +133,25 @@ export default function FeaturedRecipes() {
                   <h4 className="border-b border-gray-200 pb-4 text-center text-lg font-black uppercase tracking-wider text-gray-900 dark:border-slate-700 dark:text-white">
                     Bộ sưu tập công thức
                   </h4>
-                  <ul className="mt-5 space-y-2">
-                    {STATIC_COLLECTIONS.map((col, i) => (
+                  <ul className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                    {STATIC_COLLECTIONS.map((col) => (
                       <li key={col.text}>
                         <Link
                           to={col.category ? `/recipes?category=${encodeURIComponent(col.category)}` : `/recipes?q=${encodeURIComponent(col.search || '')}`}
-                          className="flex gap-3 rounded-md px-2 py-3 transition hover:bg-gray-100 dark:hover:bg-slate-800"
+                          className="group flex items-center gap-4 rounded-lg p-3 transition hover:bg-gray-100 dark:hover:bg-slate-800"
                         >
-                          <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white dark:bg-white dark:text-slate-950">
-                            {i + 1}
-                          </span>
-                          <span>
+                          <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-md">
+                            <ImageWithFallback
+                              src={`/assets/images/collections/${col.category?.toLowerCase().replace(/\s/g, '-')}.jpg`}
+                              fallbackSrc="https://images.unsplash.com/photo-1543339308-43e59d6b73a6?w=200"
+                              alt={col.text}
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          </div>
+                          <div>
                             <span className="block text-sm font-bold text-gray-800 dark:text-slate-100">{col.text}</span>
-                            <span className="mt-1 block text-xs leading-5 text-gray-500 dark:text-slate-400">{col.detail}</span>
-                          </span>
+                            <span className="mt-0.5 block text-xs leading-5 text-gray-500 dark:text-slate-400">{col.detail}</span>
+                          </div>
                         </Link>
                       </li>
                     ))}
@@ -156,7 +161,7 @@ export default function FeaturedRecipes() {
             </div>
 
             {otherRecipes.length > 0 && (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
                 {otherRecipes.map((recipe, idx) => (
                   <RevealStaggerItem key={recipe.id} index={idx + 1} stagger={0.08}>
                     <RecipeHomeCard recipe={recipe} />

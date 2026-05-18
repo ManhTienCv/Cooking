@@ -21,7 +21,7 @@ export default function Recipes() {
 
   const [categoryOptions, setCategoryOptions] = useState<RecipeCategory[]>([]);
   const [categories, setCategories] = useState<string[]>(['Tất cả']);
-  
+
   const {
     searchQuery,
     setSearchQuery,
@@ -67,7 +67,7 @@ export default function Recipes() {
       q.set('limit', String(PAGE_SIZE));
       q.set('offset', String((currentPage - 1) * PAGE_SIZE));
       const data = await apiJson<{ recipes: RecipeListRow[]; total?: number }>(`/api/recipes/search?${q.toString()}`);
-      
+
       setRecipes(data.recipes ?? []);
       setTotalRecipes(data.total ?? 0);
     } catch {
@@ -124,7 +124,7 @@ export default function Recipes() {
         </div>
       </div>
 
-      <FilterBar 
+      <FilterBar
         categories={categories}
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
@@ -144,12 +144,12 @@ export default function Recipes() {
             <button className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black transition-colors">
               <Search className="h-5 w-5" />
             </button>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm kiếm công thức..." 
-              className="w-full pl-10 pr-10 py-3 border border-gray-200 dark:border-slate-700 rounded-full focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300 bg-white dark:bg-slate-800 text-black dark:text-white" 
+              placeholder="Tìm kiếm công thức..."
+              className="w-full pl-10 pr-10 py-3 border border-gray-200 dark:border-slate-700 rounded-full focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300 bg-white dark:bg-slate-800 text-black dark:text-white"
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors">
@@ -159,9 +159,9 @@ export default function Recipes() {
           </div>
         </div>
 
-        <RecipeList 
-          isLoading={isLoading} 
-          recipes={recipes} 
+        <RecipeList
+          isLoading={isLoading}
+          recipes={recipes}
           onClearFilters={clearFilters}
         />
         {!isLoading && (
@@ -174,7 +174,7 @@ export default function Recipes() {
         )}
       </div>
 
-      <CreateRecipeModal 
+      <CreateRecipeModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         categoryOptions={categoryOptions}

@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { Reveal, RevealStaggerItem } from '../motion/ScrollReveal';
 import ImageWithFallback from '../../lib/ImageWithFallback';
 
-
 const FEATURED_TALL_CATEGORIES = [
   { name: 'Bữa Tối', image: '/assets/images/monchinh.jpg' },
   { name: 'Nhanh & Gọn', image: '/assets/images/monkhaivi.jpg' },
@@ -24,37 +23,38 @@ const CIRCLE_CATEGORIES = [
 
 export default function HomeEditorialHeader() {
   return (
-    <section className="pt-12 sm:pt-24 pb-6 sm:pb-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        {/* Typographic Top */}
-        <Reveal className="text-center py-8 sm:py-20 mb-6 sm:mb-12 border-b border-gray-100 dark:border-slate-800 flex flex-col items-center justify-center">
-          {/* Dòng này đã được tăng size lên text-base và md:text-xl */}
-          <span className="block max-w-[22rem] sm:max-w-[36rem] mx-auto text-[11px] sm:text-base md:text-xl font-bold text-gray-400 uppercase tracking-[0.12em] sm:tracking-[0.3em] mb-3 sm:mb-6 leading-relaxed break-words">
+    <section className="pt-2 pb-4 sm:pt-16 sm:pb-10">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Typographic hero */}
+        <Reveal className="mb-6 flex flex-col items-center justify-center border-b border-gray-100 py-4 text-center dark:border-slate-800 sm:mb-12 sm:py-16">
+          <span className="mx-auto mb-3 block max-w-[22rem] break-words text-[10px] font-bold uppercase leading-relaxed tracking-[0.12em] text-gray-400 sm:mb-6 sm:max-w-[36rem] sm:text-base sm:tracking-[0.3em] md:text-xl">
             Công thức nấu ăn đơn giản dành cho
           </span>
-
-          <h1 className="max-w-[24rem] sm:max-w-[42rem] mx-auto font-serif italic text-2xl sm:text-5xl md:text-7xl text-gray-900 dark:text-white leading-snug sm:leading-[1.1] tracking-tight break-words">
+          <h1 className="mx-auto max-w-[24rem] break-words font-serif text-xl italic leading-snug tracking-tight text-gray-900 dark:text-white sm:max-w-[42rem] sm:text-5xl sm:leading-[1.1] md:text-7xl">
             cuộc sống đời thực mỗi ngày.
           </h1>
         </Reveal>
 
-        {/* 4 Tall Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-16">
+        {/* Category cards — 2 cột mobile, nhãn overlay trong ảnh (không bị cắt) */}
+        <div className="mb-8 grid grid-cols-2 gap-3 sm:mb-14 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4 lg:gap-6">
           {FEATURED_TALL_CATEGORIES.map((cat, idx) => (
-            <RevealStaggerItem key={idx} index={idx} stagger={0.08} y={20}>
-              <Link to={`/recipes?category=${encodeURIComponent(cat.name)}`} className="group block relative w-full h-[18rem] sm:h-[28rem] md:h-[28rem] lg:h-[24rem] xl:h-[28rem] rounded-sm mb-4 sm:mb-8 md:mb-0">
-                <div className="w-full h-full overflow-hidden rounded-sm">
+            <RevealStaggerItem key={cat.name} index={idx} stagger={0.06} y={16} className="h-full">
+              <Link
+                to={`/recipes?category=${encodeURIComponent(cat.name)}`}
+                className="group relative block h-full overflow-hidden rounded-2xl shadow-md ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-lg dark:ring-white/10 dark:hover:shadow-amber-900/20"
+              >
+                <div className="relative aspect-[3/4] w-full">
                   <ImageWithFallback
                     src={cat.image}
                     alt={cat.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    loading="eager"
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    loading={idx < 2 ? 'eager' : 'lazy'}
                   />
-                </div>
-                <div className="absolute inset-x-0 bottom-0 flex justify-center translate-y-1/2 z-10 px-4">
-                  <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur font-serif text-xs sm:text-sm tracking-widest font-bold uppercase py-2.5 sm:py-3 px-4 sm:px-6 shadow-md text-black dark:text-white border border-gray-200 dark:border-slate-800 min-w-[75%] sm:min-w-[70%] max-w-full text-center group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors break-words">
-                    {cat.name}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
+                  <div className="absolute inset-x-0 bottom-0 p-3 sm:p-5">
+                    <p className="text-center font-serif text-[11px] font-bold uppercase tracking-[0.18em] text-white drop-shadow-sm sm:text-sm sm:tracking-[0.22em]">
+                      {cat.name}
+                    </p>
                   </div>
                 </div>
               </Link>
@@ -62,16 +62,30 @@ export default function HomeEditorialHeader() {
           ))}
         </div>
 
-        {/* Circle Categories */}
-        <div className="pt-4 sm:pt-8 overflow-x-auto pb-2 sm:pb-4 hide-scrollbar">
-          <div className="flex items-start md:justify-center space-x-4 sm:space-x-6 md:space-x-8 px-2 min-w-max">
+        {/* Circle categories — cuộn ngang mượt trên mobile */}
+        <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 sm:pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-min snap-x snap-mandatory justify-center gap-4 sm:gap-6 md:gap-8">
             {CIRCLE_CATEGORIES.map((cat, idx) => (
-              <RevealStaggerItem key={idx} index={idx} stagger={0.05} y={15} className="flex flex-col items-center group w-20 sm:w-24">
-                <Link to={`/recipes?category=${encodeURIComponent(cat.name)}`} className="flex flex-col items-center">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-transparent group-hover:border-black dark:group-hover:border-white transition-colors duration-300 p-1 mb-3">
-                    <ImageWithFallback src={cat.image} alt={cat.name} className="w-full h-full object-cover rounded-full group-hover:scale-110 transition-transform duration-500" />
+              <RevealStaggerItem
+                key={cat.name}
+                index={idx}
+                stagger={0.04}
+                y={12}
+                className="w-[4.75rem] shrink-0 snap-start sm:w-24"
+              >
+                <Link
+                  to={`/recipes?category=${encodeURIComponent(cat.name)}`}
+                  className="group flex flex-col items-center"
+                >
+                  <div className="mb-2 h-16 w-16 overflow-hidden rounded-full border-2 border-gray-200 p-0.5 transition-colors group-hover:border-gray-900 dark:border-slate-600 dark:group-hover:border-white sm:mb-3 sm:h-20 sm:w-20">
+                    <ImageWithFallback
+                      src={cat.image}
+                      alt={cat.name}
+                      className="h-full w-full rounded-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      loading="lazy"
+                    />
                   </div>
-                  <span className="text-[11px] sm:text-xs font-bold uppercase text-center text-gray-800 dark:text-gray-300 tracking-wider h-9 sm:h-10 group-hover:text-black dark:group-hover:text-white">
+                  <span className="line-clamp-2 min-h-[2.25rem] text-center text-[10px] font-bold uppercase leading-tight tracking-wide text-gray-700 transition-colors group-hover:text-gray-900 dark:text-gray-300 dark:group-hover:text-white sm:min-h-[2.5rem] sm:text-xs">
                     {cat.name}
                   </span>
                 </Link>
@@ -79,7 +93,6 @@ export default function HomeEditorialHeader() {
             ))}
           </div>
         </div>
-
       </div>
     </section>
   );

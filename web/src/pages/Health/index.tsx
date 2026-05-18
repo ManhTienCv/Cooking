@@ -18,7 +18,7 @@ export default function Health() {
   const [activeTab, setActiveTab] = useState('plans');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  
+
   const [plans, setPlans] = useState<HealthPlanCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -68,7 +68,7 @@ export default function Health() {
 
   useEffect(() => {
     void loadPlans();
-    
+
     const onAuthChange = (event: Event) => {
       const detail = getAuthChangeDetail(event);
       if (detail.authenticated === false) {
@@ -150,7 +150,7 @@ export default function Health() {
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-2xl font-serif font-bold text-black dark:text-white">Kế hoạch bữa ăn</h3>
                   <button onClick={() => void openCreatePlanModal()} className="bg-black dark:bg-white text-white dark:text-black px-5 py-2.5 rounded-full font-semibold hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors inline-flex items-center space-x-2 text-sm">
-                    <Plus className="w-4 h-4"/>
+                    <Plus className="w-4 h-4" />
                     <span>Tạo kế hoạch mới</span>
                   </button>
                 </div>
@@ -189,13 +189,13 @@ export default function Health() {
         </Reveal>
       </div>
 
-      <CreatePlanModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <CreatePlanModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         onSuccess={async () => {
           setIsModalOpen(false);
           await loadPlans();
-        }} 
+        }}
         defaultDates={defaultDates}
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onSuccess={loadPlans} />

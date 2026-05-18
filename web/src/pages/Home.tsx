@@ -12,7 +12,7 @@ declare global {
 
 export default function Home() {
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 min-h-screen transition-colors duration-300">
+    <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-blue-50 to-indigo-50 transition-colors duration-300 dark:from-slate-900 dark:to-slate-800">
       <HomeEditorialHeader />
       <FeaturedRecipes />
       <HomeCategories />

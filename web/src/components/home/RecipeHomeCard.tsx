@@ -18,21 +18,17 @@ export default function RecipeHomeCard({ recipe }: { recipe: FeaturedRecipe }) {
 
   return (
     <div
-      className={`group overflow-hidden border-b pb-6 transition-all duration-300 sm:rounded-lg sm:border sm:pb-0 sm:shadow-sm hover:-translate-y-1 hover:shadow-md dark:hover:shadow-none flex flex-col h-full ${
-        isPending
-          ? 'border-slate-300 bg-slate-100/80 hover:border-slate-400 dark:border-slate-600 dark:bg-slate-800/70'
-          : 'border-gray-200/80 bg-white/95 hover:border-gray-300 dark:border-slate-700/80 dark:bg-slate-900/85 dark:hover:border-slate-600'
-      }`}
+      className={`group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white/95 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-gray-200 hover:shadow-md dark:border-slate-700/80 dark:bg-slate-900/85 dark:hover:border-slate-600 dark:hover:shadow-none`}
     >
-      <div className="relative overflow-hidden">
+      <Link to={`/recipes/detail/${recipe.id}`} className="relative block aspect-[4/3] w-full overflow-hidden">
         <ImageWithFallback
           src={recipe.image_url || '/assets/images/vietnam1.jpg'}
           alt={recipe.title}
-          className="h-64 w-full object-cover transition-transform duration-500 group-hover:scale-110"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           loading="lazy"
         />
 
-        <div className="absolute left-4 top-4 flex max-w-[calc(100%-5rem)] flex-wrap items-center gap-2">
+        <div className="absolute left-3 top-3 flex max-w-[calc(100%-5rem)] flex-wrap items-center gap-2 sm:left-4 sm:top-4">
           {isPending && (
             <span className="inline-flex items-center rounded-full bg-slate-200 px-3 h-7 text-[10px] font-semibold uppercase tracking-wider text-slate-700 shadow-sm dark:bg-slate-700 dark:text-slate-200">
               Đang chờ duyệt
@@ -49,16 +45,16 @@ export default function RecipeHomeCard({ recipe }: { recipe: FeaturedRecipe }) {
           </span>
         </div>
 
-        <div className="absolute right-4 top-4">
+        <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
           <span className={`${getDiffBadge(diffLabel)} inline-flex items-center h-7 px-3 text-xs font-bold uppercase tracking-wider backdrop-blur-sm rounded-full drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]`}>
             {diffLabel}
           </span>
         </div>
-      </div>
+      </Link>
 
-      <div className="pt-6 sm:p-5 flex-1 flex flex-col">
-        <h3 className="mb-3 line-clamp-2 text-xl font-bold font-serif text-black transition-colors duration-300 group-hover:text-gray-600 dark:text-white dark:group-hover:text-slate-200 min-h-[3.5rem]">
-          {recipe.title}
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
+        <h3 className="mb-2 line-clamp-2 min-h-[2.5rem] font-serif text-base font-bold text-black transition-colors duration-300 group-hover:text-gray-600 dark:text-white dark:group-hover:text-slate-200 sm:mb-3 sm:min-h-[3.5rem] sm:text-xl">
+          <Link to={`/recipes/detail/${recipe.id}`}>{recipe.title}</Link>
         </h3>
         <div className="mb-4 flex items-center justify-between text-sm text-gray-600 dark:text-slate-400">
           <div className="flex items-center space-x-1">

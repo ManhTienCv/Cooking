@@ -150,7 +150,7 @@ export default function PublicProfile() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="flex min-h-screen items-center justify-center bg-slate-950"
+        className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-slate-950"
       >
         <motion.div
           animate={{ rotate: 360 }}
@@ -166,12 +166,12 @@ export default function PublicProfile() {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-950 px-4"
+        className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-50 px-4 dark:bg-slate-950"
       >
         <PageBackBar fallbackTo="/" className="absolute left-4 top-6 sm:left-8" />
         <p className="text-6xl">😕</p>
-        <h2 className="text-2xl font-bold text-white">Không tìm thấy trang</h2>
-        <Link to="/" className="text-amber-400 hover:underline">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Không tìm thấy trang</h2>
+        <Link to="/" className="text-amber-600 hover:underline dark:text-amber-400">
           Về trang chủ
         </Link>
       </motion.div>
@@ -193,11 +193,11 @@ export default function PublicProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-slate-950 dark:text-slate-100">
       {/* Cover */}
       <motion.div className="relative h-44 overflow-hidden sm:h-52 md:h-56">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-600/40 via-orange-600/25 to-slate-950" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(251,191,36,0.35),_transparent_55%)]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-200/80 via-orange-100/60 to-gray-50 dark:from-amber-600/40 dark:via-orange-600/25 dark:to-slate-950" />
+        <motion.div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(251,191,36,0.25),_transparent_55%)] dark:bg-[radial-gradient(ellipse_at_top_right,_rgba(251,191,36,0.35),_transparent_55%)]" />
         <motion.div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMwIDkuOTQxLTguMDU5IDE4LTE4IDE4cy0xOC04LjA1OS0xOC0xOCA4LjA1OS0xOCAxOC0xOCAxOCA4LjA1OSAxOCAxOHoiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyIvPjwvZz48L3N2Zz4=')] opacity-60" />
         <motion.div className="absolute left-4 top-5 z-10 sm:left-8">
           <PageBackBar fallbackTo="/shop" label="Quay lại" />
@@ -206,24 +206,24 @@ export default function PublicProfile() {
 
       <motion.div className="relative mx-auto max-w-5xl px-4 pb-16 sm:px-6 lg:px-8">
         {/* Profile card */}
-        <motion.div className="-mt-20 mb-8 rounded-3xl border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8">
+        <motion.div className="-mt-20 mb-8 rounded-3xl border border-gray-200/80 bg-white/95 p-6 shadow-xl shadow-gray-200/50 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-2xl dark:shadow-black/40 sm:p-8">
           <motion.div className="flex flex-col gap-6 sm:flex-row sm:items-start">
             <motion.div className="relative mx-auto shrink-0 sm:mx-0">
-              <motion.div className="rounded-full bg-gradient-to-br from-amber-400 to-orange-600 p-1 shadow-lg shadow-amber-500/25">
+              <motion.div className="rounded-full bg-gradient-to-br from-gray-800 to-black p-1 shadow-lg shadow-black/20 dark:from-gray-200 dark:to-white">
                 {profile.user.avatar_url ? (
                   <ImageWithFallback
                     src={profile.user.avatar_url}
                     alt={identity.primaryTitle}
-                    className="h-28 w-28 rounded-full object-cover ring-4 ring-slate-900 sm:h-32 sm:w-32"
+                    className="h-28 w-28 rounded-full object-cover ring-4 ring-white dark:ring-slate-900 sm:h-32 sm:w-32"
                   />
                 ) : (
-                  <motion.div className="flex h-28 w-28 items-center justify-center rounded-full bg-slate-800 text-4xl font-bold text-amber-300 sm:h-32 sm:w-32">
+                  <motion.div className="flex h-28 w-28 items-center justify-center rounded-full bg-gray-100 text-4xl font-bold text-gray-700 dark:bg-slate-800 dark:text-gray-300 sm:h-32 sm:w-32">
                     {identity.primaryTitle.charAt(0).toUpperCase()}
                   </motion.div>
                 )}
               </motion.div>
               {profile.seller?.is_verified && (
-                <motion.span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg ring-4 ring-slate-900">
+                <motion.span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg ring-4 ring-white dark:ring-slate-900">
                   <ShieldCheck className="h-4 w-4" />
                 </motion.span>
               )}
@@ -231,49 +231,49 @@ export default function PublicProfile() {
 
             <motion.div className="min-w-0 flex-1 text-center sm:text-left">
               {profile.seller && (
-                <motion.p className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-300">
+                <motion.p className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-gray-100 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
                   <Store className="h-3 w-3" />
                   Cửa hàng
                 </motion.p>
               )}
 
-              <motion.h1 className="font-serif text-2xl font-bold tracking-tight text-white sm:text-3xl">
+              <motion.h1 className="font-serif text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
                 {identity.primaryTitle}
               </motion.h1>
 
               {identity.showCreatorLine && (
-                <motion.p className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-sm text-slate-400 sm:justify-start">
-                  <ChefHat className="h-4 w-4 shrink-0 text-amber-400/80" />
+                <motion.p className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-sm text-gray-600 dark:text-slate-400 sm:justify-start">
+                  <ChefHat className="h-4 w-4 shrink-0 text-gray-500 dark:text-slate-400" />
                   <span>
                     Công thức & bài viết bởi{' '}
-                    <span className="font-semibold text-amber-200">{identity.authorName}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">{identity.authorName}</span>
                   </span>
                 </motion.p>
               )}
 
               {!profile.seller && profile.user.bio && (
-                <motion.p className="mt-2 text-sm leading-relaxed text-slate-400">{profile.user.bio}</motion.p>
+                <motion.p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-slate-400">{profile.user.bio}</motion.p>
               )}
 
               {profile.seller?.store_description && (
-                <motion.p className="mt-2 text-sm leading-relaxed text-slate-500">{profile.seller.store_description}</motion.p>
+                <motion.p className="mt-2 text-sm leading-relaxed text-gray-500 dark:text-slate-500">{profile.seller.store_description}</motion.p>
               )}
 
               {profile.seller && profile.user.bio && (
-                <motion.p className="mt-2 text-sm italic text-slate-500">{profile.user.bio}</motion.p>
+                <motion.p className="mt-2 text-sm italic text-gray-500 dark:text-slate-500">{profile.user.bio}</motion.p>
               )}
 
               {profile.seller && (
-                <motion.div className="mt-3 flex items-center justify-center gap-1 text-sm text-amber-400/90 sm:justify-start">
-                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                <motion.div className="mt-3 flex items-center justify-center gap-1 text-sm text-gray-600 dark:text-slate-400 sm:justify-start">
+                  <Star className="h-4 w-4 fill-gray-800 text-gray-800 dark:fill-slate-300 dark:text-slate-300" />
                   <span>{Number(profile.seller.rating).toFixed(1)}</span>
-                  <span className="text-slate-600">·</span>
-                  <span className="text-slate-500">{profile.seller.stats?.total_sold ?? 0} đã bán</span>
+                  <span className="text-gray-400 dark:text-slate-600">·</span>
+                  <span className="text-gray-500 dark:text-slate-500">{profile.seller.stats?.total_sold ?? 0} đã bán</span>
                 </motion.div>
               )}
 
               <div
-                className={`mt-5 grid gap-3 rounded-2xl border border-white/5 bg-slate-800/50 p-3 sm:inline-flex sm:gap-0 sm:p-0 sm:rounded-none sm:border-0 sm:bg-transparent ${
+                className={`mt-5 grid gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-3 dark:border-white/5 dark:bg-slate-800/50 sm:inline-flex sm:gap-0 sm:p-0 sm:rounded-none sm:border-0 sm:bg-transparent ${
                   profile.seller ? 'grid-cols-3' : 'grid-cols-2'
                 }`}
               >
@@ -286,10 +286,10 @@ export default function PublicProfile() {
                 ].map((stat, i, arr) => (
                   <div
                     key={stat.label}
-                    className={`text-center sm:px-5 ${i < arr.length - 1 ? 'sm:border-r sm:border-slate-700' : ''}`}
+                    className={`text-center sm:px-5 ${i < arr.length - 1 ? 'sm:border-r sm:border-gray-200 dark:sm:border-slate-700' : ''}`}
                   >
-                    <div className="text-lg font-bold text-white sm:text-xl">{stat.value}</div>
-                    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:text-[11px]">
+                    <div className="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">{stat.value}</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-500 sm:text-[11px]">
                       {stat.label}
                     </div>
                   </div>
@@ -319,7 +319,7 @@ export default function PublicProfile() {
                 {!profile.is_self && profile.seller && (
                   <Link
                     to={`/messages?sellerId=${profile.user.id}`}
-                    className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-amber-500/25 transition hover:shadow-amber-500/40"
+                    className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-black/15 transition hover:bg-black dark:bg-white dark:text-black dark:hover:bg-gray-100"
                   >
                     <MessageCircle className="h-4 w-4" />
                     Nhắn tin
@@ -328,7 +328,7 @@ export default function PublicProfile() {
                 {profile.is_self && (
                   <Link
                     to="/profile"
-                    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                    className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-gray-100 px-5 py-2.5 text-sm font-semibold text-gray-800 transition hover:bg-gray-200 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
                   >
                     Quản lý hồ sơ
                   </Link>
@@ -339,7 +339,7 @@ export default function PublicProfile() {
         </motion.div>
 
         {/* Tabs */}
-        <motion.div className="mb-8 flex flex-wrap gap-2 rounded-2xl border border-white/5 bg-slate-900/60 p-1.5 backdrop-blur">
+        <motion.div className="mb-8 flex flex-wrap gap-2 rounded-2xl border border-gray-200 bg-white/90 p-1.5 shadow-sm backdrop-blur dark:border-white/5 dark:bg-slate-900/60 dark:shadow-none">
           {tabs.map((t) => {
             const active = tab === t.id;
             return (
@@ -348,13 +348,13 @@ export default function PublicProfile() {
                 type="button"
                 onClick={() => setTab(t.id)}
                 className={`relative inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition sm:flex-none ${
-                  active ? 'text-slate-950' : 'text-slate-400 hover:text-slate-200'
+                  active ? 'text-white dark:text-black' : 'text-gray-500 hover:text-gray-800 dark:text-slate-400 dark:hover:text-slate-200'
                 }`}
               >
                 {active && (
                   <motion.span
                     layoutId="creator-tab"
-                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 shadow-md"
+                    className="absolute inset-0 rounded-xl bg-gray-900 shadow-md dark:bg-white"
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -362,7 +362,7 @@ export default function PublicProfile() {
                   <t.icon className="h-4 w-4" />
                   {t.label}
                   <span
-                    className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? 'bg-black/15' : 'bg-white/10'}`}
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? 'bg-black/15' : 'bg-gray-200 dark:bg-white/10'}`}
                   >
                     {t.count}
                   </span>
@@ -375,14 +375,14 @@ export default function PublicProfile() {
         {tabLoading ? (
           <motion.div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <motion.div key={i} className="aspect-[4/5] animate-pulse rounded-2xl bg-slate-800/80" />
+              <motion.div key={i} className="aspect-[4/5] animate-pulse rounded-2xl bg-gray-200 dark:bg-slate-800/80" />
             ))}
           </motion.div>
         ) : tab === 'shop' ? (
           products.length === 0 ? (
-            <motion.div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/50 py-16 text-center">
-              <Package className="mx-auto mb-3 h-10 w-10 text-slate-600" />
-              <p className="text-slate-500">Chưa có sản phẩm đang bán</p>
+            <motion.div className="rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center dark:border-slate-700 dark:bg-slate-900/50">
+              <Package className="mx-auto mb-3 h-10 w-10 text-gray-400 dark:text-slate-600" />
+              <p className="text-gray-500 dark:text-slate-500">Chưa có sản phẩm đang bán</p>
             </motion.div>
           ) : (
             <motion.div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -395,9 +395,9 @@ export default function PublicProfile() {
                 >
                   <Link
                     to={`/shop/${p.slug}`}
-                    className="group block overflow-hidden rounded-2xl border border-white/5 bg-slate-900/80 shadow-xl transition hover:border-amber-500/30 hover:shadow-amber-500/10"
+                    className="group block overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-md transition hover:border-amber-400/50 hover:shadow-lg dark:border-white/5 dark:bg-slate-900/80 dark:shadow-xl dark:hover:border-amber-500/30 dark:hover:shadow-amber-500/10"
                   >
-                    <motion.div className="relative aspect-square overflow-hidden bg-slate-800">
+                    <motion.div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-slate-800">
                       {p.image_url ? (
                         <ImageWithFallback
                           src={p.image_url}
@@ -412,8 +412,8 @@ export default function PublicProfile() {
                       </motion.div>
                     </motion.div>
                     <motion.div className="p-4">
-                      <p className="line-clamp-2 font-semibold text-white">{p.name}</p>
-                      <p className="mt-2 text-lg font-bold text-amber-400">{formatPrice(p.sale_price ?? p.price)}</p>
+                      <p className="line-clamp-2 font-semibold text-gray-900 dark:text-white">{p.name}</p>
+                      <p className="mt-2 text-lg font-bold text-amber-600 dark:text-amber-400">{formatPrice(p.sale_price ?? p.price)}</p>
                     </motion.div>
                   </Link>
                 </motion.div>
@@ -422,7 +422,7 @@ export default function PublicProfile() {
           )
         ) : tab === 'recipes' ? (
           recipes.length === 0 ? (
-            <motion.div className="rounded-2xl border border-dashed border-slate-700 py-16 text-center text-slate-500">
+            <motion.div className="rounded-2xl border border-dashed border-gray-300 py-16 text-center text-gray-500 dark:border-slate-700 dark:text-slate-500">
               Chưa có công thức công khai
             </motion.div>
           ) : (
@@ -436,9 +436,9 @@ export default function PublicProfile() {
                 >
                   <Link
                     to={`/recipes/detail/${r.id}`}
-                    className="group block overflow-hidden rounded-2xl border border-white/5 bg-slate-900/80 transition hover:border-amber-500/30"
+                    className="group block overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:border-amber-400/50 dark:border-white/5 dark:bg-slate-900/80 dark:hover:border-amber-500/30"
                   >
-                    <motion.div className="aspect-video overflow-hidden bg-slate-800">
+                    <motion.div className="aspect-video overflow-hidden bg-gray-100 dark:bg-slate-800">
                       {r.image_url ? (
                         <ImageWithFallback
                           src={r.image_url}
@@ -450,9 +450,9 @@ export default function PublicProfile() {
                       )}
                     </motion.div>
                     <motion.div className="p-4">
-                      <p className="font-semibold text-white line-clamp-2">{r.title}</p>
+                      <p className="line-clamp-2 font-semibold text-gray-900 dark:text-white">{r.title}</p>
                       {r.category_name && (
-                        <p className="mt-1 text-xs text-amber-400/80">{r.category_name}</p>
+                        <p className="mt-1 text-xs text-amber-600/90 dark:text-amber-400/80">{r.category_name}</p>
                       )}
                     </motion.div>
                   </Link>
@@ -461,7 +461,7 @@ export default function PublicProfile() {
             </motion.div>
           )
         ) : posts.length === 0 ? (
-          <motion.div className="rounded-2xl border border-dashed border-slate-700 py-16 text-center text-slate-500">
+          <motion.div className="rounded-2xl border border-dashed border-gray-300 py-16 text-center text-gray-500 dark:border-slate-700 dark:text-slate-500">
             Chưa có bài viết
           </motion.div>
         ) : (
@@ -475,7 +475,7 @@ export default function PublicProfile() {
               >
                 <Link
                   to={`/blog/detail/${p.id}`}
-                  className="flex gap-4 rounded-2xl border border-white/5 bg-slate-900/80 p-4 transition hover:border-amber-500/20 hover:bg-slate-800/80"
+                  className="flex gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-amber-400/30 hover:bg-gray-50 dark:border-white/5 dark:bg-slate-900/80 dark:hover:border-amber-500/20 dark:hover:bg-slate-800/80"
                 >
                   {p.image_url ? (
                     <ImageWithFallback
@@ -484,13 +484,13 @@ export default function PublicProfile() {
                       className="h-20 w-20 shrink-0 rounded-xl object-cover"
                     />
                   ) : (
-                    <motion.div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-2xl">
+                    <motion.div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-2xl dark:bg-slate-800">
                       📝
                     </motion.div>
                   )}
                   <motion.div className="min-w-0 flex-1">
-                    <p className="font-bold text-white">{p.title}</p>
-                    {p.excerpt && <p className="mt-1 line-clamp-2 text-sm text-slate-500">{p.excerpt}</p>}
+                    <p className="font-bold text-gray-900 dark:text-white">{p.title}</p>
+                    {p.excerpt && <p className="mt-1 line-clamp-2 text-sm text-gray-500 dark:text-slate-500">{p.excerpt}</p>}
                   </motion.div>
                 </Link>
               </motion.div>

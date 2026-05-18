@@ -31,7 +31,7 @@ export default function Blog() {
     setCurrentPage,
     clearFilters
   } = useFilters({ categories, pageSize: BLOG_PAGE_SIZE });
-  
+
   const [posts, setPosts] = useState<BlogPostRow[]>([]);
   const [totalPosts, setTotalPosts] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,7 +56,7 @@ export default function Blog() {
       q.set('limit', String(BLOG_PAGE_SIZE));
       q.set('offset', String((currentPage - 1) * BLOG_PAGE_SIZE));
       const data = await apiJson<{ posts: BlogPostRow[]; total?: number }>(`/api/blog/posts?${q.toString()}`);
-      
+
       setPosts(data.posts ?? []);
       setTotalPosts(data.total ?? 0);
     } catch {
@@ -188,9 +188,9 @@ export default function Blog() {
           </div>
         </div>
 
-        <BlogList 
-          isLoading={isLoading} 
-          posts={posts} 
+        <BlogList
+          isLoading={isLoading}
+          posts={posts}
           onClearFilter={clearFilters}
         />
         {!isLoading && (

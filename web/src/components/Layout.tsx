@@ -5,7 +5,7 @@ import Footer from './Footer';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  
+
   // Các trang phụ, ẩn footer
   const hideFooterRoutes = [
     '/admin',
@@ -17,7 +17,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     '/checkout',
     '/orders'
   ];
-  
+
   const shouldHideFooter = hideFooterRoutes.some(route => location.pathname.startsWith(route));
 
   return (

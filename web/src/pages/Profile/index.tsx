@@ -176,7 +176,7 @@ export default function Profile() {
 
   useEffect(() => {
     void loadMe();
-    
+
     const onAuthChange = (event: Event) => {
       const detail = getAuthChangeDetail(event);
       if (detail.authenticated === false) {
@@ -191,11 +191,11 @@ export default function Profile() {
     // Also fetch blog categories for edit modal
     apiJson<{ categories: BlogCategory[] }>('/api/blog/categories')
       .then(d => setBlogCategories(d.categories ?? []))
-      .catch(() => {});
+      .catch(() => { });
     apiJson<{ categories: RecipeCategory[] }>('/api/recipes/categories')
       .then(d => setRecipeCategories(d.categories ?? []))
-      .catch(() => {});
-      
+      .catch(() => { });
+
     return () => window.removeEventListener(AUTH_CHANGE_EVENT, onAuthChange);
   }, [loadMe]);
 
@@ -319,45 +319,44 @@ export default function Profile() {
                           {myRecipes.map((r) => {
                             const isPending = r.status === 'pending';
                             return (
-                            <div
-                              key={r.id}
-                              className={`group overflow-hidden rounded-xl border transition-shadow hover:shadow-md ${
-                                isPending
-                                  ? 'border-slate-300 bg-slate-100/80 dark:border-slate-600 dark:bg-slate-800/70'
-                                  : 'border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800'
-                              }`}
-                            >
-                              {r.image_url ? (
-                                <img src={r.image_url} alt={r.title} className="h-40 w-full object-cover" />
-                              ) : (
-                                <div className="flex h-40 w-full items-center justify-center bg-gray-100 dark:bg-slate-700">
-                                  <BookOpen className="h-8 w-8 text-gray-300 dark:text-slate-500" />
-                                </div>
-                              )}
-                              <div className="p-4 relative">
-                                {isPending && (
-                                  <span className="absolute right-3 top-3 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                                    Đang chờ duyệt
-                                  </span>
+                              <div
+                                key={r.id}
+                                className={`group overflow-hidden rounded-xl border transition-shadow hover:shadow-md ${isPending
+                                    ? 'border-slate-300 bg-slate-100/80 dark:border-slate-600 dark:bg-slate-800/70'
+                                    : 'border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800'
+                                  }`}
+                              >
+                                {r.image_url ? (
+                                  <img src={r.image_url} alt={r.title} className="h-40 w-full object-cover" />
+                                ) : (
+                                  <div className="flex h-40 w-full items-center justify-center bg-gray-100 dark:bg-slate-700">
+                                    <BookOpen className="h-8 w-8 text-gray-300 dark:text-slate-500" />
+                                  </div>
                                 )}
-                                <h4 className="line-clamp-1 font-bold text-gray-900 dark:text-white pr-16">{r.title}</h4>
-                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{r.category_name}</p>
-                                <div className="mt-3 flex items-center justify-between">
-                                  <Link to={`/recipes/detail/${r.id}`} className="inline-block text-sm font-medium text-yellow-600 hover:text-yellow-700 dark:text-yellow-500 dark:hover:text-yellow-400">
-                                    Xem chi tiết &rarr;
-                                  </Link>
-                                  <div className="flex space-x-2">
-                                    <button onClick={() => setEditingRecipeId(r.id)} className="p-1 text-gray-500 hover:text-blue-600 transition-colors" title="Sửa công thức">
-                                      <Edit className="h-4 w-4" />
-                                    </button>
-                                    <button onClick={() => handleDeleteRecipe(r.id)} className="p-1 text-gray-500 hover:text-red-600 transition-colors" title="Xóa bài">
-                                      <Trash2 className="h-4 w-4" />
-                                    </button>
+                                <div className="p-4 relative">
+                                  {isPending && (
+                                    <span className="absolute right-3 top-3 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                                      Đang chờ duyệt
+                                    </span>
+                                  )}
+                                  <h4 className="line-clamp-1 font-bold text-gray-900 dark:text-white pr-16">{r.title}</h4>
+                                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{r.category_name}</p>
+                                  <div className="mt-3 flex items-center justify-between">
+                                    <Link to={`/recipes/detail/${r.id}`} className="inline-block text-sm font-medium text-yellow-600 hover:text-yellow-700 dark:text-yellow-500 dark:hover:text-yellow-400">
+                                      Xem chi tiết &rarr;
+                                    </Link>
+                                    <div className="flex space-x-2">
+                                      <button onClick={() => setEditingRecipeId(r.id)} className="p-1 text-gray-500 hover:text-blue-600 transition-colors" title="Sửa công thức">
+                                        <Edit className="h-4 w-4" />
+                                      </button>
+                                      <button onClick={() => handleDeleteRecipe(r.id)} className="p-1 text-gray-500 hover:text-red-600 transition-colors" title="Xóa bài">
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          );
+                            );
                           })}
                         </div>
                         <Pagination currentPage={pageByTab.recipes} totalItems={totalByTab.recipes} pageSize={PROFILE_PAGE_SIZE} onPageChange={(page) => handleProfilePageChange('recipes', page)} />
@@ -382,36 +381,35 @@ export default function Profile() {
                           {myPosts.map((p) => {
                             const isPending = p.status === 'pending';
                             return (
-                            <div
-                              key={p.id}
-                              className={`relative rounded-xl border p-5 transition-shadow hover:shadow-md ${
-                                isPending
-                                  ? 'border-slate-300 bg-slate-100/80 dark:border-slate-600 dark:bg-slate-800/70'
-                                  : 'border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800'
-                              }`}
-                            >
-                              {isPending && (
-                                <span className="absolute right-4 top-4 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                                  Đang chờ duyệt
-                                </span>
-                              )}
-                              <div className="flex justify-between items-start">
-                                <span className="text-xs font-semibold text-yellow-600 dark:text-yellow-500">{p.category_name}</span>
-                                <div className="flex space-x-2">
-                                  <button onClick={() => setEditingPostId(p.id)} className="p-1 text-gray-500 hover:text-blue-600 transition-colors" title="Sửa bài">
-                                    <Edit className="h-4 w-4" />
-                                  </button>
-                                  <button onClick={() => handleDeletePost(p.id)} className="p-1 text-gray-500 hover:text-red-600 transition-colors" title="Xóa bài">
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
+                              <div
+                                key={p.id}
+                                className={`relative rounded-xl border p-5 transition-shadow hover:shadow-md ${isPending
+                                    ? 'border-slate-300 bg-slate-100/80 dark:border-slate-600 dark:bg-slate-800/70'
+                                    : 'border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800'
+                                  }`}
+                              >
+                                {isPending && (
+                                  <span className="absolute right-4 top-4 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                                    Đang chờ duyệt
+                                  </span>
+                                )}
+                                <div className="flex justify-between items-start">
+                                  <span className="text-xs font-semibold text-yellow-600 dark:text-yellow-500">{p.category_name}</span>
+                                  <div className="flex space-x-2">
+                                    <button onClick={() => setEditingPostId(p.id)} className="p-1 text-gray-500 hover:text-blue-600 transition-colors" title="Sửa bài">
+                                      <Edit className="h-4 w-4" />
+                                    </button>
+                                    <button onClick={() => handleDeletePost(p.id)} className="p-1 text-gray-500 hover:text-red-600 transition-colors" title="Xóa bài">
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
                                 </div>
+                                <h4 className="mt-1 line-clamp-2 text-lg font-bold text-gray-900 dark:text-white">{p.title}</h4>
+                                <Link to={`/blog/detail/${p.id}`} className="mt-3 inline-block text-sm font-medium text-yellow-600 hover:text-yellow-700 dark:text-yellow-500 dark:hover:text-yellow-400">
+                                  Đọc bài &rarr;
+                                </Link>
                               </div>
-                              <h4 className="mt-1 line-clamp-2 text-lg font-bold text-gray-900 dark:text-white">{p.title}</h4>
-                              <Link to={`/blog/detail/${p.id}`} className="mt-3 inline-block text-sm font-medium text-yellow-600 hover:text-yellow-700 dark:text-yellow-500 dark:hover:text-yellow-400">
-                                Đọc bài &rarr;
-                              </Link>
-                            </div>
-                          );
+                            );
                           })}
                         </div>
                         <Pagination currentPage={pageByTab.posts} totalItems={totalByTab.posts} pageSize={PROFILE_PAGE_SIZE} onPageChange={(page) => handleProfilePageChange('posts', page)} />
@@ -626,18 +624,17 @@ export default function Profile() {
                                   <h4 className="font-semibold text-gray-900 dark:text-white truncate">{p.name}</h4>
                                   <p className="text-sm text-gray-500">{p.price.toLocaleString('vi-VN')}đ · Kho: {p.stock}</p>
                                 </div>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                  p.status === 'approved' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                  p.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                  'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                }`}>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === 'approved' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                    p.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                      'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                  }`}>
                                   {p.status === 'approved' ? 'Đang bán' : p.status === 'pending' ? 'Chờ duyệt' : 'Từ chối'}
                                 </span>
                               </div>
                             ))}
                           </div>
                         )}
-                        
+
                         {totalByTab.shop > PROFILE_PAGE_SIZE && (
                           <div className="mt-8 flex justify-center">
                             <Pagination currentPage={pageByTab.shop} totalItems={totalByTab.shop} pageSize={PROFILE_PAGE_SIZE} onPageChange={(page) => handleProfilePageChange('shop', page)} />

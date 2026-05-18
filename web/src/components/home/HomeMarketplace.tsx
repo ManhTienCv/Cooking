@@ -159,20 +159,13 @@ export default function HomeMarketplace() {
               {products.map((p, idx) => {
                 const hasDiscount = p.sale_price != null && p.sale_price < p.price;
                 const discountPct = hasDiscount ? Math.round((1 - p.sale_price! / p.price) * 100) : 0;
-                const typeLabel =
-                  p.product_type === 'food' ? 'Đồ ăn' :
-                  p.product_type === 'ingredient' ? 'Nguyên liệu' : 'Đồ bếp';
-                const typeColor =
-                  p.product_type === 'food' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                  p.product_type === 'ingredient' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-
+                
                 return (
                   <RevealStaggerItem key={p.id} index={idx} stagger={0.06} y={18}>
-                    <Link to={`/shop/${p.slug}`}>
+                    <Link to={`/shop/${p.slug}`} className="block h-full">
                       <motion.div
                         whileHover={{ y: -5 }}
-                        className="group bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-300"
+                        className="group flex h-full flex-col bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-300"
                       >
                         {/* Image */}
                         <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-slate-700">
@@ -194,44 +187,27 @@ export default function HomeMarketplace() {
                               -{discountPct}%
                             </span>
                           )}
-
-                          <span className={`absolute bottom-2.5 left-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm ${typeColor}`}>
-                            {typeLabel}
-                          </span>
                         </div>
-
-                        {/* Info */}
-                        <div className="p-3.5 sm:p-4">
-                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                        {/* Details */}
+                        <div className="flex flex-1 flex-col p-3 sm:p-4">
+                          <h4 className="text-sm sm:text-base font-bold text-gray-800 dark:text-slate-100 line-clamp-2 flex-1">
                             {p.name}
                           </h4>
-
-                          <div className="flex items-center gap-1.5 mb-2">
-                            {p.rating > 0 && (
+                          <div className="mt-2">
+                            {hasDiscount ? (
                               <>
-                                <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{p.rating.toFixed(1)}</span>
+                                <span className="text-sm sm:text-base font-bold text-red-600 dark:text-red-500">{fmt(p.sale_price!)}</span>
+                                <span className="ml-2 text-xs sm:text-sm text-gray-400 line-through">{fmt(p.price)}</span>
                               </>
-                            )}
-                            {p.total_sold > 0 && (
-                              <span className="text-xs text-gray-400">· Đã bán {p.total_sold}</span>
-                            )}
-                          </div>
-
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-base font-bold text-amber-600 dark:text-amber-400">
-                              {fmt(hasDiscount ? p.sale_price! : p.price)}
-                            </span>
-                            {hasDiscount && (
-                              <span className="text-xs text-gray-400 line-through">{fmt(p.price)}</span>
+                            ) : (
+                              <span className="text-sm sm:text-base font-bold text-gray-800 dark:text-slate-200">{fmt(p.price)}</span>
                             )}
                           </div>
-
-                          {p.store_name && (
-                            <div className="mt-2 pt-2 border-t border-gray-50 dark:border-slate-700/50 text-xs text-gray-400 dark:text-gray-500 truncate">
-                              {p.store_name}
-                            </div>
-                          )}
+                          <div className="mt-2 flex items-center gap-1 text-xs text-amber-500">
+                            <Star className="w-3 h-3 fill-current" />
+                            <span className="font-bold">{p.rating.toFixed(1)}</span>
+                            <span className="text-gray-400">({p.total_sold})</span>
+                          </div>
                         </div>
                       </motion.div>
                     </Link>

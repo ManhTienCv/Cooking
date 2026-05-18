@@ -6,7 +6,6 @@ import {
   PenTool,
   Package,
   MessageCircle,
-  ShieldCheck,
   Star,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -211,11 +210,6 @@ export default function PublicProfile() {
                   </motion.div>
                 )}
               </motion.div>
-              {profile.seller?.is_verified && (
-                <motion.span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg ring-4 ring-white dark:ring-slate-900">
-                  <ShieldCheck className="h-4 w-4" />
-                </motion.span>
-              )}
             </motion.div>
 
             <motion.div className="min-w-0 flex-1 text-center sm:text-left">

@@ -7,7 +7,6 @@ import {
   Package,
   MessageCircle,
   ShieldCheck,
-  ChefHat,
   Star,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -87,9 +86,10 @@ export default function PublicProfile() {
     apiJson<PublicProfileData>(`/api/users/${userId}/public`)
       .then((data) => {
         setProfile(data);
-        if (data.seller) setTab('shop');
-        else if (data.counts.recipes > 0) setTab('recipes');
-        else setTab('posts');
+        if (data.counts.recipes > 0) setTab('recipes');
+        else if (data.counts.posts > 0) setTab('posts');
+        else if (data.seller) setTab('shop');
+        else setTab('recipes');
       })
       .catch(() => setProfile(null))
       .finally(() => setLoading(false));
@@ -136,13 +136,7 @@ export default function PublicProfile() {
     if (!profile) return null;
     const authorName = profile.user.full_name;
     const storeName = profile.seller?.store_name ?? null;
-    const primaryTitle = storeName ?? authorName;
-    const showCreatorLine =
-      profile.seller &&
-      (namesDiffer(storeName ?? '', authorName) ||
-        profile.counts.recipes > 0 ||
-        profile.counts.posts > 0);
-    return { authorName, storeName, primaryTitle, showCreatorLine };
+    return { authorName, storeName };
   }, [profile]);
 
   if (loading) {
@@ -179,17 +173,12 @@ export default function PublicProfile() {
   }
 
   const tabs: { id: TabId; label: string; icon: typeof Store; count: number }[] = [];
+  // Công thức & Bài viết luôn hiển thị trước
+  tabs.push({ id: 'recipes', label: 'Công thức', icon: BookOpen, count: profile.counts.recipes });
+  tabs.push({ id: 'posts', label: 'Bài viết', icon: PenTool, count: profile.counts.posts });
+  // Cửa hàng chỉ hiển thị khi người dùng là seller
   if (profile.seller) {
     tabs.push({ id: 'shop', label: 'Cửa hàng', icon: Store, count: profile.seller.stats?.total_products ?? 0 });
-  }
-  if (profile.counts.recipes > 0 || tab === 'recipes') {
-    tabs.push({ id: 'recipes', label: 'Công thức', icon: BookOpen, count: profile.counts.recipes });
-  }
-  if (profile.counts.posts > 0 || tab === 'posts') {
-    tabs.push({ id: 'posts', label: 'Bài viết', icon: PenTool, count: profile.counts.posts });
-  }
-  if (tabs.length === 0) {
-    tabs.push({ id: 'recipes', label: 'Công thức', icon: BookOpen, count: 0 });
   }
 
   return (
@@ -213,12 +202,12 @@ export default function PublicProfile() {
                 {profile.user.avatar_url ? (
                   <ImageWithFallback
                     src={profile.user.avatar_url}
-                    alt={identity.primaryTitle}
+                    alt={identity.authorName}
                     className="h-28 w-28 rounded-full object-cover ring-4 ring-white dark:ring-slate-900 sm:h-32 sm:w-32"
                   />
                 ) : (
                   <motion.div className="flex h-28 w-28 items-center justify-center rounded-full bg-gray-100 text-4xl font-bold text-gray-700 dark:bg-slate-800 dark:text-gray-300 sm:h-32 sm:w-32">
-                    {identity.primaryTitle.charAt(0).toUpperCase()}
+                    {identity.authorName.charAt(0).toUpperCase()}
                   </motion.div>
                 )}
               </motion.div>
@@ -230,46 +219,34 @@ export default function PublicProfile() {
             </motion.div>
 
             <motion.div className="min-w-0 flex-1 text-center sm:text-left">
-              {profile.seller && (
-                <motion.p className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-gray-100 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                  <Store className="h-3 w-3" />
-                  Cửa hàng
-                </motion.p>
-              )}
-
+              {/* Tên cá nhân luôn là tiêu đề chính */}
               <motion.h1 className="font-serif text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-                {identity.primaryTitle}
+                {identity.authorName}
               </motion.h1>
 
-              {identity.showCreatorLine && (
-                <motion.p className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-sm text-gray-600 dark:text-slate-400 sm:justify-start">
-                  <ChefHat className="h-4 w-4 shrink-0 text-gray-500 dark:text-slate-400" />
-                  <span>
-                    Công thức & bài viết bởi{' '}
-                    <span className="font-semibold text-gray-900 dark:text-white">{identity.authorName}</span>
-                  </span>
-                </motion.p>
+              {/* Bio luôn hiển thị nếu có */}
+              {profile.user.bio && (
+                <motion.p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-slate-400">{profile.user.bio}</motion.p>
               )}
 
-              {!profile.seller && profile.user.bio && (
-                <motion.p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-slate-400">{profile.user.bio}</motion.p>
+              {/* Thông tin cửa hàng (nếu có) — hiển thị phía dưới */}
+              {profile.seller && (
+                <motion.div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <Store className="h-3.5 w-3.5" />
+                    {identity.storeName}
+                  </span>
+                  <span className="flex items-center gap-1 text-sm text-gray-500 dark:text-slate-500">
+                    <Star className="h-3.5 w-3.5 fill-gray-800 text-gray-800 dark:fill-slate-300 dark:text-slate-300" />
+                    {Number(profile.seller.rating).toFixed(1)}
+                    <span className="text-gray-400 dark:text-slate-600">·</span>
+                    {profile.seller.stats?.total_sold ?? 0} đã bán
+                  </span>
+                </motion.div>
               )}
 
               {profile.seller?.store_description && (
                 <motion.p className="mt-2 text-sm leading-relaxed text-gray-500 dark:text-slate-500">{profile.seller.store_description}</motion.p>
-              )}
-
-              {profile.seller && profile.user.bio && (
-                <motion.p className="mt-2 text-sm italic text-gray-500 dark:text-slate-500">{profile.user.bio}</motion.p>
-              )}
-
-              {profile.seller && (
-                <motion.div className="mt-3 flex items-center justify-center gap-1 text-sm text-gray-600 dark:text-slate-400 sm:justify-start">
-                  <Star className="h-4 w-4 fill-gray-800 text-gray-800 dark:fill-slate-300 dark:text-slate-300" />
-                  <span>{Number(profile.seller.rating).toFixed(1)}</span>
-                  <span className="text-gray-400 dark:text-slate-600">·</span>
-                  <span className="text-gray-500 dark:text-slate-500">{profile.seller.stats?.total_sold ?? 0} đã bán</span>
-                </motion.div>
               )}
 
               <div

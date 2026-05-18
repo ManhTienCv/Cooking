@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, MapPin, Phone, User, CreditCard, Package, CheckCircle, Star } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, User, CreditCard, Package, CheckCircle, Star, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { apiFetch, apiJson } from '../../lib/api';
@@ -43,6 +43,20 @@ export default function OrderDetail() {
   }, [id]);
 
   const canReview = order ? ['delivered', 'completed'].includes(order.status) : false;
+
+  const orderSellers = useMemo(() => {
+    if (!order) return [];
+    const map = new Map<number, string[]>();
+    for (const item of order.items) {
+      const list = map.get(item.seller_id) ?? [];
+      list.push(item.product_name);
+      map.set(item.seller_id, list);
+    }
+    return [...map.entries()].map(([sellerId, productNames]) => ({
+      sellerId,
+      productNames,
+    }));
+  }, [order]);
 
   const updateReviewForm = (productId: number, patch: Partial<{ rating: number; comment: string; submitting: boolean; submitted: boolean }>) => {
     setReviewForms((prev) => ({
@@ -299,6 +313,34 @@ export default function OrderDetail() {
             </div>
           </div>
         </Reveal>
+
+        {/* Chat with sellers */}
+        {orderSellers.length > 0 && (
+          <Reveal y={12} delay={0.1}>
+            <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-gray-100 dark:border-slate-700/50 p-6">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                <MessageCircle className="w-4 h-4 text-amber-500" /> Trao đổi với cửa hàng
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Có vấn đề với đơn hàng? Nhắn tin trực tiếp — cuộc trò chuyện sẽ gắn với đơn #{order.id}.
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                {orderSellers.map(({ sellerId, productNames }) => (
+                  <Link
+                    key={sellerId}
+                    to={`/messages?orderId=${order.id}&sellerId=${sellerId}`}
+                    className="inline-flex flex-1 min-w-[200px] items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-200 dark:hover:bg-amber-900/35"
+                  >
+                    <MessageCircle className="h-4 w-4 shrink-0" />
+                    <span className="truncate">
+                      {orderSellers.length > 1 ? `Chat cửa hàng (${productNames[0]}…)` : 'Nhắn tin cửa hàng'}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+        )}
 
         {/* Shipping Info */}
         <Reveal y={12} delay={0.12}>

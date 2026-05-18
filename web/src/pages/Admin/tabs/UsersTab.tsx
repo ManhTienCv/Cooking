@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import DataTableTab from './DataTableTab';
 import { apiJson } from '../../../lib/api';
-import toast from 'react-hot-toast';
 
 export default function UsersTab() {
   const [users, setUsers] = useState<Record<string, unknown>[]>([]);
@@ -34,8 +34,6 @@ export default function UsersTab() {
     }
   }, [loadUsers]);
 
-  if (loading) return <div className="text-slate-500">Đang tải...</div>;
-
   const columns = useMemo(() => [
     { key: 'id', label: 'ID' },
     { key: 'full_name', label: 'Họ tên' },
@@ -55,6 +53,8 @@ export default function UsersTab() {
       Xóa
     </button>
   ), [onDeleteUser]);
+
+  if (loading) return <div className="text-slate-500">Đang tải...</div>;
 
   return (
     <DataTableTab

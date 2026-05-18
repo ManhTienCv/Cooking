@@ -36,7 +36,7 @@ marketplaceRouter.get('/products', asyncHandler(async (req, res) => {
 
 // GET /api/marketplace/products/featured
 marketplaceRouter.get('/products/featured', asyncHandler(async (req, res) => {
-  const result = await marketplaceService.getFeaturedRecipes(req.query.limit as string);
+  const result = await marketplaceService.getFeaturedProducts(req.query.limit as string);
   res.json({ success: true, ...result });
 }));
 

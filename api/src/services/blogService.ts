@@ -194,7 +194,7 @@ export async function updateComment(commentIdRaw: unknown, userId: number, conte
     [filtered, commentId, userId]
   );
 
-  if (r.rowCount === 0) throw { status: 403, message: 'Không có quyền sửa bình luận này.' };
+  if ((r.rowCount ?? 0) === 0) throw { status: 403, message: 'Không có quyền sửa bình luận này.' };
   return { comment: r.rows[0] };
 }
 
@@ -207,7 +207,7 @@ export async function deleteComment(commentIdRaw: unknown, userId: number) {
     [commentId, userId]
   );
 
-  if (r.rowCount === 0) throw { status: 403, message: 'Không có quyền xóa bình luận này.' };
+  if ((r.rowCount ?? 0) === 0) throw { status: 403, message: 'Không có quyền xóa bình luận này.' };
   return { success: true };
 }
 

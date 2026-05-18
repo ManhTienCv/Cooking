@@ -259,10 +259,10 @@ export default function ProductDetail() {
                   <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
                     <Store className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <Link to={`/creator/${product.seller_id}`} className="min-w-0 flex-1 transition hover:opacity-90">
                     <p className="font-semibold text-gray-900 dark:text-white text-sm">{product.store_name}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">bởi {product.seller_name}</p>
-                  </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">bởi {product.seller_name} · Xem trang</p>
+                  </Link>
                   <Link
                     to={chatHref}
                     className="shrink-0 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-300 dark:hover:bg-amber-900/35"

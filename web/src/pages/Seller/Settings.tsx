@@ -1,18 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft,
   Bell,
-  Building2,
   CheckCircle2,
   ChevronDown,
   CreditCard,
-  Eye,
-  EyeOff,
   Lock,
-  MailCheck,
   MessageCircle,
   ShieldCheck,
   Store,
@@ -20,6 +15,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiJson } from '../../lib/api';
+import PageBackBar from '../../components/ui/PageBackBar';
 
 type VerificationStatus = 'draft' | 'pending' | 'verified' | 'rejected' | 'suspended';
 type BusinessType = 'individual' | 'household' | 'company';
@@ -194,6 +190,8 @@ function ToggleRow({
 }
 
 export default function SellerSettings() {
+  const [searchParams] = useSearchParams();
+  const sectionParam = searchParams.get('section');
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<SellerProfileSettings | null>(null);
   const [preferences, setPreferences] = useState<SellerPreferences | null>(null);
@@ -204,8 +202,17 @@ export default function SellerSettings() {
   const [securityBusy, setSecurityBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>('store');
+  const [showVerificationSecurity, setShowVerificationSecurity] = useState(false);
+  const [showPayoutSecurity, setShowPayoutSecurity] = useState(false);
 
   const toggleSection = (id: string) => setOpenSection(openSection === id ? null : id);
+
+  useEffect(() => {
+    const validSections = new Set(['store', 'verification', 'payout', 'notifications']);
+    if (sectionParam && validSections.has(sectionParam)) {
+      setOpenSection(sectionParam);
+    }
+  }, [sectionParam]);
 
   const [storeForm, setStoreForm] = useState({
     store_name: '',
@@ -293,6 +300,15 @@ export default function SellerSettings() {
   const needsOtp = useMemo(() => !security?.otpVerified, [security?.otpVerified]);
   const needsPassword = useMemo(() => !security?.passwordVerified, [security?.passwordVerified]);
 
+  useEffect(() => {
+    if (!needsPassword && !needsOtp) {
+      setShowPayoutSecurity(false);
+    }
+    if (!needsPassword) {
+      setShowVerificationSecurity(false);
+    }
+  }, [needsPassword, needsOtp]);
+
   const verifyPassword = async () => {
     if (!password.trim()) return;
     setSecurityBusy(true);
@@ -361,6 +377,7 @@ export default function SellerSettings() {
   const submitVerification = async (e: React.FormEvent) => {
     e.preventDefault();
     if (needsPassword) {
+      setShowVerificationSecurity(true);
       toast.error('Nhập lại mật khẩu trước khi gửi xác minh');
       return;
     }
@@ -404,7 +421,8 @@ export default function SellerSettings() {
   const addPayout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (needsPassword || needsOtp) {
-      toast.error('Can xac thuc mat khau va OTP truoc khi sua tai khoan ngan hang');
+      setShowPayoutSecurity(true);
+      toast.error('Vui lòng xác thực mật khẩu và OTP trước khi thêm tài khoản ngân hàng.');
       return;
     }
     setSaving(true);
@@ -425,7 +443,9 @@ export default function SellerSettings() {
 
   const deletePayout = async (id: number) => {
     if (needsPassword || needsOtp) {
-      toast.error('Can xac thuc mat khau va OTP truoc khi xoa tai khoan ngan hang');
+      setOpenSection('payout');
+      setShowPayoutSecurity(true);
+      toast.error('Vui lòng xác thực mật khẩu và OTP trước khi xóa tài khoản ngân hàng.');
       return;
     }
     try {
@@ -439,7 +459,9 @@ export default function SellerSettings() {
 
   const setDefaultPayout = async (id: number) => {
     if (needsPassword || needsOtp) {
-      toast.error('Can xac thuc mat khau va OTP truoc khi doi mac dinh');
+      setOpenSection('payout');
+      setShowPayoutSecurity(true);
+      toast.error('Vui lòng xác thực mật khẩu và OTP trước khi đổi tài khoản mặc định.');
       return;
     }
     try {
@@ -481,9 +503,7 @@ export default function SellerSettings() {
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <Link to="/seller" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white">
-              <ArrowLeft className="h-4 w-4" /> Quay lai dashboard
-            </Link>
+            <PageBackBar fallbackTo="/seller" label="Quay lại" />
             <h1 className="mt-3 text-2xl font-bold">Cài đặt nhà bán hàng</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">Bảo mật thông tin cửa hàng, xác minh và tài khoản thanh toán.</p>
           </div>
@@ -561,7 +581,7 @@ export default function SellerSettings() {
                     <input className={inputClass} value={verificationForm.identity_number} onChange={(e) => setVerificationForm((f) => ({ ...f, identity_number: e.target.value }))} />
                   </div>
                   <div className="md:col-span-2 flex flex-wrap items-center gap-3">
-                    <button disabled={saving || needsPassword} className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">
+                    <button disabled={saving} className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">
                       Gửi hồ sơ xác minh
                     </button>
                     <button type="button" onClick={() => { setVerificationEdit(false); void loadSettings(); }} className="rounded-md border px-4 py-2 text-sm dark:border-slate-700">
@@ -569,6 +589,23 @@ export default function SellerSettings() {
                     </button>
                     {needsPassword && <span className="text-sm text-amber-600">Cần xác thực mật khẩu trước.</span>}
                   </div>
+                  {showVerificationSecurity && needsPassword && (
+                    <div className="md:col-span-2 rounded-lg border border-amber-300 bg-amber-50/80 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+                      <div className="mb-3 flex items-start gap-3">
+                        <Lock className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                        <div>
+                          <h3 className="font-bold text-slate-950 dark:text-white">Xác thực trước khi gửi hồ sơ</h3>
+                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Nhập lại mật khẩu để bảo vệ thông tin pháp lý của cửa hàng.</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-3 sm:flex-row">
+                        <input className={inputClass} type="password" placeholder="Mật khẩu hiện tại" value={password} onChange={(e) => setPassword(e.target.value)} />
+                        <button type="button" disabled={securityBusy || !password} onClick={() => void verifyPassword()} className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">
+                          Xác thực
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </form>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
@@ -635,27 +672,70 @@ export default function SellerSettings() {
                 <input className={inputClass} placeholder="Tên chủ tài khoản" value={payoutForm.account_name} onChange={(e) => setPayoutForm((f) => ({ ...f, account_name: e.target.value }))} />
                 <input className={inputClass} placeholder="Số tài khoản" value={payoutForm.account_number} onChange={(e) => setPayoutForm((f) => ({ ...f, account_number: e.target.value }))} />
                 <div className="md:col-span-3">
-                  <button disabled={saving || needsPassword || needsOtp} className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">
+                  <button disabled={saving} className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">
                     Thêm tài khoản
                   </button>
-                  {(needsPassword || needsOtp) && <span className="ml-3 text-sm text-amber-600">Cần xác thực mật khẩu và OTP.</span>}
+                  {(needsPassword || needsOtp) && <span className="ml-3 text-sm text-amber-600">Sẽ yêu cầu xác thực trước khi thêm.</span>}
                 </div>
               </form>
+              {showPayoutSecurity && (needsPassword || needsOtp) && (
+                <div className="mt-5 rounded-lg border border-amber-300 bg-amber-50/80 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+                  <div className="mb-4 flex items-start gap-3">
+                    <Lock className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                    <div>
+                      <h3 className="font-bold text-slate-950 dark:text-white">Xác thực trước khi thêm tài khoản</h3>
+                      <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        Tài khoản ngân hàng là thông tin nhận tiền, nên cần nhập đúng mật khẩu và OTP email trước khi lưu.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-3">
+                      <div className="rounded-md bg-white p-3 text-sm dark:bg-slate-950">
+                        <p className="font-semibold">{security?.passwordVerified ? 'Mật khẩu đã xác thực' : 'Bước 1: nhập lại mật khẩu'}</p>
+                        {security?.passwordVerifiedUntil && <p className="text-slate-500">Hiệu lực đến {maskTime(security.passwordVerifiedUntil)}</p>}
+                      </div>
+                      <input className={inputClass} type="password" placeholder="Mật khẩu hiện tại" value={password} onChange={(e) => setPassword(e.target.value)} />
+                      <button type="button" disabled={securityBusy || !password} onClick={() => void verifyPassword()} className="w-full rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">
+                        Xác thực mật khẩu
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="rounded-md bg-white p-3 text-sm dark:bg-slate-950">
+                        <p className="font-semibold">{security?.otpVerified ? 'OTP đã xác thực' : 'Bước 2: xác thực OTP'}</p>
+                        {security?.otpVerifiedUntil && <p className="text-slate-500">Hiệu lực đến {maskTime(security.otpVerifiedUntil)}</p>}
+                      </div>
+                      <button type="button" disabled={securityBusy || needsPassword} onClick={() => void requestOtp()} className="w-full rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950">
+                        Gửi OTP qua email
+                      </button>
+                      <div className="flex gap-2">
+                        <input className={inputClass} placeholder="6 chữ số OTP" value={otp} onChange={(e) => setOtp(e.target.value)} />
+                        <button type="button" disabled={securityBusy || !otp || needsPassword} onClick={() => void verifyOtp()} className="rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                          OK
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </AccordionSection>
 
             <AccordionSection
-              id="privacy"
-              title="Thông báo & Riêng tư"
+              id="notifications"
+              title="Cài đặt thông báo"
               icon={Bell}
               iconColor="text-purple-500"
-              isOpen={openSection === 'privacy'}
+              isOpen={openSection === 'notifications'}
               onToggle={toggleSection}
             >
+              <div className="mb-4 rounded-md bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+                Chọn những kênh mà cửa hàng muốn nhận cảnh báo. Các cảnh báo bảo mật quan trọng vẫn được gửi để bảo vệ tài khoản.
+              </div>
               <div className="space-y-1">
                 <ToggleRow icon={MessageCircle} title="Chat với khách hàng" detail="Cho phép người mua mở tin nhắn với cửa hàng" checked={preferences.chat_enabled} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), chat_enabled: v })} />
-                <ToggleRow icon={Bell} title="Thông báo đơn hàng" detail="Nhận thông báo khi có đơn hàng và cập nhật trạng thái" checked={preferences.order_notifications} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), order_notifications: v })} />
-                <ToggleRow icon={MailCheck} title="Thông báo tài khoản" detail="Nhận email về bảo mật và hồ sơ người bán" checked={preferences.account_notifications} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), account_notifications: v })} />
-                <ToggleRow icon={preferences.profile_visible ? Eye : EyeOff} title="Hiển thị hồ sơ cửa hàng" detail="Cho phép người mua xem trang của cửa hàng công khai" checked={preferences.profile_visible} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), profile_visible: v })} />
+                <ToggleRow icon={Bell} title="Thông báo đơn hàng" detail="Nhận thông báo trong kênh bán hàng khi có đơn mới" checked={preferences.order_notifications} onChange={(v) => void savePreferences({ ...(preferences as SellerPreferences), order_notifications: v })} />
               </div>
             </AccordionSection>
           </main>
@@ -663,42 +743,12 @@ export default function SellerSettings() {
           <aside className="space-y-6">
             <section className={panelClass}>
               <div className="mb-4 flex items-center gap-3">
-                <Lock className="h-5 w-5 text-red-500" />
-                <h2 className="text-lg font-bold">Xác thực bảo mật</h2>
-              </div>
-              <div className="space-y-4">
-                <div className="rounded-md bg-slate-50 p-3 text-sm dark:bg-slate-950">
-                  <p className="font-semibold">{security?.passwordVerified ? 'Mật khẩu đã xác thực' : 'Cần nhập lại mật khẩu'}</p>
-                  {security?.passwordVerifiedUntil && <p className="text-slate-500">Hiệu lực đến {maskTime(security.passwordVerifiedUntil)}</p>}
-                </div>
-                <input className={inputClass} type="password" placeholder="Mật khẩu hiện tại" value={password} onChange={(e) => setPassword(e.target.value)} />
-                <button type="button" disabled={securityBusy || !password} onClick={() => void verifyPassword()} className="w-full rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">
-                  Xác thực mật khẩu
-                </button>
-
-                <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
-                  <div className="mb-3 rounded-md bg-slate-50 p-3 text-sm dark:bg-slate-950">
-                    <p className="font-semibold">{security?.otpVerified ? 'OTP đã xác thực' : 'OTP bảo mật'}</p>
-                    {security?.otpVerifiedUntil && <p className="text-slate-500">Hiệu lực đến {maskTime(security.otpVerifiedUntil)}</p>}
-                  </div>
-                  <button type="button" disabled={securityBusy || needsPassword} onClick={() => void requestOtp()} className="mb-3 w-full rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-50 dark:border-slate-700">
-                    Gửi OTP qua email
-                  </button>
-                  <div className="flex gap-2">
-                    <input className={inputClass} placeholder="6 chữ số OTP" value={otp} onChange={(e) => setOtp(e.target.value)} />
-                    <button type="button" disabled={securityBusy || !otp || needsPassword} onClick={() => void verifyOtp()} className="rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-                      OK
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className={panelClass}>
-              <div className="mb-4 flex items-center gap-3">
-                <Building2 className="h-5 w-5 text-slate-500" />
+                <Store className="h-5 w-5 text-slate-500" />
                 <h2 className="text-lg font-bold">Tóm tắt kênh bán hàng</h2>
               </div>
+              <p className="mb-4 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                Kiểm tra nhanh trạng thái xác minh và tài khoản nhận tiền của cửa hàng.
+              </p>
               <div className="space-y-3 text-sm">
                 <p><span className="text-slate-500">Email:</span> {maskEmail(profile.email)}</p>
                 <p><span className="text-slate-500">Cửa hàng:</span> {profile.store_name}</p>

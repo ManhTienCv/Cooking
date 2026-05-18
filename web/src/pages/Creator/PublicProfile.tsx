@@ -1,0 +1,509 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import {
+  Store,
+  BookOpen,
+  PenTool,
+  Package,
+  MessageCircle,
+  ShieldCheck,
+  ChefHat,
+  Star,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { apiJson } from '../../lib/api';
+import ImageWithFallback from '../../lib/ImageWithFallback';
+import FollowButton from '../../components/social/FollowButton';
+import PageBackBar from '../../components/ui/PageBackBar';
+import Pagination from '../../components/ui/Pagination';
+
+type PublicProfileData = {
+  user: {
+    id: number;
+    full_name: string;
+    bio: string | null;
+    avatar_url: string | null;
+    created_at: string;
+  };
+  seller: {
+    store_name: string;
+    store_description: string | null;
+    is_verified: boolean;
+    rating: number;
+    total_sales: number;
+    stats: {
+      total_products: number;
+      total_sold: number;
+      total_orders: number;
+      total_revenue: number;
+    } | null;
+  } | null;
+  counts: {
+    followers: number;
+    following: number;
+    recipes: number;
+    posts: number;
+  };
+  is_following: boolean;
+  is_self: boolean;
+};
+
+type TabId = 'shop' | 'recipes' | 'posts';
+
+const PAGE_SIZE = 12;
+
+function formatPrice(n: number) {
+  return n.toLocaleString('vi-VN') + 'đ';
+}
+
+function namesDiffer(a: string, b: string): boolean {
+  return a.trim().toLowerCase() !== b.trim().toLowerCase();
+}
+
+export default function PublicProfile() {
+  const { id } = useParams<{ id: string }>();
+  const userId = Number(id);
+
+  const [profile, setProfile] = useState<PublicProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<TabId>('shop');
+  const [page, setPage] = useState(1);
+
+  const [products, setProducts] = useState<
+    { id: number; name: string; slug: string; price: number; sale_price: number | null; image_url: string | null }[]
+  >([]);
+  const [recipes, setRecipes] = useState<
+    { id: number; title: string; image_url: string | null; category_name: string | null }[]
+  >([]);
+  const [posts, setPosts] = useState<
+    { id: number; title: string; slug: string; excerpt: string | null; image_url: string | null }[]
+  >([]);
+  const [tabTotal, setTabTotal] = useState(0);
+  const [tabLoading, setTabLoading] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    setLoading(true);
+    apiJson<PublicProfileData>(`/api/users/${userId}/public`)
+      .then((data) => {
+        setProfile(data);
+        if (data.seller) setTab('shop');
+        else if (data.counts.recipes > 0) setTab('recipes');
+        else setTab('posts');
+      })
+      .catch(() => setProfile(null))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  const loadTab = useCallback(async () => {
+    if (!userId) return;
+    setTabLoading(true);
+    const offset = (page - 1) * PAGE_SIZE;
+    const q = `limit=${PAGE_SIZE}&offset=${offset}`;
+    try {
+      if (tab === 'shop') {
+        const d = await apiJson<{ products: typeof products; total: number }>(`/api/users/${userId}/products?${q}`);
+        setProducts(d.products ?? []);
+        setTabTotal(d.total ?? 0);
+      } else if (tab === 'recipes') {
+        const d = await apiJson<{ recipes: typeof recipes; total: number }>(`/api/users/${userId}/recipes?${q}`);
+        setRecipes(d.recipes ?? []);
+        setTabTotal(d.total ?? 0);
+      } else {
+        const d = await apiJson<{ posts: typeof posts; total: number }>(`/api/users/${userId}/posts?${q}`);
+        setPosts(d.posts ?? []);
+        setTabTotal(d.total ?? 0);
+      }
+    } catch {
+      setProducts([]);
+      setRecipes([]);
+      setPosts([]);
+      setTabTotal(0);
+    } finally {
+      setTabLoading(false);
+    }
+  }, [userId, tab, page]);
+
+  useEffect(() => {
+    if (profile) void loadTab();
+  }, [profile, loadTab]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [tab]);
+
+  const identity = useMemo(() => {
+    if (!profile) return null;
+    const authorName = profile.user.full_name;
+    const storeName = profile.seller?.store_name ?? null;
+    const primaryTitle = storeName ?? authorName;
+    const showCreatorLine =
+      profile.seller &&
+      (namesDiffer(storeName ?? '', authorName) ||
+        profile.counts.recipes > 0 ||
+        profile.counts.posts > 0);
+    return { authorName, storeName, primaryTitle, showCreatorLine };
+  }, [profile]);
+
+  if (loading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex min-h-screen items-center justify-center bg-slate-950"
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+          className="h-11 w-11 rounded-full border-4 border-amber-500/30 border-t-amber-500"
+        />
+      </motion.div>
+    );
+  }
+
+  if (!profile || !identity) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-950 px-4"
+      >
+        <PageBackBar fallbackTo="/" className="absolute left-4 top-6 sm:left-8" />
+        <p className="text-6xl">😕</p>
+        <h2 className="text-2xl font-bold text-white">Không tìm thấy trang</h2>
+        <Link to="/" className="text-amber-400 hover:underline">
+          Về trang chủ
+        </Link>
+      </motion.div>
+    );
+  }
+
+  const tabs: { id: TabId; label: string; icon: typeof Store; count: number }[] = [];
+  if (profile.seller) {
+    tabs.push({ id: 'shop', label: 'Cửa hàng', icon: Store, count: profile.seller.stats?.total_products ?? 0 });
+  }
+  if (profile.counts.recipes > 0 || tab === 'recipes') {
+    tabs.push({ id: 'recipes', label: 'Công thức', icon: BookOpen, count: profile.counts.recipes });
+  }
+  if (profile.counts.posts > 0 || tab === 'posts') {
+    tabs.push({ id: 'posts', label: 'Bài viết', icon: PenTool, count: profile.counts.posts });
+  }
+  if (tabs.length === 0) {
+    tabs.push({ id: 'recipes', label: 'Công thức', icon: BookOpen, count: 0 });
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      {/* Cover */}
+      <motion.div className="relative h-44 overflow-hidden sm:h-52 md:h-56">
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-600/40 via-orange-600/25 to-slate-950" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(251,191,36,0.35),_transparent_55%)]" />
+        <motion.div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMwIDkuOTQxLTguMDU5IDE4LTE4IDE4cy0xOC04LjA1OS0xOC0xOCA4LjA1OS0xOCAxOC0xOCAxOCA4LjA1OSAxOCAxOHoiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyIvPjwvZz48L3N2Zz4=')] opacity-60" />
+        <motion.div className="absolute left-4 top-5 z-10 sm:left-8">
+          <PageBackBar fallbackTo="/shop" label="Quay lại" />
+        </motion.div>
+      </motion.div>
+
+      <motion.div className="relative mx-auto max-w-5xl px-4 pb-16 sm:px-6 lg:px-8">
+        {/* Profile card */}
+        <motion.div className="-mt-20 mb-8 rounded-3xl border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8">
+          <motion.div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+            <motion.div className="relative mx-auto shrink-0 sm:mx-0">
+              <motion.div className="rounded-full bg-gradient-to-br from-amber-400 to-orange-600 p-1 shadow-lg shadow-amber-500/25">
+                {profile.user.avatar_url ? (
+                  <ImageWithFallback
+                    src={profile.user.avatar_url}
+                    alt={identity.primaryTitle}
+                    className="h-28 w-28 rounded-full object-cover ring-4 ring-slate-900 sm:h-32 sm:w-32"
+                  />
+                ) : (
+                  <motion.div className="flex h-28 w-28 items-center justify-center rounded-full bg-slate-800 text-4xl font-bold text-amber-300 sm:h-32 sm:w-32">
+                    {identity.primaryTitle.charAt(0).toUpperCase()}
+                  </motion.div>
+                )}
+              </motion.div>
+              {profile.seller?.is_verified && (
+                <motion.span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg ring-4 ring-slate-900">
+                  <ShieldCheck className="h-4 w-4" />
+                </motion.span>
+              )}
+            </motion.div>
+
+            <motion.div className="min-w-0 flex-1 text-center sm:text-left">
+              {profile.seller && (
+                <motion.p className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-300">
+                  <Store className="h-3 w-3" />
+                  Cửa hàng
+                </motion.p>
+              )}
+
+              <motion.h1 className="font-serif text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                {identity.primaryTitle}
+              </motion.h1>
+
+              {identity.showCreatorLine && (
+                <motion.p className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-sm text-slate-400 sm:justify-start">
+                  <ChefHat className="h-4 w-4 shrink-0 text-amber-400/80" />
+                  <span>
+                    Công thức & bài viết bởi{' '}
+                    <span className="font-semibold text-amber-200">{identity.authorName}</span>
+                  </span>
+                </motion.p>
+              )}
+
+              {!profile.seller && profile.user.bio && (
+                <motion.p className="mt-2 text-sm leading-relaxed text-slate-400">{profile.user.bio}</motion.p>
+              )}
+
+              {profile.seller?.store_description && (
+                <motion.p className="mt-2 text-sm leading-relaxed text-slate-500">{profile.seller.store_description}</motion.p>
+              )}
+
+              {profile.seller && profile.user.bio && (
+                <motion.p className="mt-2 text-sm italic text-slate-500">{profile.user.bio}</motion.p>
+              )}
+
+              {profile.seller && (
+                <motion.div className="mt-3 flex items-center justify-center gap-1 text-sm text-amber-400/90 sm:justify-start">
+                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                  <span>{Number(profile.seller.rating).toFixed(1)}</span>
+                  <span className="text-slate-600">·</span>
+                  <span className="text-slate-500">{profile.seller.stats?.total_sold ?? 0} đã bán</span>
+                </motion.div>
+              )}
+
+              <div
+                className={`mt-5 grid gap-3 rounded-2xl border border-white/5 bg-slate-800/50 p-3 sm:inline-flex sm:gap-0 sm:p-0 sm:rounded-none sm:border-0 sm:bg-transparent ${
+                  profile.seller ? 'grid-cols-3' : 'grid-cols-2'
+                }`}
+              >
+                {[
+                  { value: profile.counts.followers, label: 'Theo dõi' },
+                  { value: profile.counts.following, label: 'Đang theo dõi' },
+                  ...(profile.seller
+                    ? [{ value: profile.seller.stats?.total_sold ?? 0, label: 'Đã bán' }]
+                    : []),
+                ].map((stat, i, arr) => (
+                  <div
+                    key={stat.label}
+                    className={`text-center sm:px-5 ${i < arr.length - 1 ? 'sm:border-r sm:border-slate-700' : ''}`}
+                  >
+                    <div className="text-lg font-bold text-white sm:text-xl">{stat.value}</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:text-[11px]">
+                      {stat.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
+                <FollowButton
+                  userId={profile.user.id}
+                  initialFollowing={profile.is_following}
+                  isSelf={profile.is_self}
+                  onChange={(following) =>
+                    setProfile((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            is_following: following,
+                            counts: {
+                              ...prev.counts,
+                              followers: prev.counts.followers + (following ? 1 : -1),
+                            },
+                          }
+                        : prev
+                    )
+                  }
+                />
+                {!profile.is_self && profile.seller && (
+                  <Link
+                    to={`/messages?sellerId=${profile.user.id}`}
+                    className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-amber-500/25 transition hover:shadow-amber-500/40"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Nhắn tin
+                  </Link>
+                )}
+                {profile.is_self && (
+                  <Link
+                    to="/profile"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                  >
+                    Quản lý hồ sơ
+                  </Link>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        </motion.div>
+
+        {/* Tabs */}
+        <motion.div className="mb-8 flex flex-wrap gap-2 rounded-2xl border border-white/5 bg-slate-900/60 p-1.5 backdrop-blur">
+          {tabs.map((t) => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={`relative inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition sm:flex-none ${
+                  active ? 'text-slate-950' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="creator-tab"
+                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 shadow-md"
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  <t.icon className="h-4 w-4" />
+                  {t.label}
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? 'bg-black/15' : 'bg-white/10'}`}
+                  >
+                    {t.count}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </motion.div>
+
+        {tabLoading ? (
+          <motion.div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <motion.div key={i} className="aspect-[4/5] animate-pulse rounded-2xl bg-slate-800/80" />
+            ))}
+          </motion.div>
+        ) : tab === 'shop' ? (
+          products.length === 0 ? (
+            <motion.div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/50 py-16 text-center">
+              <Package className="mx-auto mb-3 h-10 w-10 text-slate-600" />
+              <p className="text-slate-500">Chưa có sản phẩm đang bán</p>
+            </motion.div>
+          ) : (
+            <motion.div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {products.map((p, i) => (
+                <motion.div
+                  key={p.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                >
+                  <Link
+                    to={`/shop/${p.slug}`}
+                    className="group block overflow-hidden rounded-2xl border border-white/5 bg-slate-900/80 shadow-xl transition hover:border-amber-500/30 hover:shadow-amber-500/10"
+                  >
+                    <motion.div className="relative aspect-square overflow-hidden bg-slate-800">
+                      {p.image_url ? (
+                        <ImageWithFallback
+                          src={p.image_url}
+                          alt={p.name}
+                          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <motion.div className="flex h-full items-center justify-center text-5xl opacity-40">📦</motion.div>
+                      )}
+                      <motion.div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 pt-12 opacity-0 transition group-hover:opacity-100">
+                        <span className="text-xs font-semibold text-amber-300">Xem chi tiết →</span>
+                      </motion.div>
+                    </motion.div>
+                    <motion.div className="p-4">
+                      <p className="line-clamp-2 font-semibold text-white">{p.name}</p>
+                      <p className="mt-2 text-lg font-bold text-amber-400">{formatPrice(p.sale_price ?? p.price)}</p>
+                    </motion.div>
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.div>
+          )
+        ) : tab === 'recipes' ? (
+          recipes.length === 0 ? (
+            <motion.div className="rounded-2xl border border-dashed border-slate-700 py-16 text-center text-slate-500">
+              Chưa có công thức công khai
+            </motion.div>
+          ) : (
+            <motion.div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {recipes.map((r, i) => (
+                <motion.div
+                  key={r.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                >
+                  <Link
+                    to={`/recipes/detail/${r.id}`}
+                    className="group block overflow-hidden rounded-2xl border border-white/5 bg-slate-900/80 transition hover:border-amber-500/30"
+                  >
+                    <motion.div className="aspect-video overflow-hidden bg-slate-800">
+                      {r.image_url ? (
+                        <ImageWithFallback
+                          src={r.image_url}
+                          alt={r.title}
+                          className="h-full w-full object-cover transition group-hover:scale-105"
+                        />
+                      ) : (
+                        <motion.div className="flex h-full items-center justify-center text-4xl opacity-30">🍳</motion.div>
+                      )}
+                    </motion.div>
+                    <motion.div className="p-4">
+                      <p className="font-semibold text-white line-clamp-2">{r.title}</p>
+                      {r.category_name && (
+                        <p className="mt-1 text-xs text-amber-400/80">{r.category_name}</p>
+                      )}
+                    </motion.div>
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.div>
+          )
+        ) : posts.length === 0 ? (
+          <motion.div className="rounded-2xl border border-dashed border-slate-700 py-16 text-center text-slate-500">
+            Chưa có bài viết
+          </motion.div>
+        ) : (
+          <motion.div className="space-y-4">
+            {posts.map((p, i) => (
+              <motion.div
+                key={p.id}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.03 }}
+              >
+                <Link
+                  to={`/blog/detail/${p.id}`}
+                  className="flex gap-4 rounded-2xl border border-white/5 bg-slate-900/80 p-4 transition hover:border-amber-500/20 hover:bg-slate-800/80"
+                >
+                  {p.image_url ? (
+                    <ImageWithFallback
+                      src={p.image_url}
+                      alt=""
+                      className="h-20 w-20 shrink-0 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <motion.div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-2xl">
+                      📝
+                    </motion.div>
+                  )}
+                  <motion.div className="min-w-0 flex-1">
+                    <p className="font-bold text-white">{p.title}</p>
+                    {p.excerpt && <p className="mt-1 line-clamp-2 text-sm text-slate-500">{p.excerpt}</p>}
+                  </motion.div>
+                </Link>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+
+        {tabTotal > PAGE_SIZE && (
+          <motion.div className="mt-10 flex justify-center">
+            <Pagination currentPage={page} totalItems={tabTotal} pageSize={PAGE_SIZE} onPageChange={setPage} />
+          </motion.div>
+        )}
+      </motion.div>
+    </div>
+  );
+}

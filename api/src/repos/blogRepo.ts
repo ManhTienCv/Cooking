@@ -207,6 +207,29 @@ export async function countPostsByAuthor(authorId: number): Promise<number> {
   return Number(rows[0]?.total ?? 0);
 }
 
+export async function getPublicPostsByAuthor(authorId: number, limit: number, offset: number): Promise<DbRow[]> {
+  const { rows } = await pool.query(
+    `SELECT p.id, p.title, p.slug, p.excerpt, p.image_url, p.created_at, c.name AS category_name
+     FROM blog_posts p
+     LEFT JOIN blog_categories c ON p.category_id = c.id
+     WHERE p.author_id = $1 AND p.status = 'approved'
+     ORDER BY p.created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [authorId, limit, offset]
+  );
+  return rows;
+}
+
+export async function countPublicPostsByAuthor(authorId: number): Promise<number> {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM blog_posts
+     WHERE author_id = $1 AND status = 'approved'`,
+    [authorId]
+  );
+  return Number(rows[0]?.total ?? 0);
+}
+
 export async function deletePost(id: number): Promise<void> {
   await pool.query('DELETE FROM blog_posts WHERE id = $1', [id]);
 }

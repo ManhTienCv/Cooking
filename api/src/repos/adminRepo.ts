@@ -217,7 +217,7 @@ export const adminRepo = {
       `UPDATE seller_profiles SET is_verified = $1, updated_at = NOW() WHERE user_id = $2`,
       [isVerified, sellerId]
     );
-    return rowCount > 0;
+    return (rowCount ?? 0) > 0;
   },
 
   async getMarketplaceOrders(status: string, limit: number, offset: number) {

@@ -72,7 +72,7 @@ export default function MarketProductsTab() {
   }, [loadProducts]);
 
   const filteredProducts = useMemo(() => {
-    let result = [...products].filter(p => {
+    const result = [...products].filter(p => {
       if (search) {
         const q = search.toLowerCase();
         if (!p.name.toLowerCase().includes(q) && !(p.store_name || '').toLowerCase().includes(q) && !(p.seller_name || '').toLowerCase().includes(q)) return false;

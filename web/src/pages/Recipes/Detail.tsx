@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Clock, User, Eye, ArrowLeft, Bookmark, BookmarkCheck, ChefHat, Flame, Drumstick, Wheat, Droplets, Lock } from 'lucide-react';
+import { Clock, User, Eye, ArrowLeft, Bookmark, BookmarkCheck, ChefHat, Lock } from 'lucide-react';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { apiFetch, apiJson } from '../../lib/api';
 import ImageWithFallback from '../../lib/ImageWithFallback';
@@ -24,6 +24,7 @@ interface RecipeRow {
   views?: number | null;
   image_url?: string | null;
   category_name?: string | null;
+  author_id?: number | null;
   author_name?: string | null;
   author_avatar?: string | null;
   created_at?: string | null;
@@ -291,7 +292,13 @@ export default function RecipeDetail() {
                   )}
                   <div>
                     <p className="font-semibold text-black dark:text-white">{recipe.author_name ?? '—'}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Người đóng góp</p>
+                    <p className="text-sm text-amber-600 dark:text-amber-400">
+                      {recipe.author_id ? (
+                        <Link to={`/creator/${recipe.author_id}`}>Xem trang cá nhân →</Link>
+                      ) : (
+                        'Người đóng góp'
+                      )}
+                    </p>
                   </div>
                 </div>
               </div>

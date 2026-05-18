@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import DataTableTab from './DataTableTab';
 import { apiJson } from '../../../lib/api';
-import toast from 'react-hot-toast';
 
 export default function BlogsTab() {
   const [blogs, setBlogs] = useState<Record<string, unknown>[]>([]);
@@ -45,8 +45,6 @@ export default function BlogsTab() {
     void loadBlogs();
   }, [loadBlogs]);
 
-  if (loading) return <div className="p-12 text-center text-slate-500">Đang tải...</div>;
-
   const columns = useMemo(() => [
     { key: 'id', label: 'ID' },
     { key: 'title', label: 'Tiêu đề' },
@@ -88,6 +86,8 @@ export default function BlogsTab() {
       </button>
     </div>
   ), [onBlogAction]);
+
+  if (loading) return <div className="p-12 text-center text-slate-500">Đang tải...</div>;
 
   return (
     <DataTableTab

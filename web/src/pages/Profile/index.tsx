@@ -30,7 +30,10 @@ export default function Profile() {
   const [showSuccessMenu, setShowSuccessMenu] = useState(false);
 
   const [user, setUser] = useState<ProfileUser | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
   const [stats, setStats] = useState<ProfileStats | null>(null);
+  const [followers, setFollowers] = useState(0);
+  const [following, setFollowing] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   const [myRecipes, setMyRecipes] = useState<ProfileRecipe[]>([]);
@@ -134,10 +137,11 @@ export default function Profile() {
     try {
       const me = await apiJson<{
         authenticated: boolean;
-        user?: { full_name: string; email: string; bio?: string | null; avatar_url?: string | null };
+        user?: { id: number; full_name: string; email: string; bio?: string | null; avatar_url?: string | null };
         stats?: ProfileStats;
       }>('/api/auth/me');
       if (me.authenticated && me.user) {
+        setUserId(me.user.id);
         setUser({
           full_name: me.user.full_name,
           email: me.user.email,
@@ -145,9 +149,22 @@ export default function Profile() {
           avatar: me.user.avatar_url ?? null,
         });
         setStats(me.stats ?? { recipe_count: 0, post_count: 0, recipe_views_sum: 0 });
+        try {
+          const pub = await apiJson<{ counts: { followers: number; following: number } }>(
+            `/api/users/${me.user.id}/public`
+          );
+          setFollowers(pub.counts?.followers ?? 0);
+          setFollowing(pub.counts?.following ?? 0);
+        } catch {
+          setFollowers(0);
+          setFollowing(0);
+        }
       } else {
         setUser(null);
+        setUserId(null);
         setStats(null);
+        setFollowers(0);
+        setFollowing(0);
       }
     } catch {
       setUser(null);
@@ -251,7 +268,14 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-blue-50 to-indigo-50 pb-24 transition-colors duration-300 dark:from-slate-900 dark:to-slate-800">
-      <ProfileHeader isLoading={isLoading} user={user} stats={stats} />
+      <ProfileHeader
+        isLoading={isLoading}
+        user={user}
+        stats={stats}
+        userId={userId}
+        followers={followers}
+        following={following}
+      />
 
       <Reveal className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8" y={22}>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">

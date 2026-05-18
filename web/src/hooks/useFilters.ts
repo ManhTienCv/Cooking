@@ -19,7 +19,6 @@ interface UseFiltersOptions {
 export function useFilters({
   categories = [],
   initialCategory = 'Tất cả',
-  pageSize,
 }: UseFiltersOptions) {
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');

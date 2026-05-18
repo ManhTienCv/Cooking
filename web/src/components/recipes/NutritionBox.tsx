@@ -1,4 +1,3 @@
-import React from 'react';
 import { Flame, Drumstick, Wheat, Droplets } from 'lucide-react';
 import { Reveal } from '../motion/ScrollReveal';
 

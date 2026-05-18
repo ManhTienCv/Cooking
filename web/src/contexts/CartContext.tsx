@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { apiJson, apiFetch } from '../lib/api';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../lib/authEvents';
 import type { CartItem } from '../types/marketplace';

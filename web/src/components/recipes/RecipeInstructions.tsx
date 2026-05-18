@@ -1,4 +1,3 @@
-import React from 'react';
 import { Timer, ChefHat } from 'lucide-react';
 import { Reveal, RevealStaggerItem } from '../motion/ScrollReveal';
 

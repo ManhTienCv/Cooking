@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, X, SlidersHorizontal, Store, ChevronDown } from 'lucide-react';
 import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';

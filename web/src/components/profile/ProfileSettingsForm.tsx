@@ -5,7 +5,6 @@ import {
   Bell,
   ChevronRight,
   CreditCard,
-  Lock,
   MapPin,
   MessageCircle,
   Plus,
@@ -235,8 +234,18 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
         />
 
         <div className={sectionTitleClass}>Cài đặt</div>
-        <SettingRow icon={MessageCircle} label="Cài đặt Chat" detail="Mở tin nhắn với cửa hàng" onClick={() => navigate('/messages')} />
-        <SettingRow icon={Bell} label="Cài đặt Thông báo" detail="Nhận thông báo đơn hàng và tài khoản" />
+        <SettingRow
+          icon={MessageCircle}
+          label="Cài đặt Chat"
+          detail="Mở tin nhắn với cửa hàng"
+          onClick={() => navigate('/messages', { state: { from: '/profile?tab=settings' } })}
+        />
+        <SettingRow
+          icon={Bell}
+          label="Cài đặt Thông báo"
+          detail="Nhận thông báo đơn hàng và tài khoản"
+          onClick={() => navigate('/seller/settings?section=notifications', { state: { from: '/profile?tab=settings' } })}
+        />
         <div className="flex w-full items-center justify-between gap-3 border-b border-gray-100 px-4 py-4 text-left transition-colors last:border-b-0 hover:bg-gray-50 dark:border-slate-800 dark:hover:bg-slate-800/60">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <Moon className="h-5 w-5 shrink-0 text-gray-400 dark:text-slate-500" />
@@ -258,7 +267,6 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
             />
           </button>
         </div>
-        <SettingRow icon={Lock} label="Cài đặt riêng tư" detail="Quản lý hiển thị hồ sơ" />
       </div>
     );
   }

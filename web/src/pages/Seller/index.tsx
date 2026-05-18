@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, Package, ShoppingBag, Plus, Trash2, Eye, TrendingUp, Pencil, Settings, CheckCircle } from 'lucide-react';
+import { Store, Package, ShoppingBag, Plus, Trash2, Eye, TrendingUp, Pencil, Settings, CheckCircle, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiJson, apiFetch } from '../../lib/api';
 import CreateProductModal, { type EditingProduct } from './CreateProductModal';
@@ -16,7 +16,7 @@ interface SellerProduct {
   description: string | null; category_id: number; unit: string; specs: Record<string, string>;
 }
 interface SellerOrder {
-  id: number; total_amount: number; status: string; shipping_name: string;
+  id: number; buyer_id: number; total_amount: number; status: string; shipping_name: string;
   created_at: string; items: { product_name: string; quantity: number }[];
 }
 interface SellerProfile {
@@ -455,6 +455,13 @@ export default function SellerDashboard() {
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
                       Giao cho: <span className="font-semibold text-gray-800 dark:text-gray-200">{o.shipping_name}</span>
                     </p>
+                    <Link
+                      to={`/messages?orderId=${o.id}&sellerId=${profile?.user_id ?? ''}`}
+                      className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-100 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-200"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Chat với khách (đơn #{o.id})
+                    </Link>
                   </div>
                 ))
               )}

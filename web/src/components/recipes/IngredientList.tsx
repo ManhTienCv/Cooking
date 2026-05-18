@@ -1,4 +1,3 @@
-import React from 'react';
 import { Reveal, RevealStaggerItem } from '../motion/ScrollReveal';
 
 interface IngredientListProps {

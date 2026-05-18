@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
 
 export interface OrderNotification {
   id: string;
@@ -67,6 +67,16 @@ export function NotificationProvider({ children, role }: { children: ReactNode; 
 
     const check = async () => {
       try {
+        if (role === 'seller') {
+          const settingsRes = await fetch('/api/marketplace/seller/settings', { credentials: 'include' });
+          if (settingsRes.ok) {
+            const settingsData = await settingsRes.json();
+            if (settingsData.settings?.order_notifications === false) {
+              lastCheckRef.current = Date.now();
+              return;
+            }
+          }
+        }
         const res = await fetch(endpoint, { credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();

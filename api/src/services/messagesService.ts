@@ -8,11 +8,48 @@ export async function listConversations(userId: number) {
 }
 
 export async function startConversation(userId: number, body: Record<string, unknown>) {
+  const orderIdRaw = body?.order_id ?? null;
   const productIdRaw = body?.product_id ?? null;
   const sellerIdRaw = body?.seller_id ?? null;
 
+  const orderId = orderIdRaw ? Number(orderIdRaw) : null;
   const productId = productIdRaw ? Number(productIdRaw) : null;
   let sellerId = sellerIdRaw ? Number(sellerIdRaw) : 0;
+
+  if (orderId) {
+    const access = await marketplaceRepo.userHasOrderAccess(orderId, userId);
+    if (!access) throw { status: 403, message: 'Không có quyền trao đổi về đơn hàng này.' };
+
+    const buyerId = access.buyerId;
+    if (userId === buyerId) {
+      if (!sellerId) {
+        if (access.sellerIds.length === 1) {
+          sellerId = access.sellerIds[0];
+        } else {
+          throw { status: 400, message: 'Vui lòng chọn cửa hàng để trao đổi.' };
+        }
+      }
+      if (!access.sellerIds.includes(sellerId)) {
+        throw { status: 403, message: 'Cửa hàng không thuộc đơn hàng này.' };
+      }
+    } else if (access.sellerIds.includes(userId)) {
+      sellerId = userId;
+    } else {
+      throw { status: 403, message: 'Không có quyền trao đổi về đơn hàng này.' };
+    }
+
+    if (sellerId === buyerId) throw { status: 400, message: 'Không thể nhắn tin cho chính mình.' };
+
+    let conversation = await messagesRepo.getConversationForOrder(buyerId, sellerId, orderId);
+    if (!conversation) {
+      const chatEnabled = await messagesRepo.isSellerChatEnabled(sellerId);
+      if (!chatEnabled) throw { status: 403, message: 'Cửa hàng hiện chưa mở chat với khách hàng.' };
+      conversation = await messagesRepo.createConversation(buyerId, sellerId, productId, orderId);
+    }
+
+    const summary = await messagesRepo.getConversationSummaryById(conversation.id, userId);
+    return { conversation: summary ?? conversation };
+  }
 
   if (productId) {
     const product = await marketplaceRepo.getProductById(productId);
@@ -28,6 +65,8 @@ export async function startConversation(userId: number, body: Record<string, unk
 
   let conversation = await messagesRepo.getConversationForBuyerSeller(userId, sellerId, productId);
   if (!conversation) {
+    const chatEnabled = await messagesRepo.isSellerChatEnabled(sellerId);
+    if (!chatEnabled) throw { status: 403, message: 'Cửa hàng hiện chưa mở chat với khách hàng.' };
     conversation = await messagesRepo.createConversation(userId, sellerId, productId, null);
   }
 

@@ -117,6 +117,47 @@ export async function isSeller(userId: number): Promise<boolean> {
   return rows.length > 0;
 }
 
+export async function getPublicProductsBySeller(
+  sellerId: number,
+  limit: number,
+  offset: number
+): Promise<{ rows: ProductWithSeller[]; total: number }> {
+  const where = "p.seller_id = $1 AND p.status = 'approved' AND p.is_available = TRUE";
+  const [dataResult, countResult] = await Promise.all([
+    pool.query(
+      `SELECT p.*,
+          pc.name AS category_name, pc.slug AS category_slug,
+          u.full_name AS seller_name, u.avatar_url AS seller_avatar,
+          sp.store_name
+       FROM products p
+       LEFT JOIN product_categories pc ON p.category_id = pc.id
+       LEFT JOIN users u ON p.seller_id = u.id
+       LEFT JOIN seller_profiles sp ON p.seller_id = sp.user_id
+       WHERE ${where}
+       ORDER BY p.is_featured DESC, p.total_sold DESC, p.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [sellerId, limit, offset]
+    ),
+    pool.query(`SELECT COUNT(*) AS total FROM products p WHERE ${where}`, [sellerId]),
+  ]);
+  return {
+    rows: dataResult.rows as ProductWithSeller[],
+    total: parseTotal(countResult.rows[0]?.total),
+  };
+}
+
+export async function userHasOrderAccess(
+  orderId: number,
+  userId: number
+): Promise<{ buyerId: number; sellerIds: number[] } | null> {
+  const order = await getOrderById(orderId);
+  if (!order) return null;
+  const sellerIds = [...new Set(order.items.map((i) => i.seller_id))];
+  if (order.buyer_id === userId) return { buyerId: order.buyer_id, sellerIds };
+  if (sellerIds.includes(userId)) return { buyerId: order.buyer_id, sellerIds };
+  return null;
+}
+
 /* ================================================================
  * Products
  * ================================================================ */

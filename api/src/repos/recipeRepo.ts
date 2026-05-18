@@ -243,6 +243,29 @@ export async function countRecipesByAuthor(authorId: number): Promise<number> {
   return parseTotal(rows[0]?.total);
 }
 
+export async function getPublicRecipesByAuthor(authorId: number, limit: number, offset: number): Promise<Recipe[]> {
+  const { rows } = await pool.query(
+    `SELECT r.*, c.name AS category_name
+     FROM recipes r
+     LEFT JOIN recipe_categories c ON r.category_id = c.id
+     WHERE r.author_id = $1 AND r.status = 'approved'
+     ORDER BY r.created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [authorId, limit, offset]
+  );
+  return rows as Recipe[];
+}
+
+export async function countPublicRecipesByAuthor(authorId: number): Promise<number> {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM recipes
+     WHERE author_id = $1 AND status = 'approved'`,
+    [authorId]
+  );
+  return parseTotal(rows[0]?.total);
+}
+
 export async function getSavedRecipesByUser(userId: number, limit: number, offset: number): Promise<RecipeWithAuthor[]> {
   const { rows } = await pool.query(
     `SELECT r.*, c.name AS category_name, s.created_at AS saved_at

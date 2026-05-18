@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 
 import { apiJson } from '../lib/api';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../lib/authEvents';
+import PageBackBar from '../components/ui/PageBackBar';
 
 type MeState =
   | { authenticated: false; user?: never }
@@ -18,11 +19,23 @@ type MeState =
       };
     };
 
+const ORDER_STATUS_LABEL: Record<string, string> = {
+  pending: 'Chờ xác nhận',
+  confirmed: 'Đã xác nhận',
+  preparing: 'Đang chuẩn bị',
+  shipping: 'Đang giao',
+  delivered: 'Đã giao',
+  completed: 'Hoàn thành',
+  cancelled: 'Đã hủy',
+};
+
 type ConversationSummary = {
   id: number;
   buyer_id: number;
   seller_id: number;
   product_id: number | null;
+  order_id: number | null;
+  order_status: string | null;
   product_name: string | null;
   product_slug: string | null;
   buyer_name: string;
@@ -136,11 +149,16 @@ export default function Messages() {
 
     const sellerId = Number(searchParams.get('sellerId') || 0);
     const productId = Number(searchParams.get('productId') || 0) || undefined;
+    const orderId = Number(searchParams.get('orderId') || 0) || undefined;
 
-    if (sellerId) {
+    if (sellerId || orderId) {
       apiJson<{ conversation: ConversationSummary }>('/api/messages/conversations', {
         method: 'POST',
-        body: JSON.stringify({ seller_id: sellerId, product_id: productId }),
+        body: JSON.stringify({
+          seller_id: sellerId || undefined,
+          product_id: productId,
+          order_id: orderId,
+        }),
       })
         .then((d) => {
           setActiveId(d.conversation.id);
@@ -237,8 +255,15 @@ export default function Messages() {
     return conversation.seller_store_name || conversation.seller_name;
   }, [meUser]);
 
-  const getConversationSubtitle = useCallback((conversation: ConversationSummary) =>
-    conversation.product_name || 'Trao đổi chung', []);
+  const getConversationSubtitle = useCallback((conversation: ConversationSummary) => {
+    if (conversation.order_id) {
+      const status = conversation.order_status
+        ? ORDER_STATUS_LABEL[conversation.order_status] ?? conversation.order_status
+        : '';
+      return `Đơn #${conversation.order_id}${status ? ` · ${status}` : ''}`;
+    }
+    return conversation.product_name || 'Trao đổi chung';
+  }, []);
 
   const onSendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -298,7 +323,8 @@ export default function Messages() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800">
       <div className="border-b border-white/20 bg-white/70 backdrop-blur-md dark:border-slate-800/30 dark:bg-slate-900/70">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+          <PageBackBar fallbackTo="/profile?tab=settings" label="Quay lại" className="mb-4" />
           <div className="flex items-center gap-3">
             <div className="rounded-2xl bg-amber-100 p-3 dark:bg-amber-900/30">
               <MessageCircle className="h-6 w-6 text-amber-600 dark:text-amber-300" />
@@ -361,22 +387,30 @@ export default function Messages() {
                   </span>
                   <div>
                     <h2 className="font-bold text-gray-950 dark:text-white">{getConversationName(activeConversation)}</h2>
-                    {activeConversation.product_name && (
-                      <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-slate-400">
-                        <ShoppingBag className="h-3.5 w-3.5" />
-                        {activeConversation.product_name}
-                      </p>
-                    )}
+                    <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-slate-400">
+                      <ShoppingBag className="h-3.5 w-3.5" />
+                      {getConversationSubtitle(activeConversation)}
+                    </p>
                   </div>
                 </div>
-                {activeConversation.product_id && (
-                  <Link
-                    to={activeConversation.product_slug ? `/shop/${activeConversation.product_slug}` : '/shop'}
-                    className="rounded-full border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                  >
-                    {activeConversation.product_slug ? 'Xem sản phẩm' : 'Cửa hàng'}
-                  </Link>
-                )}
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  {activeConversation.order_id && (
+                    <Link
+                      to={`/orders/${activeConversation.order_id}`}
+                      className="rounded-full border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                    >
+                      Xem đơn hàng
+                    </Link>
+                  )}
+                  {activeConversation.product_id && (
+                    <Link
+                      to={activeConversation.product_slug ? `/shop/${activeConversation.product_slug}` : '/shop'}
+                      className="rounded-full border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                    >
+                      {activeConversation.product_slug ? 'Xem sản phẩm' : 'Cửa hàng'}
+                    </Link>
+                  )}
+                </div>
               </div>
 
               <div className="flex-1 space-y-4 overflow-y-auto p-5">
@@ -409,7 +443,7 @@ export default function Messages() {
                 )}
               </div>
 
-              <form onSubmit={handleSubmit} className="flex gap-3 border-t border-gray-100 p-4 dark:border-slate-800">
+              <form onSubmit={onSendMessage} className="flex gap-3 border-t border-gray-100 p-4 dark:border-slate-800">
                 <input
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}

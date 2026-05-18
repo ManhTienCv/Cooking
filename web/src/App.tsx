@@ -42,6 +42,7 @@ const OrderDetailPage = lazy(() => import('./pages/Shop/OrderDetail'));
 const SellerDashboard = lazy(() => import('./pages/Seller'));
 const SellerSettings = lazy(() => import('./pages/Seller/Settings'));
 const Messages = lazy(() => import('./pages/Messages'));
+const PublicProfile = lazy(() => import('./pages/Creator/PublicProfile'));
 
 const EASE_PAGE = [0.22, 1, 0.36, 1] as const;
 
@@ -157,6 +158,7 @@ export default function App() {
                 <Route path="/seller" element={<SellerDashboard />} />
                 <Route path="/seller/settings" element={<SellerSettings />} />
                 <Route path="/messages" element={<Messages />} />
+                <Route path="/creator/:id" element={<PublicProfile />} />
               </Routes>
             </Suspense>
           </motion.div>

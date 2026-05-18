@@ -6,6 +6,18 @@ export async function getUserById(userId: number): Promise<{ id: number } | null
   return (rows[0] as { id: number }) ?? null;
 }
 
+export async function isSellerChatEnabled(sellerId: number): Promise<boolean> {
+  const { rows } = await pool.query<{ chat_enabled: boolean }>(
+    `SELECT COALESCE(ss.chat_enabled, TRUE) AS chat_enabled
+     FROM seller_profiles sp
+     LEFT JOIN seller_settings ss ON ss.user_id = sp.user_id
+     WHERE sp.user_id = $1
+     LIMIT 1`,
+    [sellerId]
+  );
+  return rows[0]?.chat_enabled ?? true;
+}
+
 export async function getConversationById(id: number): Promise<ChatConversation | null> {
   const { rows } = await pool.query('SELECT * FROM chat_conversations WHERE id = $1', [id]);
   return (rows[0] as ChatConversation) ?? null;
@@ -18,14 +30,29 @@ export async function getConversationForBuyerSeller(
 ): Promise<ChatConversation | null> {
   if (productId) {
     const { rows } = await pool.query(
-      'SELECT * FROM chat_conversations WHERE buyer_id = $1 AND seller_id = $2 AND product_id = $3',
+      `SELECT * FROM chat_conversations
+       WHERE buyer_id = $1 AND seller_id = $2 AND product_id = $3 AND order_id IS NULL`,
       [buyerId, sellerId, productId]
     );
     return (rows[0] as ChatConversation) ?? null;
   }
   const { rows } = await pool.query(
-    'SELECT * FROM chat_conversations WHERE buyer_id = $1 AND seller_id = $2 AND product_id IS NULL',
+    `SELECT * FROM chat_conversations
+     WHERE buyer_id = $1 AND seller_id = $2 AND product_id IS NULL AND order_id IS NULL`,
     [buyerId, sellerId]
+  );
+  return (rows[0] as ChatConversation) ?? null;
+}
+
+export async function getConversationForOrder(
+  buyerId: number,
+  sellerId: number,
+  orderId: number
+): Promise<ChatConversation | null> {
+  const { rows } = await pool.query(
+    `SELECT * FROM chat_conversations
+     WHERE buyer_id = $1 AND seller_id = $2 AND order_id = $3`,
+    [buyerId, sellerId, orderId]
   );
   return (rows[0] as ChatConversation) ?? null;
 }
@@ -50,6 +77,7 @@ export async function listConversationsForUser(userId: number): Promise<ChatConv
     `SELECT c.*,
         p.name AS product_name,
         p.slug AS product_slug,
+        o.status AS order_status,
         ub.full_name AS buyer_name,
         ub.avatar_url AS buyer_avatar_url,
         us.full_name AS seller_name,
@@ -73,6 +101,7 @@ export async function listConversationsForUser(userId: number): Promise<ChatConv
         ) AS unread_count
      FROM chat_conversations c
      LEFT JOIN products p ON p.id = c.product_id
+     LEFT JOIN orders o ON o.id = c.order_id
      JOIN users ub ON ub.id = c.buyer_id
      JOIN users us ON us.id = c.seller_id
      LEFT JOIN seller_profiles sp ON sp.user_id = c.seller_id
@@ -98,6 +127,7 @@ export async function getConversationSummaryById(
     `SELECT c.*,
         p.name AS product_name,
         p.slug AS product_slug,
+        o.status AS order_status,
         ub.full_name AS buyer_name,
         ub.avatar_url AS buyer_avatar_url,
         us.full_name AS seller_name,
@@ -121,6 +151,7 @@ export async function getConversationSummaryById(
         ) AS unread_count
      FROM chat_conversations c
      LEFT JOIN products p ON p.id = c.product_id
+     LEFT JOIN orders o ON o.id = c.order_id
      JOIN users ub ON ub.id = c.buyer_id
      JOIN users us ON us.id = c.seller_id
      LEFT JOIN seller_profiles sp ON sp.user_id = c.seller_id

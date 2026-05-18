@@ -15,6 +15,7 @@ export interface ChatConversation {
 export interface ChatConversationSummary extends ChatConversation {
   product_name: string | null;
   product_slug: string | null;
+  order_status: string | null;
   buyer_name: string;
   buyer_avatar_url: string | null;
   seller_name: string;

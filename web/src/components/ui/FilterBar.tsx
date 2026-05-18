@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface FilterBarProps {
   categories: string[];
   selectedCategory: string;

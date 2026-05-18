@@ -181,11 +181,10 @@ export default function PublicProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-blue-50 to-indigo-50 text-gray-900 transition-colors duration-300 dark:from-slate-900 dark:to-slate-800 dark:text-slate-100">
       {/* Cover */}
       <motion.div className="relative h-44 overflow-hidden sm:h-52 md:h-56">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-200/80 via-orange-100/60 to-gray-50 dark:from-amber-600/40 dark:via-orange-600/25 dark:to-slate-950" />
-        <motion.div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(251,191,36,0.25),_transparent_55%)] dark:bg-[radial-gradient(ellipse_at_top_right,_rgba(251,191,36,0.35),_transparent_55%)]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-200/60 via-indigo-100/40 to-transparent dark:from-blue-900/30 dark:via-indigo-900/20 dark:to-transparent" />
         <motion.div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMwIDkuOTQxLTguMDU5IDE4LTE4IDE4cy0xOC04LjA1OS0xOC0xOCA4LjA1OS0xOCAxOC0xOCAxOCA4LjA1OSAxOCAxOHoiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyIvPjwvZz48L3N2Zz4=')] opacity-60" />
         <motion.div className="absolute left-4 top-5 z-10 sm:left-8">
           <PageBackBar fallbackTo="/shop" label="Quay lại" />

@@ -12,6 +12,10 @@ export const MIGRATION_FILES = [
   'migration_seller_security.sql',
   'migration_messages.sql',
   'migration_social_follows.sql',
+  'migration_ewallet.sql',
+  'migration_ewallet_otp.sql',
+  'migration_commission.sql',
+  'migration_cookpay.sql',
 ] as const;
 
 export type MigrationName = (typeof MIGRATION_FILES)[number];
@@ -84,6 +88,10 @@ export async function baselineExistingSchema(client: PoolClient): Promise<string
     { file: 'migration_seller_security.sql', table: 'seller_settings' },
     { file: 'migration_messages.sql', table: 'chat_conversations' },
     { file: 'migration_social_follows.sql', table: 'user_follows' },
+    { file: 'migration_ewallet.sql', table: 'wallets' },
+    { file: 'migration_ewallet_otp.sql', table: 'ewallet_otps' },
+    { file: 'migration_commission.sql', table: 'commission_settings' },
+    { file: 'migration_cookpay.sql', table: 'wallet_transactions' },
   ];
 
   for (const { file, table } of tableRules) {

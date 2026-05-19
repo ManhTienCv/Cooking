@@ -249,6 +249,12 @@ export default function SellerDashboard() {
               <div className="ml-auto">
                 <div className="flex items-center gap-2">
                   <Link
+                    to="/seller/wallet"
+                    className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50"
+                  >
+                    Ví của tôi
+                  </Link>
+                  <Link
                     to="/seller/settings"
                     className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                   >

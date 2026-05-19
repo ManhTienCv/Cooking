@@ -17,6 +17,7 @@ import { feedbackRouter } from './routes/feedback.js';
 import { marketplaceRouter } from './routes/marketplace.js';
 import { messagesRouter } from './routes/messages.js';
 import { usersRouter } from './routes/users.js';
+import { ewalletRouter } from './routes/ewallet.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -94,6 +95,7 @@ app.use('/api/feedback', feedbackRouter);
 app.use('/api/marketplace', marketplaceRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/ewallet', ewalletRouter);
 
 app.use(errorHandler);
 

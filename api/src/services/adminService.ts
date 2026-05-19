@@ -133,3 +133,32 @@ export async function deleteCategory(typeRaw: string, idRaw: unknown) {
   await adminRepo.deleteCategory(table, id);
   return { success: true };
 }
+
+export async function processWithdrawal(id: string, action: 'approve' | 'reject', adminNote: string) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const wRes = await client.query('SELECT * FROM withdrawal_requests WHERE id = $1 FOR UPDATE', [id]);
+    if (wRes.rowCount === 0) throw new Error('Not found');
+    const w = wRes.rows[0];
+    if (w.status !== 'pending' && w.status !== 'processing') throw new Error('Invalid status');
+    
+    if (action === 'approve') {
+      await client.query('UPDATE withdrawal_requests SET status = $1, admin_note = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3', ['completed', adminNote, id]);
+      await client.query('UPDATE wallets SET frozen_balance = frozen_balance - $1 WHERE user_id = $2', [w.amount, w.user_id]);
+      await client.query('UPDATE wallet_transactions SET status = $1 WHERE reference_id = $2 AND type = $3', ['completed', 'withdraw-'+id, 'withdrawal']);
+    } else {
+      await client.query('UPDATE withdrawal_requests SET status = $1, admin_note = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3', ['rejected', adminNote, id]);
+      await client.query('UPDATE wallets SET balance = balance + $1, frozen_balance = frozen_balance - $1 WHERE user_id = $2', [w.amount, w.user_id]);
+      await client.query('UPDATE wallet_transactions SET status = $1 WHERE reference_id = $2 AND type = $3', ['failed', 'withdraw-'+id, 'withdrawal']);
+    }
+    
+    await client.query('COMMIT');
+    return { success: true };
+  } catch(e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}

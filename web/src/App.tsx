@@ -31,6 +31,7 @@ const CategoriesTab = lazy(() => import('./pages/Admin/tabs/CategoriesTab'));
 const MarketProductsTab = lazy(() => import('./pages/Admin/tabs/MarketProductsTab'));
 const MarketOrdersTab = lazy(() => import('./pages/Admin/tabs/MarketOrdersTab'));
 const SellersTab = lazy(() => import('./pages/Admin/tabs/SellersTab'));
+const AdminWithdrawalsTab = lazy(() => import('./pages/Admin/tabs/AdminWithdrawals'));
 
 /* Marketplace */
 const Shop = lazy(() => import('./pages/Shop'));
@@ -41,6 +42,7 @@ const OrdersPage = lazy(() => import('./pages/Shop/Orders'));
 const OrderDetailPage = lazy(() => import('./pages/Shop/OrderDetail'));
 const SellerDashboard = lazy(() => import('./pages/Seller'));
 const SellerSettings = lazy(() => import('./pages/Seller/Settings'));
+const CookPayWallet = lazy(() => import('./pages/Seller/EWallet'));
 const Messages = lazy(() => import('./pages/Messages'));
 const PublicProfile = lazy(() => import('./pages/Creator/PublicProfile'));
 
@@ -85,6 +87,7 @@ export default function App() {
               <Route path="market-products" element={<MarketProductsTab />} />
               <Route path="market-orders" element={<MarketOrdersTab />} />
               <Route path="market-sellers" element={<SellersTab />} />
+              <Route path="withdrawals" element={<AdminWithdrawalsTab />} />
             </Route>
           </Routes>
         </Suspense>
@@ -157,6 +160,8 @@ export default function App() {
                 <Route path="/orders/:id" element={<OrderDetailPage />} />
                 <Route path="/seller" element={<SellerDashboard />} />
                 <Route path="/seller/settings" element={<SellerSettings />} />
+                <Route path="/wallet" element={<CookPayWallet />} />
+                <Route path="/seller/wallet" element={<CookPayWallet />} />
                 <Route path="/messages" element={<Messages />} />
                 <Route path="/creator/:id" element={<PublicProfile />} />
               </Routes>

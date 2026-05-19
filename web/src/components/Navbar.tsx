@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChefHat, Menu, LogOut, ShoppingCart, Store, MessageCircle, ClipboardList } from 'lucide-react';
+import { ChefHat, Menu, LogOut, ShoppingCart, Store, MessageCircle, ClipboardList, Wallet } from 'lucide-react';
 import AuthModal from './AuthModal';
 import { apiFetch, apiJson, resetCsrfCache } from '../lib/api';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail, notifyAuthChanged } from '../lib/authEvents';
@@ -291,6 +291,27 @@ export default function Navbar() {
                     )}
                     <ClipboardList className="w-5 h-5 relative z-10" />
                   </Link>
+                  <Link
+                    to="/wallet"
+                    onClick={() => scrollWindowToTop()}
+                    className={`relative p-2 rounded-full transition-colors duration-300 ${
+                      currentPage.startsWith('/wallet') 
+                        ? 'text-white dark:text-black' 
+                        : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800'
+                    }`}
+                    aria-label="Ví Cook"
+                    title="Ví Cook"
+                  >
+                    {currentPage.startsWith('/wallet') && (
+                      <motion.div
+                        layoutId="nav-pill-desktop"
+                        className="absolute inset-0 rounded-full bg-black dark:bg-white shadow-md"
+                        transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                        style={{ zIndex: -1 }}
+                      />
+                    )}
+                    <Wallet className="w-5 h-5 relative z-10" />
+                  </Link>
                 </>
               )}
 
@@ -395,6 +416,13 @@ export default function Navbar() {
                       className={`mobile-menu-item ${isMenuOpen ? 'show' : ''} flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20`}
                     >
                       <Store className="w-5 h-5" /> Kênh bán hàng
+                    </Link>
+                    <Link
+                      to="/wallet"
+                      onClick={() => { scrollWindowToTop(); setIsMenuOpen(false); }}
+                      className={`mobile-menu-item ${isMenuOpen ? 'show' : ''} flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20`}
+                    >
+                      <Wallet className="w-5 h-5" /> Ví Cook
                     </Link>
                     <Link
                       to="/messages"

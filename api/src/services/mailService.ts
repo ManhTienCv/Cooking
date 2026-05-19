@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import { env } from '../env.js';
 
-export type OtpEmailPurpose = 'register' | 'reset' | 'seller_security';
+export type OtpEmailPurpose = 'register' | 'reset' | 'seller_security' | 'ewallet';
 
 let transporter: nodemailer.Transporter | null = null;
 
@@ -42,6 +42,13 @@ function copyForPurpose(purpose: OtpEmailPurpose): { title: string; subtitle: st
       title: 'Xac thuc bao mat nguoi ban',
       subtitle: 'Ban dang thuc hien thao tac nhay cam cho kenh ban hang. Dung ma nay de xac nhan.',
       subject: 'Ma xac thuc nguoi ban',
+    };
+  }
+  if (purpose === 'ewallet') {
+    return {
+      title: 'Xac thuc Vi Dien Tu',
+      subtitle: 'Ban dang thuc hien yeu cau rut tien hoac them Ngan hang. Dung ma nay de xac nhan.',
+      subject: 'Ma xac thuc Vi Dien Tu',
     };
   }
   return {

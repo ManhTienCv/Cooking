@@ -319,7 +319,98 @@ export async function buyerCompleteOrder(userId: number, idRaw: unknown) {
   }
 
   await marketplaceRepo.updateOrderStatus(id, 'completed');
+
+  // ── Settlement: chia doanh thu cho từng seller trong đơn hàng ──
+  try {
+    await settleOrderRevenue(id, order);
+  } catch (err) {
+    // Log nhưng không rollback trạng thái đơn — settlement có thể retry
+    console.error('[settlement] Failed for order #' + id, err instanceof Error ? err.message : err);
+  }
+
   return { message: 'Đã xác nhận hoàn thành đơn hàng.' };
+}
+
+/**
+ * Tự động chia tiền khi đơn hàng hoàn tất.
+ * - Gom subtotal theo từng seller_id
+ * - Trừ hoa hồng (commission_rate từ seller_profiles, mặc định 10%)
+ * - Cộng phần còn lại vào ví của seller
+ * - Ghi 2 dòng wallet_transactions: 1 deposit + 1 fee
+ */
+async function settleOrderRevenue(
+  orderId: number,
+  order: { items: Array<{ seller_id: number; subtotal: number }> }
+) {
+  // Gom doanh thu theo seller
+  const sellerTotals = new Map<number, number>();
+  for (const item of order.items) {
+    sellerTotals.set(item.seller_id, (sellerTotals.get(item.seller_id) ?? 0) + Number(item.subtotal));
+  }
+
+  const { pool } = await import('../db/pool.js');
+
+  for (const [sellerId, grossAmount] of sellerTotals) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // 1. Lấy commission rate của seller (mặc định 10%)
+      const spRes = await client.query(
+        'SELECT commission_rate FROM seller_profiles WHERE user_id = $1',
+        [sellerId]
+      );
+      const commissionRate = spRes.rows[0]?.commission_rate ?? 10;
+      const feeAmount = Math.round(grossAmount * commissionRate) / 100;
+      const netAmount = grossAmount - feeAmount;
+
+      if (netAmount <= 0) {
+        await client.query('COMMIT');
+        continue;
+      }
+
+      // 2. Upsert wallet (tạo nếu chưa có)
+      await client.query(
+        'INSERT INTO wallets (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING',
+        [sellerId]
+      );
+
+      // 3. Cộng balance cho seller
+      const walletRes = await client.query(
+        'UPDATE wallets SET balance = balance + $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2 RETURNING id',
+        [netAmount, sellerId]
+      );
+      const walletId = walletRes.rows[0]?.id;
+      if (!walletId) {
+        await client.query('ROLLBACK');
+        continue;
+      }
+
+      // 4. Ghi log deposit (tiền seller nhận)
+      await client.query(
+        `INSERT INTO wallet_transactions (wallet_id, amount, type, status, reference_id, description)
+         VALUES ($1, $2, 'deposit', 'completed', $3, $4)`,
+        [walletId, netAmount, 'order-' + orderId, 'Doanh thu đơn hàng #' + orderId]
+      );
+
+      // 5. Ghi log fee (hoa hồng nền tảng)
+      if (feeAmount > 0) {
+        await client.query(
+          `INSERT INTO wallet_transactions (wallet_id, amount, type, status, reference_id, description)
+           VALUES ($1, $2, 'fee', 'completed', $3, $4)`,
+          [walletId, feeAmount, 'fee-order-' + orderId, 'Hoa hồng nền tảng ' + commissionRate + '% đơn #' + orderId]
+        );
+      }
+
+      await client.query('COMMIT');
+      console.info('[settlement] Order #' + orderId + ' → seller ' + sellerId + ': net=' + netAmount + ', fee=' + feeAmount);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 export async function getOrderReviews(userId: number, idRaw: unknown) {
@@ -368,6 +459,23 @@ export async function updateOrderStatus(
   const reason = status === 'cancelled' ? String(body?.reason ?? '').trim() || null : undefined;
   const ok = await marketplaceRepo.updateOrderStatus(id, status, reason ?? undefined);
   if (!ok) throw { status: 400, message: 'Không thể cập nhật trạng thái.' };
+
+  // ── Auto-refund khi hủy đơn đã thanh toán bằng CookPay ──
+  if (status === 'cancelled') {
+    const rawOrder = order as unknown as Record<string, unknown>;
+    const paidVia = String(rawOrder.paid_via ?? '');
+    const paidAmount = Number(rawOrder.paid_amount ?? 0);
+    const paymentStatus = String(rawOrder.payment_status ?? 'unpaid');
+
+    if (paidVia === 'cookpay' && paymentStatus === 'paid' && paidAmount > 0) {
+      try {
+        const { refundOrder } = await import('./ewalletService.js');
+        await refundOrder(id, order.buyer_id, paidAmount);
+      } catch (err) {
+        console.error('[refund] Auto-refund failed for order #' + id, err instanceof Error ? err.message : err);
+      }
+    }
+  }
 
   return { success: true };
 }

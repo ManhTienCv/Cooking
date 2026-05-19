@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Building2, CreditCard, MapPin, Phone, User, FileText, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Building2, CreditCard, MapPin, Phone, User, FileText, ArrowLeft, CheckCircle, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useCart } from '../../contexts/CartContext';
@@ -22,6 +22,7 @@ export default function Checkout() {
   const [linkedBanks, setLinkedBanks] = useState<LinkedBankAccount[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [selectedBankId, setSelectedBankId] = useState('');
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [form, setForm] = useState({
     shipping_name: '',
     shipping_phone: '',
@@ -57,6 +58,13 @@ export default function Checkout() {
       if (defaultBank) setSelectedBankId(defaultBank.id);
     } catch {
       // ignore
+    }
+    // Fetch CookPay balance
+    try {
+      const wal = await apiJson<{ wallet: { balance: string } }>('/api/ewallet/me');
+      setWalletBalance(Number(wal.wallet.balance));
+    } catch {
+      setWalletBalance(null);
     }
   }, []);
 
@@ -109,9 +117,23 @@ export default function Checkout() {
         '/api/marketplace/orders',
         { method: 'POST', body: JSON.stringify(form) }
       );
+
+      // If paying with CookPay, call pay-order API
+      if (form.payment_method === 'cookpay') {
+        try {
+          await apiJson('/api/ewallet/pay-order', {
+            method: 'POST',
+            body: JSON.stringify({ orderId: result.order_id }),
+          });
+          toast.success('Thanh toán thành công bằng Ví Cook!');
+        } catch (payErr) {
+          toast.error(payErr instanceof Error ? payErr.message : 'Lỗi thanh toán Ví Cook. Đơn hàng đã tạo, vui lòng thanh toán lại.');
+        }
+      }
+
       await refresh();
       toast.success('Đặt hàng thành công!');
-      navigate(`/orders/${result.order_id}`, { replace: true });
+      navigate('/orders/' + result.order_id, { replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Lỗi đặt hàng');
     } finally {
@@ -250,6 +272,7 @@ export default function Checkout() {
                 </h3>
                 <div className="space-y-3">
                   {[
+                    { value: 'cookpay', label: 'Ví Cook', emoji: '🪙' },
                     { value: 'cod', label: 'Thanh toán khi nhận hàng (COD)', emoji: '💰' },
                     { value: 'bank_transfer', label: 'Chuyển khoản ngân hàng', emoji: '🏦' },
                     { value: 'qr', label: 'Thanh toán qua mã QR', emoji: '📱' },
@@ -274,6 +297,24 @@ export default function Checkout() {
                       <span className="text-sm font-medium text-gray-900 dark:text-white">{pm.label}</span>
                     </label>
                   ))}
+                  {form.payment_method === 'cookpay' && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/40 dark:bg-emerald-900/10">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                          <Wallet className="h-4 w-4" /> Số dư Ví Cook
+                        </div>
+                        <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">
+                          {walletBalance !== null ? walletBalance.toLocaleString('vi-VN') + 'đ' : '---'}
+                        </span>
+                      </div>
+                      {walletBalance !== null && walletBalance < total && (
+                        <p className="mt-2 text-sm text-red-600 dark:text-red-400">Số dư không đủ. Vui lòng <a href="/wallet" className="font-bold underline">nạp thêm</a>.</p>
+                      )}
+                      {walletBalance !== null && walletBalance >= total && (
+                        <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">✓ Đủ số dư. Đơn hàng sẽ được xác nhận tự động sau thanh toán.</p>
+                      )}
+                    </div>
+                  )}
                   {form.payment_method === 'bank_transfer' && (
                     <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-900/10">
                       <div className="mb-3 flex items-center gap-2 text-sm font-bold text-blue-700 dark:text-blue-300">

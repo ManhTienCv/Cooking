@@ -248,5 +248,19 @@ export const adminRepo = {
       orders: dataResult.rows,
       total: Number(countResult.rows[0]?.total ?? 0)
     };
+  },
+
+  async getWithdrawals(limit: number, offset: number) {
+    const res = await pool.query(
+      `SELECT w.*, u.full_name as fullname, u.email, b.bank_name, b.account_number, b.account_name 
+       FROM withdrawal_requests w 
+       JOIN users u ON w.user_id = u.id 
+       JOIN user_bank_accounts b ON w.bank_account_id = b.id 
+       ORDER BY w.created_at DESC 
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    const countRes = await pool.query('SELECT count(*) FROM withdrawal_requests');
+    return { withdrawals: res.rows, total: parseInt(countRes.rows[0].count) };
   }
 };

@@ -235,3 +235,20 @@ adminRouter.put('/marketplace/orders/:id/status', requireAdmin, requireCsrf, asy
   );
   res.json(result);
 }));
+
+adminRouter.get('/withdrawals', requireAdmin, asyncHandler(async (req, res) => {
+  const limit = Number(req.query.limit) || 20;
+  const offset = Number(req.query.offset) || 0;
+  const result = await adminRepo.getWithdrawals(limit, offset);
+  res.json(result);
+}));
+
+adminRouter.post('/withdrawals/:id/approve', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
+  await adminService.processWithdrawal(String(req.params.id), 'approve', req.body.adminNote || '');
+  res.json({ success: true });
+}));
+
+adminRouter.post('/withdrawals/:id/reject', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
+  await adminService.processWithdrawal(String(req.params.id), 'reject', req.body.adminNote || '');
+  res.json({ success: true });
+}));

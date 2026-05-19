@@ -99,7 +99,7 @@ export default function CategoriesTab() {
   ], []);
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Quản lý danh mục</h2>
         <p className="text-slate-500 dark:text-slate-400">Thêm, sửa, xóa các danh mục nội dung.</p>
@@ -123,21 +123,21 @@ export default function CategoriesTab() {
       </div>
 
       {/* Form */}
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm mb-8">
-        <form onSubmit={editing ? onUpdate : onCreate} className="flex gap-4">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm mb-8 w-full">
+        <form onSubmit={editing ? onUpdate : onCreate} className="flex flex-col gap-4 sm:flex-row">
           <div className="flex-1">
             <input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder={editing ? 'Tên danh mục mới' : 'Tên danh mục cần thêm'}
-              className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 focus:ring-2 focus:ring-blue-400/20 outline-none"
+              className="w-full px-5 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 focus:ring-2 focus:ring-blue-400/20 outline-none"
               disabled={busy}
             />
           </div>
           <button
             type="submit"
             disabled={busy || !newName.trim()}
-            className={`px-6 py-2 rounded-xl font-bold text-sm text-white transition-all flex items-center gap-2 ${
+            className={`px-8 py-3 rounded-xl font-bold text-sm text-white transition-all flex items-center justify-center gap-2 sm:min-w-[176px] ${
               editing ? 'bg-amber-500 hover:bg-amber-600' : 'bg-blue-600 hover:bg-blue-700'
             } disabled:opacity-50`}
           >

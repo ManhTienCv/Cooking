@@ -22,8 +22,8 @@ export default function AdminHeader() {
   }, []);
 
   return (
-    <header className="flex justify-between items-center mb-8">
-      <div>
+    <header className="flex justify-end items-center mb-8">
+      <div className="hidden">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
           Xin chào, Admin
         </h1>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Activity, BookOpen, Bookmark, CheckCircle, PenTool, Settings, X, Edit, Trash2, Store, Package, Heart, Star } from 'lucide-react';
+import { Activity, BookOpen, Bookmark, CheckCircle, PenTool, Settings, X, Edit, Trash2, Store, Package, Heart, Star, Wallet, ArrowUpRight } from 'lucide-react';
 import { apiFetch, apiJson, resetCsrfCache } from '../../lib/api';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail, notifyAuthChanged } from '../../lib/authEvents';
 import { Reveal } from '../../components/motion/ScrollReveal';
@@ -127,7 +127,7 @@ export default function Profile() {
   }, [pageByTab]);
 
   useEffect(() => {
-    if (user && activeTab !== 'settings') {
+    if (user && activeTab !== 'settings' && activeTab !== 'wallet') {
       void loadTabData(activeTab);
     }
   }, [activeTab, user, loadTabData]);
@@ -254,6 +254,7 @@ export default function Profile() {
 
   const tabs = [
     { id: 'shop', label: 'Cửa hàng', icon: Store },
+    { id: 'wallet', label: 'Ví Cook', icon: Wallet },
     { id: 'wishlist', label: 'Món yêu thích', icon: Heart },
     { id: 'recipes', label: 'Công thức của tôi', icon: BookOpen },
     { id: 'posts', label: 'Bài viết của tôi', icon: PenTool },
@@ -642,6 +643,49 @@ export default function Profile() {
                         )}
                       </>
                     )}
+                  </div>
+                )}
+
+                {activeTab === 'wallet' && (
+                  <div>
+                    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">Thanh toán</p>
+                        <h2 className="mt-2 text-2xl font-bold font-serif text-gray-950 dark:text-white">Ví Cook</h2>
+                      </div>
+                      <Link
+                        to="/wallet"
+                        className="inline-flex items-center justify-center gap-2 rounded-full bg-gray-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-gray-800 dark:bg-white dark:text-gray-950 dark:hover:bg-gray-200"
+                      >
+                        Mở ví <ArrowUpRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+
+                    <div className="overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-6 shadow-sm dark:border-emerald-900/40 dark:from-emerald-950/30 dark:via-slate-900 dark:to-sky-950/30">
+                      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+                            <Wallet className="h-7 w-7" />
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-extrabold text-gray-950 dark:text-white">Quản lý số dư và tài khoản nhận tiền</h3>
+                            <p className="mt-2 max-w-xl text-sm leading-6 text-gray-600 dark:text-gray-300">
+                              Nạp tiền, rút tiền, thêm tài khoản ngân hàng và theo dõi giao dịch Ví Cook tại một nơi.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="grid min-w-[220px] grid-cols-2 gap-3 text-center">
+                          <div className="rounded-xl border border-white/70 bg-white/75 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/70">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Nạp tiền</p>
+                            <p className="mt-1 text-lg font-black text-emerald-600">MoMo</p>
+                          </div>
+                          <div className="rounded-xl border border-white/70 bg-white/75 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/70">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Rút tiền</p>
+                            <p className="mt-1 text-lg font-black text-sky-600">OTP</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 

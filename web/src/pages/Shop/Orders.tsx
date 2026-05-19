@@ -24,6 +24,11 @@ function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
 }
 
+function formatOrderCode(order: Order) {
+  const year = new Date(order.created_at).getFullYear();
+  return `DH-${year}-${String(order.id).padStart(6, '0')}`;
+}
+
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
@@ -88,26 +93,36 @@ export default function Orders() {
                   <Link
                     to={`/orders/${order.id}`}
                     onClick={scrollWindowToTop}
-                    className="block bg-white dark:bg-slate-800/80 rounded-2xl border border-gray-100 dark:border-slate-700/50 p-5 hover:shadow-md hover:-translate-y-0.5 transition-all group"
+                    className="block overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-gray-200 hover:shadow-lg dark:border-slate-700/60 dark:bg-slate-800/80 dark:hover:border-slate-600 group"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                          <ClipboardList className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 items-center gap-4">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 ring-1 ring-blue-100 dark:bg-blue-900/20 dark:ring-blue-900/40">
+                          <ClipboardList className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-gray-900 dark:text-white">#{order.id}</span>
-                            <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${st.color}`}>{st.label}</span>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-extrabold tracking-wide text-gray-700 dark:bg-slate-700 dark:text-slate-200">
+                              {formatOrderCode(order)}
+                            </span>
+                            <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${st.color}`}>{st.label}</span>
                           </div>
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            {new Date(order.created_at).toLocaleString('vi-VN')}
-                          </p>
+                          <p className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">Đơn mua tại Marketplace</p>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                            <span>{new Date(order.created_at).toLocaleString('vi-VN')}</span>
+                            <span className="hidden sm:inline">•</span>
+                            <span>{order.payment_method === 'cod' ? 'Thanh toán khi nhận hàng' : order.payment_method}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg font-bold text-red-600 dark:text-red-400">{formatPrice(order.total_amount)}</span>
-                        <ChevronRight className="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-black dark:group-hover:text-white transition-colors" />
+                      <div className="flex items-center justify-between gap-4 border-t border-gray-100 pt-4 sm:border-t-0 sm:pt-0">
+                        <div className="text-left sm:text-right">
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Tổng thanh toán</p>
+                          <p className="mt-1 text-xl font-black text-red-600 dark:text-red-400">{formatPrice(order.total_amount)}</p>
+                        </div>
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-400 transition group-hover:bg-gray-950 group-hover:text-white dark:bg-slate-700 dark:text-slate-300 dark:group-hover:bg-white dark:group-hover:text-slate-950">
+                          <ChevronRight className="h-5 w-5" />
+                        </span>
                       </div>
                     </div>
                   </Link>

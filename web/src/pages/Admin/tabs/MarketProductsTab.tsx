@@ -49,7 +49,7 @@ export default function MarketProductsTab() {
       setProducts(d.products ?? []);
       setTotal(d.total ?? 0);
     } catch {
-      toast.error('Không thể tải danh sách sản phẩm');
+      toast.error('Không thể tải danh sách sản phẩm', { id: 'admin-market-products-load-error' });
     } finally {
       setLoading(false);
     }

@@ -18,6 +18,10 @@ body {
     overflow-x: hidden;
 }
 
+.grecaptcha-badge {
+    visibility: hidden !important;
+}
+
 /* Trang bọc Framer Motion — 3D nhẹ, giảm răng cưa khi chuyển route */
 .motion-page-root {
     transform-style: preserve-3d;

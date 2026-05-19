@@ -47,6 +47,7 @@ const Messages = lazy(() => import('./pages/Messages'));
 const PublicProfile = lazy(() => import('./pages/Creator/PublicProfile'));
 
 const EASE_PAGE = [0.22, 1, 0.36, 1] as const;
+const TOAST_OPTIONS = { duration: 1800 };
 
 function PageFallback() {
   return (
@@ -70,7 +71,7 @@ export default function App() {
   if (isAdminRoute) {
     return (
       <>
-        <Toaster position="top-right" />
+        <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
         <Suspense fallback={<PageFallback />}>
           <Routes location={location}>
             <Route path="/admin/login" element={<AdminLogin />} />
@@ -101,7 +102,7 @@ export default function App() {
   return (
     <CartProvider>
     <Layout>
-      <Toaster position="top-right" />
+      <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
       {/*
         Grid: mọi trang con cùng ô → chồng lên nhau khi sync.
         Trang mới fade in đè trang cũ → không còn khoảng trống như mode="wait".

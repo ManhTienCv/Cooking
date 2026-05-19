@@ -41,7 +41,7 @@ export const authForgotPasswordRateLimit = rateLimit({
 
 export const authRegisterOtpRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 10,
+  max: 30,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, res) => {

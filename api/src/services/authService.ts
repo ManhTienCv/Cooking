@@ -1,4 +1,4 @@
-import { randomInt } from 'node:crypto';
+import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import type { Request } from 'express';
 import { z } from 'zod';
@@ -92,6 +92,19 @@ function generateOtp(): string {
     return env.testOtpCode;
   }
   return String(randomInt(100000, 1000000));
+}
+
+function hashOtp(email: string, otp: string): string {
+  return `hmac:${createHmac('sha256', env.sessionSecret).update(`${email}:${otp}`).digest('hex')}`;
+}
+
+async function verifyOtpHash(email: string, otp: string, storedHash: string): Promise<boolean> {
+  if (storedHash.startsWith('hmac:')) {
+    const expected = Buffer.from(hashOtp(email, otp));
+    const actual = Buffer.from(storedHash);
+    return expected.length === actual.length && timingSafeEqual(expected, actual);
+  }
+  return bcrypt.compare(otp, storedHash);
 }
 
 function remoteIp(req: Request): string {
@@ -199,18 +212,22 @@ export async function requestRegisterOtp(req: Request) {
   if (activePending && activePending.expires_at > new Date()) {
     const elapsedMs = Date.now() - activePending.updated_at.getTime();
     if (elapsedMs < OTP_MIN_RESEND_MS) {
-      throw httpError(429, 'Please wait before requesting another OTP.');
+      throw httpError(429, 'Vui lòng chờ khoảng 1 phút trước khi gửi lại mã OTP.');
     }
     if (activePending.resend_count >= OTP_MAX_SENDS_PER_PENDING) {
-      throw httpError(429, 'Too many OTP requests. Please try again later.');
+      throw httpError(429, 'Bạn đã yêu cầu quá nhiều mã OTP. Vui lòng thử lại sau.');
     }
     resendCount = activePending.resend_count + 1;
   }
 
   const otp = generateOtp();
-  const otpHash = await bcrypt.hash(otp, BCRYPT_COST);
-  const passHash = await bcrypt.hash(payload.password, BCRYPT_COST);
+  const otpHash = hashOtp(payload.email, otp);
   const exp = new Date(Date.now() + OTP_EXPIRY_MS);
+  const [sent, passHash] = await Promise.all([
+    sendOtpEmail(payload.email, otp, 'register'),
+    bcrypt.hash(payload.password, BCRYPT_COST),
+  ]);
+  if (!sent) throw httpError(503, 'Không gửi được email OTP. Vui lòng kiểm tra cấu hình SMTP hoặc thử lại sau.');
 
   await pool.query(
     `INSERT INTO pending_registrations (email, full_name, password_hash, otp_hash, expires_at, attempt_count, resend_count)
@@ -226,10 +243,7 @@ export async function requestRegisterOtp(req: Request) {
     [payload.email, payload.full_name, passHash, otpHash, exp, resendCount]
   );
 
-  const sent = await sendOtpEmail(payload.email, otp, 'register');
-  if (!sent) throw httpError(503, 'Unable to send OTP email.');
-
-  return { success: true, message: 'OTP has been sent to your email.' };
+  return { success: true, message: 'Mã OTP đã được gửi tới email của bạn.' };
 }
 
 export async function verifyRegisterOtp(body: unknown) {
@@ -256,7 +270,7 @@ export async function verifyRegisterOtp(body: unknown) {
       throw httpError(429, 'Too many OTP attempts. Please request a new OTP.');
     }
 
-    const otpOk = await bcrypt.compare(payload.otp, row.otp_hash);
+    const otpOk = await verifyOtpHash(payload.email, payload.otp, row.otp_hash);
     if (!otpOk) {
       const nextAttempts = row.attempt_count + 1;
       if (nextAttempts >= OTP_MAX_ATTEMPTS) {

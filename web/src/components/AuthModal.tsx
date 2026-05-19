@@ -124,6 +124,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
 
   const handleRegisterRequestOtp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (authLoading) return;
     setAuthError(null);
     const fd = new FormData(e.currentTarget);
     const full_name = String(fd.get('full_name') ?? '').trim();
@@ -179,6 +180,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
 
   const handleForgotSendOtp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (authLoading) return;
     setAuthError(null);
     const fd = new FormData(e.currentTarget);
     const email = String(fd.get('email') ?? '').trim().toLowerCase();

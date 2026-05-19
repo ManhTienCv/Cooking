@@ -155,6 +155,72 @@ function logOtpOnly(to: string, subject: string, code: string, reason: string): 
   console.info(`[OTP:${reason}] Email delivery skipped for ${to} (${subject}). OTP: ${code}`);
 }
 
+type BrevoSendResponse = {
+  messageId?: string;
+};
+
+function getBrevoSender(): { email: string; name?: string } | null {
+  const email = env.brevoSenderEmail.trim();
+  if (!email) return null;
+  const name = env.brevoSenderName.trim() || env.mailBrand || undefined;
+  return { email, name };
+}
+
+async function sendBrevoEmail(
+  to: string,
+  subject: string,
+  text: string,
+  html: string,
+  tag?: string
+): Promise<boolean> {
+  if (!env.brevoApiKey) {
+    console.error('[Brevo] Missing BREVO_API_KEY; cannot send email.');
+    return false;
+  }
+  const sender = getBrevoSender();
+  if (!sender) {
+    console.error('[Brevo] Missing BREVO_SENDER_EMAIL; cannot send email.');
+    return false;
+  }
+
+  const payload = {
+    sender,
+    to: [{ email: to }],
+    subject,
+    textContent: text,
+    htmlContent: html,
+    tags: tag ? [tag] : undefined,
+  };
+
+  try {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': env.brevoApiKey,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error('[Brevo] sendEmail FAILED:', {
+        to,
+        status: res.status,
+        body: body.slice(0, 500),
+      });
+      return false;
+    }
+
+    const data = (await res.json().catch(() => ({}))) as BrevoSendResponse;
+    console.info(`[Brevo] email sent to ${to} - messageId: ${data.messageId ?? 'n/a'}`);
+    return true;
+  } catch (err) {
+    console.error('[Brevo] sendEmail FAILED:', err);
+    return false;
+  }
+}
+
 export async function sendOtpEmail(to: string, code: string, purpose: OtpEmailPurpose): Promise<boolean> {
   const brand = env.mailBrand;
   const subject = subjectForPurpose(purpose, brand);
@@ -166,38 +232,42 @@ export async function sendOtpEmail(to: string, code: string, purpose: OtpEmailPu
     return true;
   }
 
-  const t = await getTransporter();
-  if (t) {
-    try {
-      const info = await t.sendMail({
-        from: env.mailFrom,
-        to,
-        subject,
-        text,
-        html,
-      });
-      console.info(`[SMTP] OTP sent to ${to} - messageId: ${info.messageId}, response: ${info.response}`);
-      return true;
-    } catch (e: unknown) {
-      const err = e as Record<string, unknown>;
-      console.error('[SMTP] sendOtpEmail FAILED:', {
-        to,
-        code: err.code ?? '?',
-        responseCode: err.responseCode ?? '?',
-        response: err.response ?? '?',
-        message: err.message ?? String(e),
-        command: err.command ?? '?',
-      });
-      return false;
-    }
-  }
+  const sent = await sendBrevoEmail(to, subject, text, html, 'otp');
+  if (sent) return true;
+
+  // SMTP fallback kept for later use (disabled on Render due to blocked ports).
+  // const t = await getTransporter();
+  // if (t) {
+  //   try {
+  //     const info = await t.sendMail({
+  //       from: env.mailFrom,
+  //       to,
+  //       subject,
+  //       text,
+  //       html,
+  //     });
+  //     console.info(`[SMTP] OTP sent to ${to} - messageId: ${info.messageId}, response: ${info.response}`);
+  //     return true;
+  //   } catch (e: unknown) {
+  //     const err = e as Record<string, unknown>;
+  //     console.error('[SMTP] sendOtpEmail FAILED:', {
+  //       to,
+  //       code: err.code ?? '?',
+  //       responseCode: err.responseCode ?? '?',
+  //       response: err.response ?? '?',
+  //       message: err.message ?? String(e),
+  //       command: err.command ?? '?',
+  //     });
+  //     return false;
+  //   }
+  // }
 
   if (env.nodeEnv !== 'production') {
     console.info(`[dev] OTP email to ${to} (${subject}): ${code}`);
     return true;
   }
 
-  console.error('SMTP not configured; cannot send OTP in production.');
+  console.error('Brevo not configured; cannot send OTP in production.');
   return false;
 }
 
@@ -207,24 +277,28 @@ export async function sendFeedbackEmail(to: string, name: string): Promise<boole
   const text = `Cam on ${name} da gui phan hoi cho ${brand}.\n\nChung toi da ghi nhan y kien cua ban va se xem xet som nhat.`;
   const html = `<!DOCTYPE html><html lang="vi"><body><h2>Cam on ban da gui phan hoi!</h2><p>Chao <strong>${name}</strong>,</p><p>Chung toi da nhan duoc phan hoi cua ban.</p><p><strong>${brand}</strong></p></body></html>`;
 
-  const t = await getTransporter();
-  if (t) {
-    try {
-      await t.sendMail({
-        from: env.mailFrom,
-        to,
-        subject,
-        text,
-        html,
-      });
-      return true;
-    } catch (e) {
-      console.error('[SMTP] sendFeedbackEmail FAILED:', e);
-      return false;
-    }
-  }
+  const sent = await sendBrevoEmail(to, subject, text, html, 'feedback');
+  if (sent) return true;
 
-  console.info(`[dev] Feedback email to ${to} (not sent because SMTP not configured)`);
+  // SMTP fallback kept for later use (disabled on Render due to blocked ports).
+  // const t = await getTransporter();
+  // if (t) {
+  //   try {
+  //     await t.sendMail({
+  //       from: env.mailFrom,
+  //       to,
+  //       subject,
+  //       text,
+  //       html,
+  //     });
+  //     return true;
+  //   } catch (e) {
+  //     console.error('[SMTP] sendFeedbackEmail FAILED:', e);
+  //     return false;
+  //   }
+  // }
+
+  console.info(`[dev] Feedback email to ${to} (not sent because Brevo not configured)`);
   return false;
 }
 
@@ -235,16 +309,20 @@ export async function sendSellerStatusEmail(to: string, storeName: string, isVer
   const text = `Cửa hàng "${storeName}" ${statusText}. Vui lòng đăng nhập để xem chi tiết.`;
   const html = `<!doctype html><html lang="vi"><body><p>Xin chào,</p><p>Cửa hàng <strong>${storeName}</strong> <strong>${statusText}</strong>.</p><p>Truy cập tài khoản của bạn để biết thông tin chi tiết.</p><p><strong>${brand}</strong></p></body></html>`;
 
-  const t = await getTransporter();
-  if (t) {
-    try {
-      await t.sendMail({ from: env.mailFrom, to, subject, text, html });
-      return true;
-    } catch (e) {
-      console.error('[SMTP] sendSellerStatusEmail FAILED:', e);
-      return false;
-    }
-  }
-  console.info(`[dev] sendSellerStatusEmail to ${to} (not sent because SMTP not configured)`);
+  const sent = await sendBrevoEmail(to, subject, text, html, 'seller-status');
+  if (sent) return true;
+
+  // SMTP fallback kept for later use (disabled on Render due to blocked ports).
+  // const t = await getTransporter();
+  // if (t) {
+  //   try {
+  //     await t.sendMail({ from: env.mailFrom, to, subject, text, html });
+  //     return true;
+  //   } catch (e) {
+  //     console.error('[SMTP] sendSellerStatusEmail FAILED:', e);
+  //     return false;
+  //   }
+  // }
+  console.info(`[dev] sendSellerStatusEmail to ${to} (not sent because Brevo not configured)`);
   return false;
 }

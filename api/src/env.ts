@@ -65,6 +65,11 @@ export const env = {
   /** Tên hiển thị trong template email OTP */
   mailBrand: process.env.MAIL_BRAND ?? 'CookingWeb',
 
+  /** Brevo (HTTP API) — preferred on cloud where SMTP is blocked */
+  brevoApiKey: process.env.BREVO_API_KEY ?? '',
+  brevoSenderEmail: process.env.BREVO_SENDER_EMAIL ?? '',
+  brevoSenderName: process.env.BREVO_SENDER_NAME ?? '',
+
   /** Google reCAPTCHA v3 secret. Login checks are enforced after repeated failures. */
   otpEmailMode: (process.env.OTP_EMAIL_MODE ?? 'auto').toLowerCase(),
   testOtpCode: process.env.TEST_OTP_CODE ?? '',

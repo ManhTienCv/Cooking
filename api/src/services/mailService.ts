@@ -4,7 +4,7 @@ import nodemailer from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport/index.js';
 import { env } from '../env.js';
 
-export type OtpEmailPurpose = 'register' | 'reset' | 'seller_security' | 'ewallet';
+export type OtpEmailPurpose = 'register' | 'reset' | 'seller_security' | 'ewallet' | 'email_change';
 
 let transporter: nodemailer.Transporter | null = null;
 const brevoEndpoint = new URL('https://api.brevo.com/v3/smtp/email');
@@ -65,6 +65,13 @@ function copyForPurpose(purpose: OtpEmailPurpose): { title: string; subtitle: st
       title: 'Xac thuc Vi Dien Tu',
       subtitle: 'Ban dang thuc hien yeu cau rut tien hoac them Ngan hang. Dung ma nay de xac nhan.',
       subject: 'Ma xac thuc Vi Dien Tu',
+    };
+  }
+  if (purpose === 'email_change') {
+    return {
+      title: 'Xac thuc thay doi email',
+      subtitle: 'Ban vua yeu cau doi email cho tai khoan. Dung ma nay de xac nhan.',
+      subject: 'Ma xac thuc doi email',
     };
   }
   return {

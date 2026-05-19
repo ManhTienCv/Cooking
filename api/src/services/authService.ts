@@ -54,6 +54,14 @@ const updateProfileSchema = z.object({
   bio: z.string().trim().max(2000).optional().default(''),
 });
 
+const emailChangeRequestSchema = z.object({
+  email: emailSchema,
+});
+
+const emailChangeVerifySchema = z.object({
+  otp: z.string().trim().regex(/^\d{6}$/),
+});
+
 const changePasswordSchema = z.object({
   current_password: z.string().min(1).max(128),
   new_password: z.string().min(8).max(128),
@@ -393,6 +401,83 @@ export async function updateProfile(userId: number, body: unknown) {
   );
   if (r.rows.length === 0) throw httpError(404, 'User not found.');
   return { success: true, message: 'Profile updated successfully.', user: r.rows[0] };
+}
+
+export async function requestEmailChangeOtp(userId: number, body: unknown) {
+  const payload = parsePayload(emailChangeRequestSchema, body);
+  const newEmail = payload.email.trim().toLowerCase();
+
+  const current = await pool.query<{ email: string }>('SELECT email FROM users WHERE id = $1', [userId]);
+  const row = current.rows[0];
+  if (!row) throw httpError(404, 'User not found.');
+  if (row.email.toLowerCase() === newEmail) {
+    throw httpError(400, 'Email mới trùng với email hiện tại.');
+  }
+
+  const existing = await pool.query<{ id: number }>('SELECT id FROM users WHERE email = $1 LIMIT 1', [newEmail]);
+  if (existing.rows.length > 0) throw httpError(409, 'Email đã được sử dụng.');
+
+  const otp = generateOtp();
+  const exp = new Date(Date.now() + OTP_EXPIRY_MS);
+  await pool.query(
+    'UPDATE users SET pending_email = $1, email_otp = $2, email_otp_expiry = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4',
+    [newEmail, otp, exp, userId]
+  );
+
+  const sent = await sendOtpEmail(newEmail, otp, 'email_change');
+  if (!sent) {
+    await pool.query(
+      'UPDATE users SET pending_email = NULL, email_otp = NULL, email_otp_expiry = NULL WHERE id = $1',
+      [userId]
+    );
+    throw httpError(503, 'Không gửi được email OTP.');
+  }
+
+  return { success: true, message: 'Mã OTP đã được gửi tới email mới.' };
+}
+
+export async function verifyEmailChangeOtp(userId: number, body: unknown) {
+  const payload = parsePayload(emailChangeVerifySchema, body);
+  const otp = payload.otp.trim();
+
+  const r = await pool.query<{
+    email: string;
+    pending_email: string | null;
+    email_otp: string | null;
+    email_otp_expiry: Date | null;
+  }>(
+    'SELECT email, pending_email, email_otp, email_otp_expiry FROM users WHERE id = $1',
+    [userId]
+  );
+  const row = r.rows[0];
+  if (!row) throw httpError(404, 'User not found.');
+  if (!row.pending_email || !row.email_otp || !row.email_otp_expiry) {
+    throw httpError(400, 'Không có yêu cầu đổi email nào.');
+  }
+  if (row.email_otp_expiry < new Date()) {
+    await pool.query(
+      'UPDATE users SET pending_email = NULL, email_otp = NULL, email_otp_expiry = NULL WHERE id = $1',
+      [userId]
+    );
+    throw httpError(400, 'OTP đã hết hạn. Vui lòng gửi lại mã.');
+  }
+  if (row.email_otp !== otp) {
+    throw httpError(401, 'OTP không đúng.');
+  }
+
+  const existing = await pool.query<{ id: number }>('SELECT id FROM users WHERE email = $1 LIMIT 1', [row.pending_email]);
+  if (existing.rows.length > 0 && existing.rows[0].id !== userId) {
+    throw httpError(409, 'Email đã được sử dụng.');
+  }
+
+  const updated = await pool.query<Pick<User, 'id' | 'full_name' | 'email' | 'avatar_url' | 'bio'>>(
+    'UPDATE users SET email = $1, pending_email = NULL, email_otp = NULL, email_otp_expiry = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, full_name, email, avatar_url, bio',
+    [row.pending_email, userId]
+  );
+  const user = updated.rows[0];
+  if (!user) throw httpError(404, 'User not found.');
+
+  return { success: true, message: 'Đổi email thành công.', user };
 }
 
 export async function changePassword(userId: number, body: unknown) {

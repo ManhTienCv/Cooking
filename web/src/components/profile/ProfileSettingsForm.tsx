@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import { Skeleton } from '../ui/Skeleton';
 import type { ProfileUser } from './types';
-import { apiFetch } from '../../lib/api';
+import { apiFetch, apiJson } from '../../lib/api';
+import { notifyAuthChanged } from '../../lib/authEvents';
 import { useTheme } from '../../hooks/useTheme';
 import {
   loadProfilePreferences,
@@ -86,7 +87,12 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
   const { isDark, toggleTheme } = useTheme();
   const [view, setView] = useState<SettingsView>(initialView);
   const [profileMsg, setProfileMsg] = useState<Notice>(null);
+  const [emailMsg, setEmailMsg] = useState<Notice>(null);
   const [passMsg, setPassMsg] = useState<Notice>(null);
+  const [emailDraft, setEmailDraft] = useState('');
+  const [emailOtp, setEmailOtp] = useState('');
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [emailBusy, setEmailBusy] = useState(false);
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [banks, setBanks] = useState<LinkedBankAccount[]>([]);
   const [addressForm, setAddressForm] = useState(blankAddress);
@@ -98,6 +104,13 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
     const prefs = loadProfilePreferences(user?.email);
     setAddresses(prefs.addresses);
     setBanks(prefs.banks);
+  }, [user?.email]);
+
+  useEffect(() => {
+    setEmailDraft(user?.email ?? '');
+    setEmailOtp('');
+    setEmailOtpSent(false);
+    setEmailMsg(null);
   }, [user?.email]);
 
   useEffect(() => {
@@ -119,15 +132,68 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
     const bio = fd.get('bio') as string;
 
     try {
-      await apiFetch('/api/auth/profile', {
+      const r = await apiFetch('/api/auth/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ full_name, bio }),
       });
+      const data = (await r.json().catch(() => ({}))) as { message?: string };
+      if (!r.ok) {
+        throw new Error(data.message ?? 'Lỗi cập nhật hồ sơ');
+      }
       setProfileMsg({ text: 'Cập nhật hồ sơ thành công!', type: 'success' });
+      notifyAuthChanged({ authenticated: true });
       onSuccessSubmit();
     } catch (err: unknown) {
       setProfileMsg({ text: err instanceof Error ? err.message : 'Lỗi cập nhật hồ sơ', type: 'error' });
+    }
+  };
+
+  const handleRequestEmailOtp = async () => {
+    const nextEmail = emailDraft.trim().toLowerCase();
+    if (!nextEmail) {
+      setEmailMsg({ text: 'Vui lòng nhập email mới.', type: 'error' });
+      return;
+    }
+    setEmailBusy(true);
+    setEmailMsg(null);
+    try {
+      const data = await apiJson<{ message?: string }>('/api/auth/email/request-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email: nextEmail }),
+      });
+      setEmailMsg({ text: data.message ?? 'Đã gửi mã OTP.', type: 'success' });
+      setEmailOtp('');
+      setEmailOtpSent(true);
+    } catch (err) {
+      setEmailMsg({ text: err instanceof Error ? err.message : 'Không gửi được mã OTP.', type: 'error' });
+    } finally {
+      setEmailBusy(false);
+    }
+  };
+
+  const handleVerifyEmailOtp = async () => {
+    const otp = emailOtp.trim();
+    if (!otp) {
+      setEmailMsg({ text: 'Vui lòng nhập mã OTP.', type: 'error' });
+      return;
+    }
+    setEmailBusy(true);
+    setEmailMsg(null);
+    try {
+      const data = await apiJson<{ message?: string }>('/api/auth/email/verify', {
+        method: 'POST',
+        body: JSON.stringify({ otp }),
+      });
+      setEmailMsg({ text: data.message ?? 'Đổi email thành công.', type: 'success' });
+      setEmailOtp('');
+      setEmailOtpSent(false);
+      notifyAuthChanged({ authenticated: true });
+      onSuccessSubmit();
+    } catch (err) {
+      setEmailMsg({ text: err instanceof Error ? err.message : 'Xác thực OTP thất bại.', type: 'error' });
+    } finally {
+      setEmailBusy(false);
     }
   };
 
@@ -296,7 +362,60 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
               </div>
               <div>
                 <label className={labelClass}>Email nhận hóa đơn</label>
-                <input type="email" defaultValue={user?.email} disabled className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 font-medium text-gray-600 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" />
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <input
+                    type="email"
+                    value={emailDraft}
+                    onChange={(e) => {
+                      setEmailDraft(e.target.value);
+                      if (emailOtpSent) {
+                        setEmailOtpSent(false);
+                        setEmailOtp('');
+                      }
+                      setEmailMsg(null);
+                    }}
+                    placeholder="Email mới"
+                    className={`${inputClass} sm:w-auto sm:flex-1`}
+                  />
+                  <button
+                    type="button"
+                    disabled={emailBusy || !emailDraft.trim()}
+                    onClick={handleRequestEmailOtp}
+                    className="whitespace-nowrap rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-60"
+                  >
+                    {emailBusy ? 'Đang gửi…' : 'Xác nhận'}
+                  </button>
+                </div>
+                {emailOtpSent && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]{6}"
+                        maxLength={6}
+                        value={emailOtp}
+                        onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="Nhập OTP 6 số"
+                        className={`${inputClass} sm:w-auto sm:flex-1`}
+                      />
+                      <button
+                        type="button"
+                        disabled={emailBusy || emailOtp.length !== 6}
+                        onClick={handleVerifyEmailOtp}
+                        className="whitespace-nowrap rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+                      >
+                        Xác nhận OTP
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">OTP đã gửi tới email mới. Vui lòng nhập để hoàn tất đổi email.</p>
+                  </div>
+                )}
+                {emailMsg && (
+                  <div className={`mt-3 rounded-md border p-3 text-sm ${emailMsg.type === 'success' ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300'}`}>
+                    {emailMsg.text}
+                  </div>
+                )}
               </div>
               <div>
                 <label className={labelClass}>Tiểu sử</label>

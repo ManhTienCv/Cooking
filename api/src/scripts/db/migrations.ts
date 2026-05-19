@@ -8,6 +8,7 @@ export const MIGRATION_FILES = [
   'postgresql_schema.sql',
   'migration_pending_registrations.sql',
   'migration_secure_otp.sql',
+  'migration_email_change.sql',
   'migration_marketplace.sql',
   'migration_seller_security.sql',
   'migration_messages.sql',

@@ -27,6 +27,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
 
+  const sanitizeOtp = (value: string) => value.replace(/\D/g, '').slice(0, 6);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -298,6 +300,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
           ) : (
             <form
               className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900"
+              autoComplete="off"
               onSubmit={handleRegisterVerify}
             >
               <h1 className="text-2xl font-bold mb-2 text-black dark:text-white">Nhập mã OTP</h1>
@@ -319,7 +322,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                 autoCorrect="off"
                 spellCheck={false}
                 value={registerOtp}
-                onChange={(e) => setRegisterOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onChange={(e) => setRegisterOtp(sanitizeOtp(e.target.value))}
+                onInput={(e) => setRegisterOtp(sanitizeOtp((e.target as HTMLInputElement).value))}
                 className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-4 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm tracking-widest text-center font-bold text-black dark:text-white"
               />
               <button
@@ -462,7 +466,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
         >
           <div className="grid h-full w-full grid-cols-1 md:grid-cols-[1.1fr_0.9fr]">
             <div className="flex items-center justify-center bg-white dark:bg-slate-900 p-8">
-              <form className="w-full max-w-sm flex flex-col items-center justify-center" onSubmit={handleResetPassword}>
+              <form
+                className="w-full max-w-sm flex flex-col items-center justify-center"
+                autoComplete="off"
+                onSubmit={handleResetPassword}
+              >
                 <h1 className="text-2xl font-bold mb-2 text-black dark:text-white">Đặt Lại Mật Khẩu</h1>
                 <span className="text-gray-500 dark:text-gray-400 text-xs mb-2 text-center">
                   Mã đã gửi tới <strong className="text-black dark:text-white">{forgotEmail}</strong>
@@ -482,7 +490,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                   autoCorrect="off"
                   spellCheck={false}
                   value={resetOtp}
-                  onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) => setResetOtp(sanitizeOtp(e.target.value))}
+                  onInput={(e) => setResetOtp(sanitizeOtp((e.target as HTMLInputElement).value))}
                   className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
                 />
                 <input

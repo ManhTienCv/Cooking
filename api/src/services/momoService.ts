@@ -1,5 +1,4 @@
 import crypto from 'crypto';
-import { env } from '../env.js';
 
 interface MoMoPaymentRequest {
   partnerCode: string;
@@ -22,9 +21,11 @@ export const createMoMoPayment = async (orderId: string, amount: number, orderIn
   const accessKey = process.env.MOMO_ACCESS_KEY || 'MOCK_ACCESS_KEY';
   const secretKey = process.env.MOMO_SECRET_KEY || 'MOCK_SECRET_KEY';
   const endpoint = process.env.MOMO_ENDPOINT || 'https://test-payment.momo.vn/v2/gateway/api/create';
-  
-  const redirectUrl = `http://localhost:5173/wallet`;
-  const ipnUrl = `https://your-ngrok-domain.com/api/ewallet/topup/momo-ipn`; // Should be public IP/domain in prod
+
+  const apiBaseUrl = (process.env.API_URL || 'https://abc123.ngrok-free.app').replace(/\/+$/, '');
+  const feBaseUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+  const redirectUrl = `${feBaseUrl}/wallet`;
+  const ipnUrl = `${apiBaseUrl}/api/ewallet/topup/momo-ipn`;
   const requestType = 'payWithMethod';
   const extraData = '';
   const requestId = partnerCode + new Date().getTime();

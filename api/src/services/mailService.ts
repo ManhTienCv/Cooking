@@ -1,26 +1,40 @@
+import { lookup } from 'node:dns/promises';
 import nodemailer from 'nodemailer';
+import type SMTPTransport from 'nodemailer/lib/smtp-transport/index.js';
 import { env } from '../env.js';
 
 export type OtpEmailPurpose = 'register' | 'reset' | 'seller_security' | 'ewallet';
 
 let transporter: nodemailer.Transporter | null = null;
 
-function getTransporter(): nodemailer.Transporter | null {
+async function resolveSmtpHost(host: string): Promise<string> {
+  try {
+    const result = await lookup(host, { family: 4 });
+    return result.address;
+  } catch (err) {
+    console.warn('[SMTP] IPv4 DNS lookup failed; falling back to configured host:', err);
+    return host;
+  }
+}
+
+async function getTransporter(): Promise<nodemailer.Transporter | null> {
   if (!env.smtpHost || !env.smtpUser) return null;
   if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: env.smtpHost,
+    const smtpHost = await resolveSmtpHost(env.smtpHost);
+    const options: SMTPTransport.Options = {
+      host: smtpHost,
       port: env.smtpPort,
       secure: env.smtpSecure,
       auth: {
         user: env.smtpUser,
         pass: env.smtpPass,
       },
-      tls: { rejectUnauthorized: false },
+      tls: { rejectUnauthorized: false, servername: env.smtpHost },
       connectionTimeout: 10_000,
       greetingTimeout: 10_000,
       socketTimeout: 15_000,
-    });
+    };
+    transporter = nodemailer.createTransport(options);
   }
   return transporter;
 }
@@ -152,7 +166,7 @@ export async function sendOtpEmail(to: string, code: string, purpose: OtpEmailPu
     return true;
   }
 
-  const t = getTransporter();
+  const t = await getTransporter();
   if (t) {
     try {
       const info = await t.sendMail({
@@ -193,7 +207,7 @@ export async function sendFeedbackEmail(to: string, name: string): Promise<boole
   const text = `Cam on ${name} da gui phan hoi cho ${brand}.\n\nChung toi da ghi nhan y kien cua ban va se xem xet som nhat.`;
   const html = `<!DOCTYPE html><html lang="vi"><body><h2>Cam on ban da gui phan hoi!</h2><p>Chao <strong>${name}</strong>,</p><p>Chung toi da nhan duoc phan hoi cua ban.</p><p><strong>${brand}</strong></p></body></html>`;
 
-  const t = getTransporter();
+  const t = await getTransporter();
   if (t) {
     try {
       await t.sendMail({
@@ -221,7 +235,7 @@ export async function sendSellerStatusEmail(to: string, storeName: string, isVer
   const text = `Cửa hàng "${storeName}" ${statusText}. Vui lòng đăng nhập để xem chi tiết.`;
   const html = `<!doctype html><html lang="vi"><body><p>Xin chào,</p><p>Cửa hàng <strong>${storeName}</strong> <strong>${statusText}</strong>.</p><p>Truy cập tài khoản của bạn để biết thông tin chi tiết.</p><p><strong>${brand}</strong></p></body></html>`;
 
-  const t = getTransporter();
+  const t = await getTransporter();
   if (t) {
     try {
       await t.sendMail({ from: env.mailFrom, to, subject, text, html });

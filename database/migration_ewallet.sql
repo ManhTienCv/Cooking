@@ -1,4 +1,4 @@
--- Migration for E-Wallet and Automated Payments
+﻿-- Migration for E-Wallet and Automated Payments
 
 -- Create Enums
 DO $$ BEGIN

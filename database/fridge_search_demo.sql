@@ -1,9 +1,9 @@
--- File này lưu lại cấu trúc SQL mẫu dùng cho tính năng "Tìm kiếm theo nguyên liệu Tủ lạnh" (Fridge Clearing Search).
--- Hệ thống sẽ tự động ghép thêm các dòng CASE WHEN tương ứng với số lượng nguyên liệu mà người dùng nhập vào.
--- Bạn có thể lưu lại file này để đảm bảo đủ dữ liệu khi chia sẻ code cho bạn bè.
+﻿-- File nÃ y lÆ°u láº¡i cáº¥u trÃºc SQL máº«u dÃ¹ng cho tÃ­nh nÄƒng "TÃ¬m kiáº¿m theo nguyÃªn liá»‡u Tá»§ láº¡nh" (Fridge Clearing Search).
+-- Há»‡ thá»‘ng sáº½ tá»± Ä‘á»™ng ghÃ©p thÃªm cÃ¡c dÃ²ng CASE WHEN tÆ°Æ¡ng á»©ng vá»›i sá»‘ lÆ°á»£ng nguyÃªn liá»‡u mÃ  ngÆ°á»i dÃ¹ng nháº­p vÃ o.
+-- Báº¡n cÃ³ thá»ƒ lÆ°u láº¡i file nÃ y Ä‘á»ƒ Ä‘áº£m báº£o Ä‘á»§ dá»¯ liá»‡u khi chia sáº» code cho báº¡n bÃ¨.
 
--- Ví dụ: Khi người dùng gõ tìm 3 nguyên liệu: 'trứng', 'cà chua', 'hành lá'
--- Query thực tế trên Node.js sẽ được sinh ra như sau:
+-- VÃ­ dá»¥: Khi ngÆ°á»i dÃ¹ng gÃµ tÃ¬m 3 nguyÃªn liá»‡u: 'trá»©ng', 'cÃ  chua', 'hÃ nh lÃ¡'
+-- Query thá»±c táº¿ trÃªn Node.js sáº½ Ä‘Æ°á»£c sinh ra nhÆ° sau:
 
 SELECT 
     r.id,
@@ -16,18 +16,18 @@ SELECT
     c.name AS category_name,
     u.full_name AS author_name,
     (
-        (CASE WHEN r.ingredients ILIKE '%trứng%' THEN 1 ELSE 0 END) +
-        (CASE WHEN r.ingredients ILIKE '%cà chua%' THEN 1 ELSE 0 END) +
-        (CASE WHEN r.ingredients ILIKE '%hành lá%' THEN 1 ELSE 0 END)
+        (CASE WHEN r.ingredients ILIKE '%trá»©ng%' THEN 1 ELSE 0 END) +
+        (CASE WHEN r.ingredients ILIKE '%cÃ  chua%' THEN 1 ELSE 0 END) +
+        (CASE WHEN r.ingredients ILIKE '%hÃ nh lÃ¡%' THEN 1 ELSE 0 END)
     ) AS match_count
 FROM recipes r
 LEFT JOIN recipe_categories c ON r.category_id = c.id
 LEFT JOIN users u ON r.author_id = u.id
 WHERE r.status = 'approved'
   AND (
-        r.ingredients ILIKE '%trứng%' OR 
-        r.ingredients ILIKE '%cà chua%' OR 
-        r.ingredients ILIKE '%hành lá%'
+        r.ingredients ILIKE '%trá»©ng%' OR 
+        r.ingredients ILIKE '%cÃ  chua%' OR 
+        r.ingredients ILIKE '%hÃ nh lÃ¡%'
   )
 ORDER BY match_count DESC, r.views DESC
 LIMIT 20 OFFSET 0;

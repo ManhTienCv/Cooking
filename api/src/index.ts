@@ -34,6 +34,8 @@ app.use(
 app.use(cookieParser());
 const pgSession = connectPgSimple(session);
 
+const isProduction = env.nodeEnv === 'production';
+
 app.use(
   session({
     store: new pgSession({
@@ -47,11 +49,12 @@ app.use(
     cookie: {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: 'lax',
-      secure: env.nodeEnv === 'production',
+      sameSite: isProduction ? 'none' : 'lax',
+      secure: isProduction,
     },
   })
 );
+
 
 app.use(
   cors({

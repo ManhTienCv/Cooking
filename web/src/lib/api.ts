@@ -1,9 +1,11 @@
 /**
- * Gọi API backend (proxy Vite /api → cookapp-server).
+ * Gọi API backend.
+ * - Local dev: VITE_API_URL trống → dùng Vite proxy (/api → localhost:3001)
+ * - Production (Vercel): VITE_API_URL = URL backend thật (vd: https://your-api.onrender.com)
  * Session cookie + CSRF header cho các request thay đổi dữ liệu.
  */
 
-const base = '';
+const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
 
 let csrfPromise: Promise<string> | null = null;
 

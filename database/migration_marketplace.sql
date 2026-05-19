@@ -1,11 +1,11 @@
--- ================================================================
--- Migration: Smart Cooking Hub — Marketplace
+﻿-- ================================================================
+-- Migration: Smart Cooking Hub â€” Marketplace
 -- Adds: product_categories, products, cart_items, orders,
 --        order_items, product_reviews, seller_profiles,
 --        product_bundles, bundle_items, wishlist_items
 -- ================================================================
 
--- 1. Danh mục sản phẩm (cả đồ ăn & đồ bếp)
+-- 1. Danh má»¥c sáº£n pháº©m (cáº£ Ä‘á»“ Äƒn & Ä‘á»“ báº¿p)
 CREATE TABLE IF NOT EXISTS product_categories (
   id SERIAL PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS product_categories (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Seller profiles — user nâng cấp thành người bán
+-- 2. Seller profiles â€” user nÃ¢ng cáº¥p thÃ nh ngÆ°á»i bÃ¡n
 CREATE TABLE IF NOT EXISTS seller_profiles (
   user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   store_name VARCHAR(200) NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS seller_profiles (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Sản phẩm thống nhất (đồ ăn + đồ bếp)
+-- 3. Sáº£n pháº©m thá»‘ng nháº¥t (Ä‘á»“ Äƒn + Ä‘á»“ báº¿p)
 CREATE TABLE IF NOT EXISTS products (
   id SERIAL PRIMARY KEY,
   seller_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -45,21 +45,21 @@ CREATE TABLE IF NOT EXISTS products (
   image_url VARCHAR(500),
   images JSONB DEFAULT '[]',                          -- gallery: ["url1","url2"]
   product_type VARCHAR(20) NOT NULL DEFAULT 'food',   -- 'food' | 'ingredient' | 'equipment'
-  specs JSONB DEFAULT '{}',                           -- kỹ thuật: {"material":"Inox","weight":"1.2kg"}
+  specs JSONB DEFAULT '{}',                           -- ká»¹ thuáº­t: {"material":"Inox","weight":"1.2kg"}
   stock INT DEFAULT 0 CHECK (stock >= 0),
-  unit VARCHAR(50) DEFAULT 'cái',                     -- đơn vị: cái, kg, gói, hộp, ...
+  unit VARCHAR(50) DEFAULT 'cÃ¡i',                     -- Ä‘Æ¡n vá»‹: cÃ¡i, kg, gÃ³i, há»™p, ...
   is_available BOOLEAN DEFAULT TRUE,
   is_featured BOOLEAN DEFAULT FALSE,
   rating DECIMAL(3,2) DEFAULT 0,
   total_reviews INT DEFAULT 0,
   total_sold INT DEFAULT 0,
-  recipe_id INT REFERENCES recipes(id) ON DELETE SET NULL,  -- liên kết recipe (nếu có)
+  recipe_id INT REFERENCES recipes(id) ON DELETE SET NULL,  -- liÃªn káº¿t recipe (náº¿u cÃ³)
   status VARCHAR(20) DEFAULT 'pending',               -- 'pending' | 'approved' | 'rejected'
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Giỏ hàng
+-- 4. Giá» hÃ ng
 CREATE TABLE IF NOT EXISTS cart_items (
   id SERIAL PRIMARY KEY,
   user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -69,13 +69,13 @@ CREATE TABLE IF NOT EXISTS cart_items (
   UNIQUE(user_id, product_id)
 );
 
--- 5. Đơn hàng
+-- 5. ÄÆ¡n hÃ ng
 CREATE TABLE IF NOT EXISTS orders (
   id SERIAL PRIMARY KEY,
   buyer_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   total_amount DECIMAL(12,2) NOT NULL CHECK (total_amount >= 0),
   status VARCHAR(30) DEFAULT 'pending',
-    -- pending → confirmed → preparing → shipping → delivered → completed → cancelled
+    -- pending â†’ confirmed â†’ preparing â†’ shipping â†’ delivered â†’ completed â†’ cancelled
   shipping_name VARCHAR(120),
   shipping_phone VARCHAR(20),
   shipping_address TEXT,
@@ -86,13 +86,13 @@ CREATE TABLE IF NOT EXISTS orders (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. Chi tiết đơn hàng
+-- 6. Chi tiáº¿t Ä‘Æ¡n hÃ ng
 CREATE TABLE IF NOT EXISTS order_items (
   id SERIAL PRIMARY KEY,
   order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   product_id INT NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
   seller_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  product_name VARCHAR(200) NOT NULL,                 -- snapshot tên lúc mua
+  product_name VARCHAR(200) NOT NULL,                 -- snapshot tÃªn lÃºc mua
   product_image VARCHAR(500),
   quantity INT NOT NULL CHECK (quantity > 0),
   unit_price DECIMAL(12,2) NOT NULL,
@@ -119,7 +119,7 @@ BEGIN
   END IF;
 END $$;
 
--- 7. Đánh giá sản phẩm
+-- 7. ÄÃ¡nh giÃ¡ sáº£n pháº©m
 CREATE TABLE IF NOT EXISTS product_reviews (
   id SERIAL PRIMARY KEY,
   product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS product_reviews (
   UNIQUE(user_id, product_id, order_id)
 );
 
--- 8. Wishlist / Yêu thích sản phẩm
+-- 8. Wishlist / YÃªu thÃ­ch sáº£n pháº©m
 CREATE TABLE IF NOT EXISTS wishlist_items (
   id SERIAL PRIMARY KEY,
   user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS wishlist_items (
   UNIQUE(user_id, product_id)
 );
 
--- 9. Bundle / Gói combo
+-- 9. Bundle / GÃ³i combo
 CREATE TABLE IF NOT EXISTS product_bundles (
   id SERIAL PRIMARY KEY,
   name VARCHAR(200) NOT NULL,
@@ -155,7 +155,7 @@ CREATE TABLE IF NOT EXISTS product_bundles (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 10. Chi tiết gói combo
+-- 10. Chi tiáº¿t gÃ³i combo
 CREATE TABLE IF NOT EXISTS bundle_items (
   id SERIAL PRIMARY KEY,
   bundle_id INT NOT NULL REFERENCES product_bundles(id) ON DELETE CASCADE,
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS bundle_items (
 );
 
 -- ================================================================
--- Indexes tối ưu truy vấn
+-- Indexes tá»‘i Æ°u truy váº¥n
 -- ================================================================
 CREATE INDEX IF NOT EXISTS idx_products_seller ON products(seller_id);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
@@ -186,16 +186,16 @@ CREATE INDEX IF NOT EXISTS idx_wishlist_user ON wishlist_items(user_id);
 -- Default product categories
 -- ================================================================
 INSERT INTO product_categories (name, slug, type, icon, sort_order) VALUES
-  -- Đồ ăn
-  ('Đồ ăn sẵn',       'do-an-san',       'food',      'UtensilsCrossed', 1),
-  ('Nguyên liệu tươi','nguyen-lieu-tuoi','food',      'Carrot',          2),
-  ('Đồ khô & Gia vị', 'do-kho-gia-vi',  'food',      'Package',         3),
-  ('Bánh & Đồ ngọt',  'banh-do-ngot',   'food',      'Cake',            4),
-  ('Đồ uống',         'do-uong',        'food',      'Coffee',          5),
-  -- Đồ bếp
-  ('Nồi & Chảo',      'noi-chao',       'equipment', 'CookingPot',      6),
-  ('Dao & Thớt',      'dao-thot',       'equipment', 'Slice',           7),
-  ('Máy xay & Máy ép','may-xay-ep',     'equipment', 'Cog',             8),
-  ('Phụ kiện nhà bếp','phu-kien-bep',   'equipment', 'Wrench',          9),
-  ('Bộ đồ ăn',        'bo-do-an',       'equipment', 'Utensils',       10)
+  -- Äá»“ Äƒn
+  ('Äá»“ Äƒn sáºµn',       'do-an-san',       'food',      'UtensilsCrossed', 1),
+  ('NguyÃªn liá»‡u tÆ°Æ¡i','nguyen-lieu-tuoi','food',      'Carrot',          2),
+  ('Äá»“ khÃ´ & Gia vá»‹', 'do-kho-gia-vi',  'food',      'Package',         3),
+  ('BÃ¡nh & Äá»“ ngá»t',  'banh-do-ngot',   'food',      'Cake',            4),
+  ('Äá»“ uá»‘ng',         'do-uong',        'food',      'Coffee',          5),
+  -- Äá»“ báº¿p
+  ('Ná»“i & Cháº£o',      'noi-chao',       'equipment', 'CookingPot',      6),
+  ('Dao & Thá»›t',      'dao-thot',       'equipment', 'Slice',           7),
+  ('MÃ¡y xay & MÃ¡y Ã©p','may-xay-ep',     'equipment', 'Cog',             8),
+  ('Phá»¥ kiá»‡n nhÃ  báº¿p','phu-kien-bep',   'equipment', 'Wrench',          9),
+  ('Bá»™ Ä‘á»“ Äƒn',        'bo-do-an',       'equipment', 'Utensils',       10)
 ON CONFLICT (slug) DO NOTHING;

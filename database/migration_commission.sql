@@ -1,4 +1,4 @@
--- Migration: Add commission_rate to seller_profiles
+﻿-- Migration: Add commission_rate to seller_profiles
 -- Used by the E-Wallet system to automatically deduct platform fee
 -- when an order is marked as completed.
 
@@ -15,6 +15,6 @@ BEGIN
     ALTER TABLE seller_profiles ADD COLUMN commission_rate DECIMAL(5,2) NOT NULL DEFAULT 10.00;
     RAISE NOTICE 'Added commission_rate column to seller_profiles';
   ELSE
-    RAISE NOTICE 'commission_rate column already exists — skipping';
+    RAISE NOTICE 'commission_rate column already exists â€” skipping';
   END IF;
 END $$;

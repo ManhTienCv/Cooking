@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { verifyRecaptchaToken } from './recaptchaService.js';
+import { verifyRecaptchaV3 } from '../lib/recaptchaVerify.js';
 import { env } from '../env.js';
 import { httpError } from '../lib/httpError.js';
 import * as sellerRepo from '../repos/sellerSettingsRepo.js';
@@ -90,11 +90,12 @@ export async function updateStore(userId: number, body: unknown) {
 
 export async function submitVerification(userId: number, body: unknown) {
   const payload = parsePayload(verificationSchema, body);
-  // server-side recaptcha: if configured, require token inside body
+  // server-side recaptcha v3: if configured, require token inside body
   const token = (body as any)?.recaptcha_token as string | undefined;
   if (env.recaptchaSecretKey) {
     if (!token) throw httpError(403, 'Missing reCAPTCHA token.');
-    if (!(await verifyRecaptchaToken(token, undefined))) {
+    const ok = await verifyRecaptchaV3(env.recaptchaSecretKey, token, 'seller_verification', env.recaptchaMinScore);
+    if (!ok) {
       throw httpError(403, 'reCAPTCHA verification failed.');
     }
   }

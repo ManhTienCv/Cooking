@@ -1,4 +1,4 @@
--- PostgreSQL schema for cookingboy
+﻿-- PostgreSQL schema for cookingboy
 -- Create database manually if needed:
 --   CREATE DATABASE cookingboy;
 
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS recipes (
   description TEXT,
   ingredients TEXT,
   instructions TEXT,
-  difficulty VARCHAR(20) DEFAULT 'Trung b�nh',
+  difficulty VARCHAR(20) DEFAULT 'Trung bình',
   cooking_time INT,
   servings INT,
   image_url VARCHAR(255),

@@ -1,4 +1,4 @@
--- Migration for E-Wallet OTPs
+﻿-- Migration for E-Wallet OTPs
 
 CREATE TABLE IF NOT EXISTS ewallet_otps (
     user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,

@@ -1,4 +1,4 @@
--- Harden OTP flows: 5-minute codes, bounded attempts, and resend tracking.
+﻿-- Harden OTP flows: 5-minute codes, bounded attempts, and resend tracking.
 -- Run once against the application database before deploying the updated API.
 
 ALTER TABLE pending_registrations

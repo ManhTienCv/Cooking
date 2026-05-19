@@ -117,6 +117,10 @@ app.use('/api/ewallet', ewalletRouter);
 
 app.use(errorHandler);
 
+console.info(
+  `[SMTP] config host=${env.smtpHost || '(empty)'} port=${env.smtpPort} secure=${env.smtpSecure}`
+);
+
 app.listen(env.port, () => {
   console.log(`cookapp-server listening on http://localhost:${env.port}`);
 });

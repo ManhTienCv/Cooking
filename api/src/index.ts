@@ -35,6 +35,22 @@ app.use(cookieParser());
 const pgSession = connectPgSimple(session);
 
 const isProduction = env.nodeEnv === 'production';
+const isLocalOrigin = (origin: string): boolean => {
+  try {
+    const { hostname } = new URL(origin);
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  } catch {
+    return false;
+  }
+};
+const usesCrossSiteHttpsCookies =
+  isProduction ||
+  env.corsOrigins.some((origin) => origin.startsWith('https://') && !isLocalOrigin(origin));
+const sessionCookieOptions = {
+  path: '/',
+  sameSite: usesCrossSiteHttpsCookies ? 'none' : 'lax',
+  secure: usesCrossSiteHttpsCookies,
+} as const;
 
 app.use(
   session({
@@ -47,10 +63,9 @@ app.use(
     saveUninitialized: false,
     name: 'cook.sid',
     cookie: {
+      ...sessionCookieOptions,
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: isProduction ? 'none' : 'lax',
-      secure: isProduction,
     },
   })
 );

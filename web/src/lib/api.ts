@@ -15,7 +15,7 @@ export function resetCsrfCache(): void {
 
 export async function getCsrfToken(): Promise<string> {
   if (!csrfPromise) {
-    csrfPromise = fetch(`${base}/api/auth/csrf`, { credentials: 'include' })
+    csrfPromise = fetch(`${base}/api/auth/csrf`, { credentials: 'include', cache: 'no-store' })
       .then((r) => {
         if (!r.ok) {
           throw new Error('Khong lay duoc CSRF token. Kiem tra backend API dang chay.');

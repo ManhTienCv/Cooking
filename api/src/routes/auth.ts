@@ -10,8 +10,27 @@ import {
 import { logAuthLogin } from '../lib/auditLog.js';
 import * as authService from '../services/authService.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { env } from '../env.js';
 
 export const authRouter = Router();
+
+function isLocalOrigin(origin: string): boolean {
+  try {
+    const { hostname } = new URL(origin);
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  } catch {
+    return false;
+  }
+}
+
+const usesCrossSiteHttpsCookies =
+  env.nodeEnv === 'production' ||
+  env.corsOrigins.some((origin) => origin.startsWith('https://') && !isLocalOrigin(origin));
+const sessionCookieOptions = {
+  path: '/',
+  sameSite: usesCrossSiteHttpsCookies ? 'none' : 'lax',
+  secure: usesCrossSiteHttpsCookies,
+} as const;
 
 authRouter.use(ensureCsrfToken);
 
@@ -116,7 +135,7 @@ authRouter.post('/logout', requireCsrf, (req, res) => {
       res.status(500).json({ success: false, message: 'Logout failed.' });
       return;
     }
-    res.clearCookie('cook.sid', { path: '/' });
+    res.clearCookie('cook.sid', sessionCookieOptions);
     res.json({ success: true, message: 'Logout successful.' });
   });
 });

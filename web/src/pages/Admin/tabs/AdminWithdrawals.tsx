@@ -53,8 +53,8 @@ export default function AdminWithdrawals() {
       });
       toast.success(`Đã ${label} lệnh rút tiền.`);
       void load();
-    } catch (e: any) {
-      toast.error(e.message || 'Lỗi thao tác');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Lỗi thao tác');
     }
   };
 

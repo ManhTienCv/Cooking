@@ -34,8 +34,8 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
       });
       toast.success('Đã gửi mã OTP qua email.');
       setStep(2);
-    } catch (err: any) {
-      toast.error(err.message || 'Lỗi gửi OTP');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi gửi OTP');
     } finally {
       setLoading(false);
     }
@@ -66,8 +66,8 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
       // Reset
       setStep(1);
       setForm({ bank_bin: '', bank_name: '', account_number: '', account_name: '', otpCode: '' });
-    } catch (err: any) {
-      toast.error(err.message || 'Lỗi thêm tài khoản');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi thêm tài khoản');
     } finally {
       setLoading(false);
     }

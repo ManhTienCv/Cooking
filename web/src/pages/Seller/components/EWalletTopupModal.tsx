@@ -34,8 +34,8 @@ export default function EWalletTopupModal({ open, onClose }: EWalletTopupModalPr
       } else {
         toast.error('Không lấy được link thanh toán MoMo');
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Lỗi tạo giao dịch nạp tiền');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi tạo giao dịch nạp tiền');
     } finally {
       setLoading(false);
     }

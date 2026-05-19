@@ -52,8 +52,8 @@ export default function EWalletWithdrawModal({ open, onClose, onSuccess, banks, 
       });
       toast.success('Đã gửi mã OTP qua email.');
       setStep(2);
-    } catch (err: any) {
-      toast.error(err.message || 'Lỗi gửi OTP');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi gửi OTP');
     } finally {
       setLoading(false);
     }
@@ -80,8 +80,8 @@ export default function EWalletWithdrawModal({ open, onClose, onSuccess, banks, 
       onClose();
       setStep(1);
       setForm({ amount: '', bankAccountId: '', otpCode: '' });
-    } catch (err: any) {
-      toast.error(err.message || 'Lỗi rút tiền');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi rút tiền');
     } finally {
       setLoading(false);
     }

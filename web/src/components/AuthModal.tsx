@@ -21,6 +21,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
   const [registerStep, setRegisterStep] = useState<1 | 2>(1);
   const [pendingEmail, setPendingEmail] = useState('');
   const [forgotEmail, setForgotEmail] = useState('');
+  const [registerOtp, setRegisterOtp] = useState('');
+  const [resetOtp, setResetOtp] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
@@ -35,6 +37,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
       setRegisterStep(1);
       setPendingEmail('');
       setForgotEmail('');
+      setRegisterOtp('');
+      setResetOtp('');
     } else {
       document.body.style.overflow = '';
     }
@@ -55,6 +59,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     e.preventDefault();
     setIsActive(true);
     setRegisterStep(1);
+    setRegisterOtp('');
     setAuthError(null);
   };
 
@@ -74,6 +79,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     e.preventDefault();
     setView('main');
     setForgotEmail('');
+    setResetOtp('');
     setAuthError(null);
     setAuthSuccess(null);
   };
@@ -143,6 +149,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
         return;
       }
       setPendingEmail(email);
+      setRegisterOtp('');
       setRegisterStep(2);
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Lỗi mạng.');
@@ -154,8 +161,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
   const handleRegisterVerify = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setAuthError(null);
-    const fd = new FormData(e.currentTarget);
-    const otp = String(fd.get('otp') ?? '').trim();
+    const otp = registerOtp.trim();
     setAuthLoading(true);
     try {
       const r = await apiFetch('/api/auth/register/verify', {
@@ -197,6 +203,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
         return;
       }
       setForgotEmail(email);
+      setResetOtp('');
       setView('reset');
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Lỗi mạng.');
@@ -209,7 +216,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     e.preventDefault();
     setAuthError(null);
     const fd = new FormData(e.currentTarget);
-    const otp = String(fd.get('otp') ?? '').trim();
+    const otp = resetOtp.trim();
     const new_password = String(fd.get('new_password') ?? '');
     setAuthLoading(true);
     try {
@@ -308,6 +315,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                 maxLength={6}
                 placeholder="Mã 6 số"
                 required
+                autoComplete="one-time-code"
+                autoCorrect="off"
+                spellCheck={false}
+                value={registerOtp}
+                onChange={(e) => setRegisterOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-4 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm tracking-widest text-center font-bold text-black dark:text-white"
               />
               <button
@@ -466,6 +478,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                   maxLength={6}
                   placeholder="Mã OTP (6 số)"
                   required
+                  autoComplete="one-time-code"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  value={resetOtp}
+                  onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
                 />
                 <input

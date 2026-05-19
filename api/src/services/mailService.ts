@@ -1,4 +1,5 @@
 import { lookup } from 'node:dns/promises';
+import https from 'node:https';
 import nodemailer from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport/index.js';
 import { env } from '../env.js';
@@ -6,6 +7,7 @@ import { env } from '../env.js';
 export type OtpEmailPurpose = 'register' | 'reset' | 'seller_security' | 'ewallet';
 
 let transporter: nodemailer.Transporter | null = null;
+const brevoEndpoint = new URL('https://api.brevo.com/v3/smtp/email');
 
 async function resolveSmtpHost(host: string): Promise<string> {
   try {
@@ -159,6 +161,13 @@ type BrevoSendResponse = {
   messageId?: string;
 };
 
+type BrevoHttpResponse = {
+  ok: boolean;
+  status: number;
+  text: string;
+  json?: BrevoSendResponse;
+};
+
 function getBrevoSender(): { email: string; name?: string } | null {
   const email = env.brevoSenderEmail.trim();
   if (!email) return null;
@@ -192,28 +201,93 @@ async function sendBrevoEmail(
     tags: tag ? [tag] : undefined,
   };
 
-  try {
-    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': env.brevoApiKey,
-      },
-      body: JSON.stringify(payload),
+  const parseJson = (raw: string): BrevoSendResponse | undefined => {
+    try {
+      return JSON.parse(raw) as BrevoSendResponse;
+    } catch {
+      return undefined;
+    }
+  };
+
+  const sendRequest = async (useIpv4: boolean): Promise<BrevoHttpResponse> => {
+    if (!useIpv4) {
+      const res = await fetch(brevoEndpoint.toString(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': env.brevoApiKey,
+        },
+        body: JSON.stringify(payload),
+      });
+      const raw = await res.text();
+      return {
+        ok: res.ok,
+        status: res.status,
+        text: raw,
+        json: parseJson(raw),
+      };
+    }
+
+    const data = JSON.stringify(payload);
+    return await new Promise<BrevoHttpResponse>((resolve, reject) => {
+      const req = https.request(
+        {
+          protocol: brevoEndpoint.protocol,
+          hostname: brevoEndpoint.hostname,
+          port: brevoEndpoint.port || 443,
+          path: `${brevoEndpoint.pathname}${brevoEndpoint.search}`,
+          method: 'POST',
+          family: 4,
+          servername: brevoEndpoint.hostname,
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(data),
+            'api-key': env.brevoApiKey,
+            Host: brevoEndpoint.hostname,
+          },
+        },
+        (res) => {
+          let body = '';
+          res.setEncoding('utf8');
+          res.on('data', (chunk) => {
+            body += chunk;
+          });
+          res.on('end', () => {
+            const status = res.statusCode ?? 0;
+            resolve({
+              ok: status >= 200 && status < 300,
+              status,
+              text: body,
+              json: parseJson(body),
+            });
+          });
+        }
+      );
+      req.on('error', reject);
+      req.write(data);
+      req.end();
     });
+  };
+
+  try {
+    let res: BrevoHttpResponse;
+    try {
+      res = await sendRequest(false);
+    } catch (err) {
+      console.warn('[Brevo] Primary send failed; retrying with IPv4.', err);
+      res = await sendRequest(true);
+    }
 
     if (!res.ok) {
-      const body = await res.text();
       console.error('[Brevo] sendEmail FAILED:', {
         to,
         status: res.status,
-        body: body.slice(0, 500),
+        body: res.text.slice(0, 500),
       });
       return false;
     }
 
-    const data = (await res.json().catch(() => ({}))) as BrevoSendResponse;
-    console.info(`[Brevo] email sent to ${to} - messageId: ${data.messageId ?? 'n/a'}`);
+    console.info(`[Brevo] email sent to ${to} - messageId: ${res.json?.messageId ?? 'n/a'}`);
     return true;
   } catch (err) {
     console.error('[Brevo] sendEmail FAILED:', err);

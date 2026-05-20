@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, MapPin, Phone, User, CreditCard, Package, CheckCircle, Star, MessageCircle } from 'lucide-react';
+import { MapPin, Phone, User, CreditCard, Package, CheckCircle, Star, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { apiFetch, apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
+import PageBackBar from '../../components/ui/PageBackBar';
 import { scrollWindowToTop } from '../../lib/scroll';
 import type { Order, OrderItem } from '../../types/marketplace';
 
@@ -168,9 +169,9 @@ export default function OrderDetail() {
     <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 transition-colors">
       <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border-b border-white/20 dark:border-slate-800/20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Link to="/orders" onClick={scrollWindowToTop} className="text-sm text-gray-500 hover:text-black dark:hover:text-white inline-flex items-center gap-1 mb-3 transition-colors">
-            <ArrowLeft className="w-3.5 h-3.5" /> Đơn hàng
-          </Link>
+          <div className="mb-4">
+            <PageBackBar fallbackTo="/orders" label="Quay lại danh sách" />
+          </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             Đơn hàng #{order.id}
           </h1>

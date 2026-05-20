@@ -1,6 +1,6 @@
 import { useState, type KeyboardEvent, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, X, ChefHat, Info, Clock, Users, ArrowRight, Check } from 'lucide-react';
+import { Search, X, ChefHat, Info, Clock, Users, ArrowRight, Check, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiJson } from '../../lib/api';
 
@@ -68,6 +68,16 @@ export default function FridgeSearch() {
   return (
     <main className="min-h-screen pt-24 pb-16 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-slate-950 dark:to-slate-900 transition-colors duration-300">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* Back button */}
+        <div className="mb-6 flex justify-start">
+          <Link
+            to="/recipes"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 hover:text-black dark:text-gray-300 dark:hover:text-white rounded-full bg-white hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 shadow-sm transition-all border border-gray-100 dark:border-slate-700/80"
+          >
+            <ArrowLeft className="h-4 w-4" /> Quay lại
+          </Link>
+        </div>
 
         {/* Header section */}
         <div className="text-center max-w-2xl mx-auto mb-12">

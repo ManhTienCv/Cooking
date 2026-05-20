@@ -13,6 +13,7 @@ import {
 import * as marketplaceService from '../services/marketplaceService.js';
 import * as sellerSettingsService from '../services/sellerSettingsService.js';
 import * as sellerSecurityService from '../services/sellerSecurityService.js';
+import * as logisticsService from '../services/logisticsService.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 
 export const marketplaceRouter = Router();
@@ -147,6 +148,11 @@ marketplaceRouter.get('/orders', requireAuth, asyncHandler(async (req, res) => {
 
 marketplaceRouter.get('/orders/:id', requireAuth, asyncHandler(async (req, res) => {
   const result = await marketplaceService.getOrderDetail(req.session.userId!, req.params.id);
+  res.json({ success: true, ...result });
+}));
+
+marketplaceRouter.get('/orders/:id/transit-logs', requireAuth, asyncHandler(async (req, res) => {
+  const result = await logisticsService.getTransitLogs(Number(req.params.id), req.session.userId!);
   res.json({ success: true, ...result });
 }));
 
@@ -291,5 +297,17 @@ marketplaceRouter.get('/seller/orders', requireAuth, requireSeller, asyncHandler
 // Cập nhật trạng thái đơn hàng (seller)
 marketplaceRouter.put('/seller/orders/:id/status', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
   const result = await marketplaceService.updateOrderStatus(req.session.userId!, req.params.id, req.body, false);
+  res.json(result);
+}));
+
+// Khởi động giao hàng với đơn vị vận chuyển (seller)
+marketplaceRouter.post('/seller/orders/:id/shipping', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
+  const result = await logisticsService.initializeShipping(Number(req.params.id), req.session.userId!, req.body);
+  res.json(result);
+}));
+
+// Thêm lịch trình vận chuyển / bưu cục (seller)
+marketplaceRouter.post('/seller/orders/:id/transit-logs', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
+  const result = await logisticsService.addTransitLog(Number(req.params.id), req.session.userId!, req.body);
   res.json(result);
 }));

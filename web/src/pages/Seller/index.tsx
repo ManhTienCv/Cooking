@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, Package, ShoppingBag, Plus, Trash2, Eye, TrendingUp, Pencil, Settings, CheckCircle, MessageCircle } from 'lucide-react';
+import { Store, Package, ShoppingBag, Plus, Trash2, Eye, TrendingUp, Pencil, Settings, CheckCircle, MessageCircle, Navigation } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiJson, apiFetch } from '../../lib/api';
 import CreateProductModal, { type EditingProduct } from './CreateProductModal';
@@ -8,6 +8,7 @@ import { NotificationProvider } from '../../contexts/NotificationContext';
 import NotificationBell from '../../components/ui/NotificationBell';
 import Pagination from '../../components/ui/Pagination';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../../lib/authEvents';
+import { SellerShippingModal, SellerTransitLogModal } from './components/SellerShippingModals';
 
 interface SellerProduct {
   id: number; name: string; slug: string; price: number; sale_price: number | null;
@@ -77,6 +78,9 @@ export default function SellerDashboard() {
 
   const [editingProduct, setEditingProduct] = useState<EditingProduct | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+
+  const [shippingOrderId, setShippingOrderId] = useState<number | null>(null);
+  const [transitOrderId, setTransitOrderId] = useState<number | null>(null);
 
   const [productPage, setProductPage] = useState(1);
   const [productTotal, setProductTotal] = useState(0);
@@ -403,17 +407,32 @@ export default function SellerDashboard() {
                         <span className="font-bold text-red-600 dark:text-red-400">{formatPrice(o.total_amount)}</span>
                         {(() => {
                           if (['completed', 'cancelled'].includes(o.status)) return null;
+                          if (o.status === 'shipping' || o.status === 'delayed') {
+                            return (
+                              <button
+                                onClick={() => setTransitOrderId(o.id)}
+                                className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1"
+                              >
+                                <Navigation className="w-3.5 h-3.5" /> Lộ trình
+                              </button>
+                            );
+                          }
                           const nextStatusMap: Record<string, { val: string; label: string }> = {
                             pending: { val: 'confirmed', label: 'Xác nhận đơn' },
                             confirmed: { val: 'preparing', label: 'Bắt đầu chuẩn bị' },
                             preparing: { val: 'shipping', label: 'Bắt đầu giao hàng' },
-                            shipping: { val: 'delivered', label: 'Đánh dấu đã giao' },
                           };
                           const next = nextStatusMap[o.status];
                           if (!next) return null;
                           return (
                             <button
-                              onClick={() => void onUpdateOrderStatus(o.id, next.val)}
+                              onClick={() => {
+                                if (next.val === 'shipping') {
+                                  setShippingOrderId(o.id);
+                                } else {
+                                  void onUpdateOrderStatus(o.id, next.val);
+                                }
+                              }}
                               className="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors"
                             >
                               {next.label}
@@ -485,6 +504,20 @@ export default function SellerDashboard() {
           )}
         </div>
       </div>
+      
+      <SellerShippingModal
+        open={shippingOrderId !== null}
+        orderId={shippingOrderId}
+        onClose={() => setShippingOrderId(null)}
+        onSuccess={() => void loadData()}
+      />
+
+      <SellerTransitLogModal
+        open={transitOrderId !== null}
+        orderId={transitOrderId}
+        onClose={() => setTransitOrderId(null)}
+        onSuccess={() => void loadData()}
+      />
     </NotificationProvider>
   );
 }

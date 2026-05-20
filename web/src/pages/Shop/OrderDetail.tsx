@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Phone, User, CreditCard, Package, CheckCircle, Star, MessageCircle } from 'lucide-react';
+import { MapPin, Phone, User, CreditCard, Package, CheckCircle, Star, MessageCircle, Truck, Calendar, AlertTriangle, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { apiFetch, apiJson } from '../../lib/api';
@@ -38,12 +38,31 @@ export default function OrderDetail() {
   const [order, setOrder] = useState<(Order & { items: OrderItem[] }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviewForms, setReviewForms] = useState<Record<number, { rating: number; comment: string; submitting: boolean; submitted: boolean }>>({});
+  const [transitData, setTransitData] = useState<{
+    status: string;
+    estimated_delivery_at: string | null;
+    actual_delivery_at: string | null;
+    carrier_name: string | null;
+    tracking_number: string | null;
+    delay_resolution: string;
+    is_delayed: boolean;
+    logs: { id: string; status: string; current_location: string; description: string; created_at: string }[];
+  } | null>(null);
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     apiJson<{ order: Order & { items: OrderItem[] } }>(`/api/marketplace/orders/${id}`)
-      .then((d) => setOrder(d.order))
+      .then((d) => {
+        setOrder(d.order);
+        if (d.order && !['pending', 'confirmed', 'cancelled'].includes(d.order.status)) {
+          return apiJson<any>(`/api/marketplace/orders/${id}/transit-logs`);
+        }
+        return null;
+      })
+      .then((t) => {
+        if (t) setTransitData(t);
+      })
       .catch(() => setOrder(null))
       .finally(() => setLoading(false));
   }, [id]);
@@ -250,6 +269,79 @@ export default function OrderDetail() {
             )}
           </div>
         </Reveal>
+
+        {/* Lộ trình Vận chuyển & Định vị */}
+        {transitData && (
+          <Reveal y={12} delay={0.03}>
+            <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-gray-100 dark:border-slate-700/50 p-6 space-y-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100 dark:border-slate-700">
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Truck className="w-5 h-5 text-amber-500" /> Thông tin vận đơn
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Đơn vị: <span className="font-semibold text-gray-700 dark:text-gray-300">{transitData.carrier_name}</span> · Mã: <span className="font-semibold text-gray-700 dark:text-gray-300">{transitData.tracking_number}</span>
+                  </p>
+                </div>
+                <div className="text-left md:text-right">
+                  <span className="text-xs text-gray-400">Thời gian giao dự kiến:</span>
+                  <p className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5 md:justify-end mt-0.5">
+                    <Calendar className="w-4 h-4 text-amber-500" />
+                    {transitData.estimated_delivery_at ? new Date(transitData.estimated_delivery_at).toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Chưa cập nhật'}
+                  </p>
+                </div>
+              </div>
+
+              {transitData.is_delayed && (
+                <div className="p-4 bg-orange-50 dark:bg-amber-950/20 border border-orange-200 dark:border-orange-900/50 rounded-2xl flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-bold text-orange-800 dark:text-orange-300">Đơn hàng bị trễ hẹn giao hàng</h4>
+                    <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                      Chúng tôi vô cùng xin lỗi vì sự chậm trễ này do quá trình vận chuyển. Đơn hàng đang được thúc đẩy giao hàng sớm nhất có thể. CookingWeb đã tự động gửi voucher đền bù đến tài khoản của bạn để xin lỗi.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {transitData.logs && transitData.logs.length > 0 ? (
+                <div className="relative pl-6 border-l-2 border-amber-100 dark:border-slate-700 space-y-8 ml-2">
+                  {transitData.logs.map((log, idx) => {
+                    const isLatest = idx === 0;
+                    return (
+                      <div key={log.id} className="relative">
+                        {/* Milestone dot */}
+                        <div className={`absolute -left-[31px] top-1 w-4 h-4 rounded-full border-2 ${
+                          isLatest 
+                            ? 'bg-amber-500 border-white dark:border-slate-800 ring-4 ring-amber-100 dark:ring-amber-950 animate-pulse' 
+                            : 'bg-gray-300 dark:bg-slate-600 border-white dark:border-slate-800'
+                        }`} />
+                        <div>
+                          <div className="flex items-center justify-between gap-4">
+                            <h4 className={`text-sm font-bold ${isLatest ? 'text-amber-600 dark:text-amber-400' : 'text-gray-800 dark:text-gray-300'}`}>
+                              {log.current_location}
+                            </h4>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">
+                              {new Date(log.created_at).toLocaleString('vi-VN')}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {log.description}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-sm text-gray-400">
+                  <Clock className="w-8 h-8 text-gray-300 dark:text-slate-600 mx-auto mb-2" />
+                  Đang lập lộ trình chi tiết...
+                </div>
+              )}
+            </div>
+          </Reveal>
+        )}
 
         {/* Order Items */}
         <Reveal y={12} delay={0.06}>

@@ -56,7 +56,24 @@ export default function OrderDetail() {
       .then((d) => {
         setOrder(d.order);
         if (d.order && !['pending', 'confirmed', 'cancelled'].includes(d.order.status)) {
-          return apiJson<any>(`/api/marketplace/orders/${id}/transit-logs`);
+          interface TransitLog {
+            id: string;
+            status: string;
+            current_location: string;
+            description: string;
+            created_at: string;
+          }
+          interface TransitDataResponse {
+            status: string;
+            estimated_delivery_at: string | null;
+            actual_delivery_at: string | null;
+            carrier_name: string | null;
+            tracking_number: string | null;
+            delay_resolution: string;
+            is_delayed: boolean;
+            logs: TransitLog[];
+          }
+          return apiJson<TransitDataResponse>(`/api/marketplace/orders/${id}/transit-logs`);
         }
         return null;
       })

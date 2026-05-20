@@ -265,7 +265,7 @@ export function SellerTransitLogModal({ open, orderId, onClose, onSuccess }: Sel
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mốc sự kiện vận chuyển</label>
                 <select
                   value={form.status}
-                  onChange={(e) => handleStatusChange(e.target.value as any)}
+                  onChange={(e) => handleStatusChange(e.target.value as 'in_transit' | 'arrived_hub' | 'out_for_delivery' | 'delayed' | 'delivered')}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
                 >
                   <option value="in_transit">Đang trung chuyển (In transit)</option>

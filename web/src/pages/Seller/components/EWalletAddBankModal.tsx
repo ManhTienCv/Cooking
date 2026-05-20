@@ -143,7 +143,7 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md pointer-events-auto overflow-hidden flex flex-col"
+              className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md pointer-events-auto overflow-hidden flex flex-col max-h-[90vh] min-h-0"
             >
               <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -154,7 +154,7 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
                 </button>
               </div>
 
-              <div className="p-6 space-y-4">
+              <div className="p-6 space-y-4 overflow-y-auto">
                 {step === 1 ? (
                   <>
                     <div>

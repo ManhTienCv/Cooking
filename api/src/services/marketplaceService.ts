@@ -283,10 +283,10 @@ export async function createOrder(userId: number, body: Record<string, unknown>)
   return { order_id: orderId, total_amount: totalAmount };
 }
 
-export async function getMyOrders(userId: number, limitRaw: unknown, offsetRaw: unknown) {
+export async function getMyOrders(userId: number, limitRaw: unknown, offsetRaw: unknown, q?: string) {
   const limit = Math.min(50, Math.max(1, Number(limitRaw) || 10));
   const offset = Math.max(0, Number(offsetRaw) || 0);
-  const { rows, total } = await marketplaceRepo.getOrdersByBuyer(userId, limit, offset);
+  const { rows, total } = await marketplaceRepo.getOrdersByBuyer(userId, limit, offset, q);
   return { orders: rows, total, limit, offset };
 }
 

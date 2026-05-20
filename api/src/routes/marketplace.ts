@@ -136,7 +136,12 @@ marketplaceRouter.post('/orders', requireAuth, orderCreateRateLimit, asyncHandle
 }));
 
 marketplaceRouter.get('/orders', requireAuth, asyncHandler(async (req, res) => {
-  const result = await marketplaceService.getMyOrders(req.session.userId!, req.query.limit as string, req.query.offset as string);
+  const result = await marketplaceService.getMyOrders(
+    req.session.userId!,
+    req.query.limit as string,
+    req.query.offset as string,
+    req.query.q as string
+  );
   res.json({ success: true, ...result });
 }));
 

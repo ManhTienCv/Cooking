@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardList, ChevronRight, Package } from 'lucide-react';
+import { ClipboardList, ChevronRight, Package, Search, X } from 'lucide-react';
 
 import { apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
@@ -34,12 +34,25 @@ export default function Orders() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+      setPage(1);
+    }, 400);
+
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
+      const qParam = debouncedQuery.trim() ? `&q=${encodeURIComponent(debouncedQuery.trim())}` : '';
       const data = await apiJson<{ orders: Order[]; total: number }>(
-        `/api/marketplace/orders?limit=${PAGE_SIZE}&offset=${(page - 1) * PAGE_SIZE}`
+        `/api/marketplace/orders?limit=${PAGE_SIZE}&offset=${(page - 1) * PAGE_SIZE}${qParam}`
       );
       setOrders(data.orders ?? []);
       setTotal(data.total ?? 0);
@@ -48,27 +61,53 @@ export default function Orders() {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, debouncedQuery]);
 
   useEffect(() => { void fetchOrders(); }, [fetchOrders]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 transition-colors">
-      <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border-b border-white/20 dark:border-slate-800/20">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 transition-colors pt-24 pb-16">
+      <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border-b border-white/20 dark:border-slate-800/20 mb-8 rounded-3xl max-w-5xl mx-auto shadow-sm">
+        <div className="px-6 py-8">
           <Reveal y={16}>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                <ClipboardList className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                    <ClipboardList className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h1 className="text-3xl font-serif italic font-bold text-black dark:text-white">Đơn hàng</h1>
+                </div>
+                <p className="text-gray-600 dark:text-gray-400">{total > 0 ? `${total} đơn hàng` : 'Chưa có đơn hàng'}</p>
               </div>
-              <h1 className="text-3xl font-serif italic font-bold text-black dark:text-white">Đơn hàng</h1>
+
+              {/* Premium Search input */}
+              <div className="w-full md:w-80 relative">
+                <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm theo sản phẩm, mã đơn..."
+                  className="w-full pl-10 pr-9 py-2.5 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all text-sm shadow-sm"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
-            <p className="text-gray-600 dark:text-gray-400">{total > 0 ? `${total} đơn hàng` : 'Chưa có đơn hàng'}</p>
           </Reveal>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         {loading ? (
           <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -76,7 +115,7 @@ export default function Orders() {
             ))}
           </div>
         ) : orders.length === 0 ? (
-          <div className="text-center py-20">
+          <div className="text-center py-20 bg-white dark:bg-slate-800/40 rounded-3xl border border-dashed border-gray-200 dark:border-slate-700">
             <div className="text-6xl mb-4">📋</div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Chưa có đơn hàng</h3>
             <p className="text-gray-500 dark:text-gray-400 mb-6">Hãy bắt đầu mua sắm để tạo đơn hàng đầu tiên</p>
@@ -88,6 +127,9 @@ export default function Orders() {
           <div className="space-y-4">
             {orders.map((order) => {
               const st = STATUS_MAP[order.status] ?? STATUS_MAP['pending'];
+              const hasItems = order.items && order.items.length > 0;
+              const firstItem = hasItems ? order.items![0] : null;
+
               return (
                 <Reveal key={order.id} y={12}>
                   <Link
@@ -97,17 +139,44 @@ export default function Orders() {
                   >
                     <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex min-w-0 items-center gap-4">
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 ring-1 ring-blue-100 dark:bg-blue-900/20 dark:ring-blue-900/40">
-                          <ClipboardList className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                        {/* Product Image / Logo */}
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-blue-50 ring-1 ring-blue-100 dark:bg-blue-900/20 dark:ring-blue-900/40 overflow-hidden shadow-inner">
+                          {firstItem?.product_image ? (
+                            <img
+                              src={firstItem.product_image}
+                              alt={firstItem.product_name}
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                const t = e.target as HTMLImageElement;
+                                t.src = '/assets/images/default-product.jpg';
+                              }}
+                            />
+                          ) : (
+                            <ClipboardList className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                          )}
                         </div>
-                        <div className="min-w-0">
+
+                        <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-extrabold tracking-wide text-gray-700 dark:bg-slate-700 dark:text-slate-200">
+                            <span className="rounded-full bg-gray-100 dark:bg-slate-700 px-3 py-0.5 text-xs font-extrabold tracking-wide text-gray-700 dark:text-slate-200">
                               {formatOrderCode(order)}
                             </span>
-                            <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${st.color}`}>{st.label}</span>
+                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${st.color}`}>{st.label}</span>
                           </div>
-                          <p className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">Đơn mua tại Marketplace</p>
+
+                          {/* Product names */}
+                          <p className="mt-2 text-sm font-semibold text-gray-900 dark:text-white truncate max-w-md">
+                            {firstItem ? (
+                              <>
+                                {firstItem.product_name}
+                                {firstItem.quantity > 1 && ` (x${firstItem.quantity})`}
+                                {order.items && order.items.length > 1 && ` và ${order.items.length - 1} sản phẩm khác`}
+                              </>
+                            ) : (
+                              'Đơn mua tại Marketplace'
+                            )}
+                          </p>
+
                           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                             <span>{new Date(order.created_at).toLocaleString('vi-VN')}</span>
                             <span className="hidden sm:inline">•</span>
@@ -115,6 +184,7 @@ export default function Orders() {
                           </div>
                         </div>
                       </div>
+
                       <div className="flex items-center justify-between gap-4 border-t border-gray-100 pt-4 sm:border-t-0 sm:pt-0">
                         <div className="text-left sm:text-right">
                           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Tổng thanh toán</p>

@@ -492,17 +492,57 @@ export async function createOrder(
 export async function getOrdersByBuyer(
   buyerId: number,
   limit: number,
-  offset: number
-): Promise<{ rows: Order[]; total: number }> {
+  offset: number,
+  q?: string
+): Promise<{ rows: OrderWithItems[]; total: number }> {
+  let dataSql = 'SELECT * FROM orders WHERE buyer_id = $1';
+  let countSql = 'SELECT COUNT(*) AS total FROM orders WHERE buyer_id = $1';
+  const params: unknown[] = [buyerId];
+
+  if (q && q.trim()) {
+    const searchVal = `%${q.trim()}%`;
+    params.push(searchVal);
+    const filterCond = ` AND (
+      shipping_name ILIKE $2 OR
+      shipping_phone ILIKE $2 OR
+      shipping_address ILIKE $2 OR
+      id::text ILIKE $2 OR
+      EXISTS (
+        SELECT 1 FROM order_items oi 
+        WHERE oi.order_id = orders.id AND oi.product_name ILIKE $2
+      )
+    )`;
+    dataSql += filterCond;
+    countSql += filterCond;
+  }
+
+  dataSql += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+  const dataParams = [...params, limit, offset];
+
   const [dataResult, countResult] = await Promise.all([
-    pool.query(
-      'SELECT * FROM orders WHERE buyer_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
-      [buyerId, limit, offset]
-    ),
-    pool.query('SELECT COUNT(*) AS total FROM orders WHERE buyer_id = $1', [buyerId]),
+    pool.query(dataSql, dataParams),
+    pool.query(countSql, params),
   ]);
+
+  const orders = dataResult.rows as OrderWithItems[];
+  if (orders.length > 0) {
+    const orderIds = orders.map(o => o.id);
+    const { rows: itemRows } = await pool.query(
+      `SELECT oi.*, p.slug AS product_slug
+       FROM order_items oi
+       LEFT JOIN products p ON p.id = oi.product_id
+       WHERE oi.order_id = ANY($1)
+       ORDER BY oi.id`,
+      [orderIds]
+    );
+
+    for (const order of orders) {
+      order.items = itemRows.filter(item => item.order_id === order.id);
+    }
+  }
+
   return {
-    rows: dataResult.rows as Order[],
+    rows: orders,
     total: parseTotal(countResult.rows[0]?.total),
   };
 }

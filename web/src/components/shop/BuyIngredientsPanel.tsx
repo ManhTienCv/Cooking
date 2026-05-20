@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, ShoppingBag, ChevronDown, ChevronUp, Check, Sparkles, ExternalLink } from 'lucide-react';
@@ -23,11 +23,19 @@ export default function BuyIngredientsPanel({ ingredients }: Props) {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [adding, setAdding] = useState(false);
 
+  useEffect(() => {
+    setProducts([]);
+    setKeywords([]);
+    setExpanded(false);
+    setHasFetched(false);
+  }, [ingredients]);
+
   const handleMatch = async () => {
-    if (products.length > 0) {
+    if (hasFetched) {
       setExpanded(!expanded);
       return;
     }
@@ -42,6 +50,7 @@ export default function BuyIngredientsPanel({ ingredients }: Props) {
       setKeywords(data.keywords ?? []);
       setSelected(new Set((data.products ?? []).map(p => p.id)));
       setExpanded(true);
+      setHasFetched(true);
     } catch {
       toast.error('Không tìm thấy sản phẩm phù hợp');
     } finally {

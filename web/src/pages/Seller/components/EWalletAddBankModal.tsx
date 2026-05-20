@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Building2, ShieldCheck, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -127,23 +128,25 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
+          {/* Backdrop overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999]"
           />
-          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
+          {/* Modal Container */}
+          <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md pointer-events-auto overflow-hidden flex flex-col max-h-[80vh] min-h-0"
+              className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md pointer-events-auto overflow-hidden flex flex-col max-h-[85vh] min-h-0 border border-gray-200/80 dark:border-slate-700"
             >
               <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -186,7 +189,7 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
                             value={bankQuery}
                             onChange={(e) => setBankQuery(e.target.value)}
                             placeholder="Tìm theo tên, viết tắt, mã BIN..."
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
                           />
                           <div className="mt-3 max-h-56 overflow-y-auto rounded-xl border border-gray-200 dark:border-slate-700">
                             {bankLoading && (
@@ -239,7 +242,7 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
                         value={form.account_number}
                         onChange={e => setForm(f => ({ ...f, account_number: e.target.value }))}
                         placeholder="VD: 0123456789"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
                       />
                     </div>
                     <div>
@@ -248,7 +251,7 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
                         value={form.account_name}
                         onChange={e => setForm(f => ({ ...f, account_name: e.target.value.toUpperCase() }))}
                         placeholder="VD: NGUYEN VAN A"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 uppercase"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 uppercase outline-none"
                       />
                     </div>
 
@@ -274,7 +277,7 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
                       value={form.otpCode}
                       onChange={e => setForm(f => ({ ...f, otpCode: e.target.value.replace(/[^0-9]/g, '').slice(0,6) }))}
                       placeholder="• • • • • •"
-                      className="w-full text-center text-3xl tracking-[0.5em] px-4 py-4 rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-mono"
+                      className="w-full text-center text-3xl tracking-[0.5em] px-4 py-4 rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-mono outline-none"
                     />
 
                     <button 
@@ -291,6 +294,7 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
           </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

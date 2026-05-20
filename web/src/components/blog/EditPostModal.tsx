@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { apiJson } from '../../lib/api';
 import type { BlogCategory } from './types';
@@ -68,8 +69,6 @@ export default function EditPostModal({
       .finally(() => setIsLoadingPost(false));
   }, [isOpen, postId]);
 
-  if (!isOpen) return null;
-
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -126,101 +125,120 @@ export default function EditPostModal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 py-8" style={{ animation: 'fadeIn 200ms ease-out' }}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white dark:bg-slate-800 rounded-2xl w-full max-w-xl max-h-[85vh] flex flex-col my-4 overflow-hidden" style={{ animation: 'slideUp 250ms ease-out' }}>
-        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
-          <h3 className="text-2xl font-bold text-black dark:text-white">Sửa Bài Viết</h3>
-          <button type="button" title="Đóng" onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white transition-colors">
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-
-        <div className="overflow-y-auto flex-1 p-6">
-          {isLoadingPost ? (
-            <div className="py-12 text-center text-gray-500 dark:text-gray-400">Đang tải dữ liệu...</div>
-          ) : (
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tiêu đề bài viết *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.title}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-black dark:text-white rounded-2xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all"
-                  placeholder="VD: 10 mẹo nấu ăn cần biết"
-                />
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop overlay */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999]"
+          />
+          {/* Modal Container */}
+          <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-xl max-h-[85vh] flex flex-col my-4 overflow-hidden border border-gray-200/80 dark:border-slate-800 shadow-2xl pointer-events-auto"
+            >
+              <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
+                <h3 className="text-2xl font-bold text-black dark:text-white">Sửa Bài Viết</h3>
+                <button type="button" title="Đóng" onClick={onClose} className="text-gray-500 hover:text-black dark:hover:text-white transition-colors">
+                  <X className="h-6 w-6" />
+                </button>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Danh mục</label>
-                <select
-                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-black dark:text-white rounded-2xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all"
-                  value={formData.categoryId ? String(formData.categoryId) : (formData.categoryName ? `name:${formData.categoryName}` : '')}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    if (raw.startsWith('name:')) {
-                      setFormData((prev) => ({ ...prev, categoryId: 0, categoryName: raw.slice(5) }));
-                      return;
-                    }
-                    const id = Number(raw) || 0;
-                    const found = categoryOptions.find((c) => c.id === id);
-                    setFormData((prev) => ({ ...prev, categoryId: id, categoryName: found?.name ?? prev.categoryName }));
-                  }}
-                  required
-                >
-                  <option value="">-- Chọn danh mục --</option>
-                  {modalCategoryOptions.map((cat) => (
-                    <option key={cat.value} value={cat.value}>{cat.label}</option>
-                  ))}
-                </select>
-              </div>
+              <div className="overflow-y-auto flex-1 p-6">
+                {isLoadingPost ? (
+                  <div className="py-12 text-center text-gray-500 dark:text-gray-400">Đang tải dữ liệu...</div>
+                ) : (
+                  <form className="space-y-4" onSubmit={handleSubmit}>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tiêu đề bài viết *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.title}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                        className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-black dark:text-white rounded-2xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all"
+                        placeholder="VD: 10 mẹo nấu ăn cần biết"
+                      />
+                    </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Thay đổi hình ảnh</label>
-                <div className="flex items-center gap-3">
-                  <input id="edit-blog-image" type="file" onChange={handleImageChange} accept="image/*" className="sr-only" />
-                  <label htmlFor="edit-blog-image" className="inline-flex items-center justify-center rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors cursor-pointer">
-                    Chọn ảnh mới
-                  </label>
-                  <span className="text-sm text-gray-500 dark:text-gray-400 truncate">{imageName || 'Giữ ảnh cũ'}</span>
-                </div>
-                {previewImage && (
-                  <div className="mt-2 text-center">
-                    <img src={previewImage} alt="Preview" className="w-full h-32 object-cover rounded-lg" />
-                  </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Danh mục</label>
+                      <select
+                        className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-black dark:text-white rounded-2xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all"
+                        value={formData.categoryId ? String(formData.categoryId) : (formData.categoryName ? `name:${formData.categoryName}` : '')}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          if (raw.startsWith('name:')) {
+                            setFormData((prev) => ({ ...prev, categoryId: 0, categoryName: raw.slice(5) }));
+                            return;
+                          }
+                          const id = Number(raw) || 0;
+                          const found = categoryOptions.find((c) => c.id === id);
+                          setFormData((prev) => ({ ...prev, categoryId: id, categoryName: found?.name ?? prev.categoryName }));
+                        }}
+                        required
+                      >
+                        <option value="">-- Chọn danh mục --</option>
+                        {modalCategoryOptions.map((cat) => (
+                          <option key={cat.value} value={cat.value}>{cat.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Thay đổi hình ảnh</label>
+                      <div className="flex items-center gap-3">
+                        <input id="edit-blog-image" type="file" onChange={handleImageChange} accept="image/*" className="sr-only" />
+                        <label htmlFor="edit-blog-image" className="inline-flex items-center justify-center rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors cursor-pointer">
+                          Chọn ảnh mới
+                        </label>
+                        <span className="text-sm text-gray-500 dark:text-gray-400 truncate">{imageName || 'Giữ ảnh cũ'}</span>
+                      </div>
+                      {previewImage && (
+                        <div className="mt-2 text-center">
+                          <img src={previewImage} alt="Preview" className="w-full h-32 object-cover rounded-lg" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nội dung bài viết *</label>
+                      <textarea
+                        required
+                        rows={10}
+                        value={formData.content}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, content: e.target.value }))}
+                        className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-black dark:text-white rounded-2xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 font-mono text-sm transition-all"
+                        placeholder="Viết nội dung bài viết..."
+                      ></textarea>
+                    </div>
+
+                    {formError && <p className="text-sm text-red-600">{formError}</p>}
+                    {formSuccess && <p className="text-sm text-green-600">{formSuccess}</p>}
+
+                    <div className="flex space-x-3 pt-2">
+                      <button type="submit" disabled={isSubmitting} className="flex-1 bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                        {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+                      </button>
+                      <button type="button" onClick={onClose} className="px-6 py-3 border border-gray-300 dark:border-slate-600 rounded-full font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors text-black dark:text-white">
+                        Hủy
+                      </button>
+                    </div>
+                  </form>
                 )}
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nội dung bài viết *</label>
-                <textarea
-                  required
-                  rows={10}
-                  value={formData.content}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, content: e.target.value }))}
-                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-black dark:text-white rounded-2xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 font-mono text-sm transition-all"
-                  placeholder="Viết nội dung bài viết..."
-                ></textarea>
-              </div>
-
-              {formError && <p className="text-sm text-red-600">{formError}</p>}
-              {formSuccess && <p className="text-sm text-green-600">{formSuccess}</p>}
-
-              <div className="flex space-x-3 pt-2">
-                <button type="submit" disabled={isSubmitting} className="flex-1 bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-                  {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
-                </button>
-                <button type="button" onClick={onClose} className="px-6 py-3 border border-gray-300 dark:border-slate-600 rounded-full font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors text-black dark:text-white">
-                  Hủy
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
-    </div>,
+            </motion.div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>,
     document.body
   );
 }

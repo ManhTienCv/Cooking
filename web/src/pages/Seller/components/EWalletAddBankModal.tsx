@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Building2, ShieldCheck, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -10,9 +10,20 @@ interface AddBankModalProps {
   onSuccess: () => void;
 }
 
+type VietQrBank = {
+  bin: string;
+  shortName: string;
+  name: string;
+  logo: string;
+};
+
 export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBankModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
+  const [bankLoading, setBankLoading] = useState(false);
+  const [bankError, setBankError] = useState<string | null>(null);
+  const [bankQuery, setBankQuery] = useState('');
+  const [banks, setBanks] = useState<VietQrBank[]>([]);
   const [form, setForm] = useState({
     bank_bin: '',
     bank_name: '',
@@ -21,8 +32,44 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
     otpCode: ''
   });
 
+  useEffect(() => {
+    if (!open || banks.length > 0) return;
+    setBankLoading(true);
+    setBankError(null);
+    fetch('https://api.vietqr.io/v2/banks')
+      .then((res) => {
+        if (!res.ok) throw new Error('Không thể tải danh sách ngân hàng.');
+        return res.json() as Promise<{ data?: VietQrBank[] }>;
+      })
+      .then((data) => {
+        setBanks(Array.isArray(data.data) ? data.data : []);
+      })
+      .catch((err) => {
+        setBankError(err instanceof Error ? err.message : 'Không thể tải danh sách ngân hàng.');
+      })
+      .finally(() => setBankLoading(false));
+  }, [open, banks.length]);
+
+  const filteredBanks = useMemo(() => {
+    const q = bankQuery.trim().toLowerCase();
+    if (!q) return banks;
+    return banks.filter((b) => {
+      const name = `${b.name} ${b.shortName} ${b.bin}`.toLowerCase();
+      return name.includes(q);
+    });
+  }, [bankQuery, banks]);
+
+  const selectedBank = useMemo(
+    () => banks.find((b) => b.bin === form.bank_bin) ?? null,
+    [banks, form.bank_bin]
+  );
+
   const handleRequestOtp = async () => {
-    if (!form.bank_bin || !form.bank_name || !form.account_number || !form.account_name) {
+    if (!form.bank_bin || !form.bank_name) {
+      toast.error('Vui lòng chọn ngân hàng.');
+      return;
+    }
+    if (!form.account_number || !form.account_name) {
       toast.error('Vui lòng điền đầy đủ thông tin ngân hàng.');
       return;
     }
@@ -104,22 +151,52 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
                 {step === 1 ? (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tên ngân hàng</label>
-                      <input 
-                        value={form.bank_name}
-                        onChange={e => setForm(f => ({ ...f, bank_name: e.target.value }))}
-                        placeholder="VD: Vietcombank"
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chọn ngân hàng</label>
+                      <input
+                        value={bankQuery}
+                        onChange={(e) => setBankQuery(e.target.value)}
+                        placeholder="Tìm theo tên, viết tắt, mã BIN..."
                         className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mã BIN (Tùy chọn/Mã NH)</label>
-                      <input 
-                        value={form.bank_bin}
-                        onChange={e => setForm(f => ({ ...f, bank_bin: e.target.value }))}
-                        placeholder="VD: 970436"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
-                      />
+                      <div className="mt-3 max-h-56 overflow-y-auto rounded-xl border border-gray-200 dark:border-slate-700">
+                        {bankLoading && (
+                          <div className="p-4 text-sm text-gray-500 dark:text-gray-400">Đang tải danh sách ngân hàng...</div>
+                        )}
+                        {!bankLoading && bankError && (
+                          <div className="p-4 text-sm text-red-500">{bankError}</div>
+                        )}
+                        {!bankLoading && !bankError && filteredBanks.length === 0 && (
+                          <div className="p-4 text-sm text-gray-500 dark:text-gray-400">Không tìm thấy ngân hàng phù hợp.</div>
+                        )}
+                        {!bankLoading && !bankError && filteredBanks.map((bank) => {
+                          const active = bank.bin === form.bank_bin;
+                          return (
+                            <button
+                              type="button"
+                              key={bank.bin}
+                              onClick={() => setForm((f) => ({ ...f, bank_bin: bank.bin, bank_name: bank.shortName || bank.name }))}
+                              className={`flex w-full items-center gap-3 px-4 py-3 text-left border-b border-gray-100 last:border-b-0 dark:border-slate-700/60 hover:bg-amber-50/60 dark:hover:bg-slate-700/40 transition-colors ${
+                                active ? 'bg-amber-50 dark:bg-slate-700/60' : ''
+                              }`}
+                            >
+                              {bank.logo ? (
+                                <img src={bank.logo} alt={bank.shortName} className="h-7 w-7 rounded-full object-contain bg-white" />
+                              ) : (
+                                <div className="h-7 w-7 rounded-full bg-gray-200 dark:bg-slate-600" />
+                              )}
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{bank.shortName || bank.name}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{bank.name} · BIN {bank.bin}</p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {selectedBank && (
+                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                          Đã chọn: <span className="font-semibold text-gray-800 dark:text-slate-200">{selectedBank.shortName || selectedBank.name}</span>
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Số tài khoản</label>

@@ -129,6 +129,8 @@ export async function createWithdrawalRequest(userId: number, body: unknown) {
     body
   );
 
+  const AUTO_WITHDRAW_THRESHOLD = 5000000; // 5.000.000 VNĐ
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -147,36 +149,78 @@ export async function createWithdrawalRequest(userId: number, body: unknown) {
       throw httpError(404, 'Không tìm thấy ví của người dùng.');
     }
 
-    if (wallet.balance < payload.amount) {
+    if (Number(wallet.balance) < payload.amount) {
       throw httpError(400, 'Số dư khả dụng không đủ để thực hiện lệnh rút này.');
     }
 
-    // 3. Update Wallet: deduct balance, increase frozen_balance
-    await client.query(
-      `UPDATE wallets 
-       SET balance = balance - $1, frozen_balance = frozen_balance + $1, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $2`,
-      [payload.amount, wallet.id]
-    );
-
-    // 4. Validate Bank Account ownership
+    // 3. Validate Bank Account ownership
     const bankRes = await client.query(
-      'SELECT id FROM user_bank_accounts WHERE id = $1 AND user_id = $2',
+      'SELECT bank_name, account_number FROM user_bank_accounts WHERE id = $1 AND user_id = $2',
       [payload.bankAccountId, userId]
     );
     if (bankRes.rows.length === 0) {
       throw httpError(403, 'Tài khoản ngân hàng không hợp lệ.');
     }
+    const bank = bankRes.rows[0];
+    const bankDesc = `Rút tiền về ${bank.bank_name} (${bank.account_number.slice(-4)})`;
 
-    // 5. Create Withdrawal Request
-    await client.query(
-      `INSERT INTO withdrawal_requests (user_id, bank_account_id, amount, status)
-       VALUES ($1, $2, $3, 'pending')`,
-      [userId, payload.bankAccountId, payload.amount]
-    );
+    const isAuto = payload.amount < AUTO_WITHDRAW_THRESHOLD;
 
-    await client.query('COMMIT');
-    return { success: true, message: 'Tạo lệnh rút tiền thành công. Vui lòng chờ quản trị viên duyệt.' };
+    if (isAuto) {
+      // Direct Deduct Balance (Instant auto-withdraw)
+      await client.query(
+        `UPDATE wallets 
+         SET balance = balance - $1, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2`,
+        [payload.amount, wallet.id]
+      );
+
+      // Create Completed Withdrawal Request
+      const requestRes = await client.query(
+        `INSERT INTO withdrawal_requests (user_id, bank_account_id, amount, status, admin_note)
+         VALUES ($1, $2, $3, 'completed', 'Duyệt tự động (Hệ thống chi hộ dưới 5M)')
+         RETURNING id`,
+        [userId, payload.bankAccountId, payload.amount]
+      );
+      const requestId = requestRes.rows[0].id;
+
+      // Create Completed Transaction Log
+      await client.query(
+        `INSERT INTO wallet_transactions (wallet_id, amount, type, status, reference_id, description)
+         VALUES ($1, $2, 'withdrawal', 'completed', $3, $4)`,
+        [wallet.id, payload.amount, 'withdraw-' + requestId, bankDesc]
+      );
+
+      await client.query('COMMIT');
+      return { success: true, message: `Rút tiền thành công! Đã tự động chi hộ ${payload.amount.toLocaleString('vi-VN')}đ về tài khoản ngân hàng.` };
+    } else {
+      // Manual approval flow: Deduct balance, increase frozen balance
+      await client.query(
+        `UPDATE wallets 
+         SET balance = balance - $1, frozen_balance = frozen_balance + $1, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2`,
+        [payload.amount, wallet.id]
+      );
+
+      // Create Pending Withdrawal Request
+      const requestRes = await client.query(
+        `INSERT INTO withdrawal_requests (user_id, bank_account_id, amount, status)
+         VALUES ($1, $2, $3, 'pending')
+         RETURNING id`,
+        [userId, payload.bankAccountId, payload.amount]
+      );
+      const requestId = requestRes.rows[0].id;
+
+      // Create Pending Transaction Log
+      await client.query(
+        `INSERT INTO wallet_transactions (wallet_id, amount, type, status, reference_id, description)
+         VALUES ($1, $2, 'withdrawal', 'pending', $3, $4)`,
+        [wallet.id, payload.amount, 'withdraw-' + requestId, bankDesc]
+      );
+
+      await client.query('COMMIT');
+      return { success: true, message: 'Tạo lệnh rút tiền thành công. Số tiền rút đã được đóng băng. Vui lòng chờ quản trị viên duyệt (Lệnh rút trên 5.000.000đ).' };
+    }
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;

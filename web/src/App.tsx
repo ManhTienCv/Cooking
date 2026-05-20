@@ -32,6 +32,7 @@ const MarketProductsTab = lazy(() => import('./pages/Admin/tabs/MarketProductsTa
 const MarketOrdersTab = lazy(() => import('./pages/Admin/tabs/MarketOrdersTab'));
 const SellersTab = lazy(() => import('./pages/Admin/tabs/SellersTab'));
 const AdminWithdrawalsTab = lazy(() => import('./pages/Admin/tabs/AdminWithdrawals'));
+const AdminCommissionWalletTab = lazy(() => import('./pages/Admin/tabs/AdminCommissionWallet'));
 
 /* Marketplace */
 const Shop = lazy(() => import('./pages/Shop'));
@@ -89,6 +90,7 @@ export default function App() {
               <Route path="market-orders" element={<MarketOrdersTab />} />
               <Route path="market-sellers" element={<SellersTab />} />
               <Route path="withdrawals" element={<AdminWithdrawalsTab />} />
+              <Route path="commission-wallet" element={<AdminCommissionWalletTab />} />
             </Route>
           </Routes>
         </Suspense>

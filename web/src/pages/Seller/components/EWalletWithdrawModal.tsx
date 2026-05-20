@@ -139,7 +139,7 @@ export default function EWalletWithdrawModal({ open, onClose, onSuccess, banks, 
                         value={form.amount}
                         onChange={e => setForm(f => ({ ...f, amount: formatAmountInput(e.target.value) }))}
                         placeholder="VD: 50,000"
-                        className="w-full px-4 py-3 text-lg font-bold rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
+                        className="w-full px-4 py-3 text-lg font-bold rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
                       />
                     </div>
                     
@@ -197,7 +197,7 @@ export default function EWalletWithdrawModal({ open, onClose, onSuccess, banks, 
                       value={form.otpCode}
                       onChange={e => setForm(f => ({ ...f, otpCode: e.target.value.replace(/[^0-9]/g, '').slice(0,6) }))}
                       placeholder="• • • • • •"
-                      className="w-full text-center text-3xl tracking-[0.5em] px-4 py-4 rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-mono"
+                      className="w-full text-center text-3xl tracking-[0.5em] px-4 py-4 rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-mono"
                     />
 
                     <button 

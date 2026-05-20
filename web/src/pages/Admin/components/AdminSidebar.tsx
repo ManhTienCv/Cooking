@@ -90,6 +90,9 @@ export default function AdminSidebar({ pendingCount, pendingProducts }: { pendin
         <Link to="/admin/withdrawals" className={navClass(path === '/admin/withdrawals')}>
           <Wallet className="w-6 h-6" /> Duyệt rút tiền (Ví)
         </Link>
+        <Link to="/admin/commission-wallet" className={navClass(path === '/admin/commission-wallet')}>
+          <Wallet className="w-6 h-6 text-blue-500" /> Ví Admin & Rút hoa hồng
+        </Link>
       </nav>
 
       <div className="p-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">

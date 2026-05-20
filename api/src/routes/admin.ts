@@ -9,6 +9,7 @@ import * as marketplaceService from '../services/marketplaceService.js';
 import * as sellerRepo from '../repos/sellerSettingsRepo.js';
 import { sendSellerStatusEmail } from '../services/mailService.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import * as adminWalletService from '../services/adminWalletService.js';
 
 export const adminRouter = Router();
 
@@ -251,4 +252,32 @@ adminRouter.post('/withdrawals/:id/approve', requireAdmin, requireCsrf, asyncHan
 adminRouter.post('/withdrawals/:id/reject', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
   await adminService.processWithdrawal(String(req.params.id), 'reject', req.body.adminNote || '');
   res.json({ success: true });
+}));
+
+/* ================================================================
+ * Admin E-Wallet & Commission Withdrawals
+ * ================================================================ */
+
+// Get Wallet details (Balance, Linked Banks, Unified transaction list)
+adminRouter.get('/ewallet/me', requireAdmin, asyncHandler(async (req, res) => {
+  const result = await adminWalletService.getAdminWallet(req.session.adminId!);
+  res.json(result);
+}));
+
+// Link a bank account for Admin
+adminRouter.post('/ewallet/banks', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
+  const result = await adminWalletService.addAdminBankAccount(req.session.adminId!, req.body);
+  res.json(result);
+}));
+
+// Delete a linked bank account for Admin
+adminRouter.delete('/ewallet/banks/:id', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
+  const result = await adminWalletService.deleteAdminBankAccount(req.session.adminId!, String(req.params.id));
+  res.json(result);
+}));
+
+// Withdraw commission to Admin linked bank account
+adminRouter.post('/ewallet/withdraw', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
+  const result = await adminWalletService.createAdminWithdrawal(req.session.adminId!, req.body);
+  res.json(result);
 }));

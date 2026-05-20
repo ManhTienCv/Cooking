@@ -189,7 +189,7 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
                             value={bankQuery}
                             onChange={(e) => setBankQuery(e.target.value)}
                             placeholder="Tìm theo tên, viết tắt, mã BIN..."
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
                           />
                           <div className="mt-3 max-h-56 overflow-y-auto rounded-xl border border-gray-200 dark:border-slate-700">
                             {bankLoading && (
@@ -242,7 +242,7 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
                         value={form.account_number}
                         onChange={e => setForm(f => ({ ...f, account_number: e.target.value }))}
                         placeholder="VD: 0123456789"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
                       />
                     </div>
                     <div>
@@ -251,7 +251,7 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
                         value={form.account_name}
                         onChange={e => setForm(f => ({ ...f, account_name: e.target.value.toUpperCase() }))}
                         placeholder="VD: NGUYEN VAN A"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 uppercase outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 uppercase outline-none"
                       />
                     </div>
 
@@ -277,7 +277,7 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
                       value={form.otpCode}
                       onChange={e => setForm(f => ({ ...f, otpCode: e.target.value.replace(/[^0-9]/g, '').slice(0,6) }))}
                       placeholder="• • • • • •"
-                      className="w-full text-center text-3xl tracking-[0.5em] px-4 py-4 rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-mono outline-none"
+                      className="w-full text-center text-3xl tracking-[0.5em] px-4 py-4 rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-mono outline-none"
                     />
 
                     <button 

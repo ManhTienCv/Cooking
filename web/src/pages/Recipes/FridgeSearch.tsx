@@ -66,11 +66,11 @@ export default function FridgeSearch() {
   }, [ingredients]);
 
   return (
-    <main className="min-h-screen pt-24 pb-16 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-slate-950 dark:to-slate-900 transition-colors duration-300">
+    <main className="min-h-screen pt-16 pb-16 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-slate-950 dark:to-slate-900 transition-colors duration-300">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Back button */}
-        <div className="mb-6 flex justify-start">
+        <div className="mb-4 flex justify-start">
           <Link
             to="/recipes"
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 hover:text-black dark:text-gray-300 dark:hover:text-white rounded-full bg-white hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 shadow-sm transition-all border border-gray-100 dark:border-slate-700/80"
@@ -80,11 +80,11 @@ export default function FridgeSearch() {
         </div>
 
         {/* Header section */}
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <div className="inline-flex items-center justify-center p-3 bg-amber-100 dark:bg-amber-900/30 rounded-full mb-4">
-            <ChefHat className="h-8 w-8 text-amber-600 dark:text-amber-500" />
+        <div className="text-center max-w-2xl mx-auto mb-8">
+          <div className="inline-flex items-center justify-center p-4 bg-amber-100 dark:bg-amber-900/30 rounded-full mb-3 shadow-md">
+            <ChefHat className="h-12 w-12 text-amber-600 dark:text-amber-500" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 dark:text-white mb-4">
+          <h1 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 dark:text-white mb-2">
             Khám Phá Tủ Lạnh
           </h1>
           <p className="text-gray-600 dark:text-gray-400 text-lg">
@@ -93,7 +93,7 @@ export default function FridgeSearch() {
         </div>
 
         {/* Search Input Box */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-amber-100 dark:border-slate-700 p-6 md:p-8 mb-12">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-amber-100 dark:border-slate-700 p-6 md:p-8 mb-8">
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="flex-1 relative">
               <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">

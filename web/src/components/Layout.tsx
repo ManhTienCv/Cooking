@@ -16,7 +16,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     '/cart',
     '/checkout',
     '/orders',
-    '/wallet'
+    '/wallet',
+    '/recipes/fridge'
   ];
 
   const shouldHideFooter = hideFooterRoutes.some(route => location.pathname.startsWith(route));

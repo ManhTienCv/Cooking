@@ -27,8 +27,8 @@ type MessageConversationSummary = {
 
 const NAV_ITEMS = [
   { path: '/', label: 'Trang chủ' },
-  { path: '/recipes', label: 'Công thức' },
   { path: '/shop', label: 'Cửa hàng' },
+  { path: '/recipes', label: 'Công thức' },
   { path: '/blog', label: 'Diễn đàn' },
   { path: '/health', label: 'Sức khỏe' },
   { path: '/about', label: 'Về chúng tôi' },

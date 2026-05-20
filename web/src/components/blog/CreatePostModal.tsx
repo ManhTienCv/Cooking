@@ -95,14 +95,14 @@ export default function CreatePostModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 py-8">
-      <div className="bg-white rounded-2xl w-full max-w-xl max-h-[85vh] flex flex-col my-4 overflow-hidden">
-        <div className="flex justify-between items-center p-6 border-b border-gray-200 flex-shrink-0">
-          <h3 className="text-2xl font-bold text-black">Tạo Bài Viết Mới</h3>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-xl max-h-[85vh] flex flex-col my-4 overflow-hidden border border-gray-200/80 dark:border-slate-800 shadow-2xl">
+        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-slate-800 flex-shrink-0">
+          <h3 className="text-2xl font-bold text-black dark:text-white">Tạo Bài Viết Mới</h3>
           <button
             type="button"
             title="Đóng cửa sổ tạo bài viết"
             onClick={onClose}
-            className="text-gray-500 hover:text-black transition-colors"
+            className="text-gray-500 hover:text-black dark:hover:text-white transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
@@ -111,20 +111,20 @@ export default function CreatePostModal({
         <div className="overflow-y-auto flex-1 p-6">
           <form className="space-y-4" onSubmit={handleCreatePost}>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tiêu đề bài viết *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Tiêu đề bài viết *</label>
               <input
                 type="text"
                 required
                 value={formData.title}
                 onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all"
+                className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded-2xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all"
                 placeholder="VD: 10 mẹo nấu ăn cần biết"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Danh mục</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Danh mục</label>
               <select
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all"
+                className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded-2xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all"
                 value={formData.categoryId ? String(formData.categoryId) : (formData.categoryName ? `name:${formData.categoryName}` : '')}
                 onChange={(e) => {
                   const raw = e.target.value;
@@ -139,14 +139,14 @@ export default function CreatePostModal({
                 }}
                 required
               >
-                <option value="">-- Chọn danh mục --</option>
+                <option value="" className="dark:bg-slate-800">-- Chọn danh mục --</option>
                 {modalCategoryOptions.map((cat) => (
-                  <option key={cat.value} value={cat.value}>{cat.label}</option>
+                  <option key={cat.value} value={cat.value} className="dark:bg-slate-800">{cat.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Hình ảnh đại diện</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Hình ảnh đại diện</label>
               <div className="flex items-center gap-3">
                 <input
                   id="blog-image"
@@ -158,11 +158,11 @@ export default function CreatePostModal({
                 />
                 <label
                   htmlFor="blog-image"
-                  className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="inline-flex items-center justify-center rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-slate-300 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                 >
                   Chọn ảnh
                 </label>
-                <span className="text-sm text-gray-500 truncate">
+                <span className="text-sm text-gray-500 dark:text-slate-400 truncate">
                   {imageName || 'Chưa chọn tệp'}
                 </span>
               </div>
@@ -173,23 +173,23 @@ export default function CreatePostModal({
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nội dung bài viết *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Nội dung bài viết *</label>
               <textarea
                 required
                 rows={10}
                 value={formData.content}
                 onChange={(e) => setFormData((prev) => ({ ...prev, content: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 font-mono text-sm transition-all"
+                className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700 rounded-2xl focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 font-mono text-sm transition-all"
                 placeholder="Viết nội dung bài viết của bạn tại đây..."
               ></textarea>
             </div>
             {formError && <p className="text-sm text-red-600">{formError}</p>}
             {formSuccess && <p className="text-sm text-green-600">{formSuccess}</p>}
             <div className="flex space-x-3 pt-2">
-              <button type="submit" disabled={isSubmitting} className="flex-1 bg-black text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+              <button type="submit" disabled={isSubmitting} className="flex-1 bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
                 {isSubmitting ? 'Đang đăng...' : 'Đăng bài viết'}
               </button>
-              <button type="button" onClick={onClose} className="px-6 py-3 border border-gray-300 rounded-full font-semibold hover:bg-gray-50 transition-colors">
+              <button type="button" onClick={onClose} className="px-6 py-3 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-slate-300 rounded-full font-semibold hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
                 Hủy
               </button>
             </div>

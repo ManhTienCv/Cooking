@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Activity, BookOpen, Bookmark, CheckCircle, PenTool, Settings, X, Edit, Trash2, Store, Package, Heart, Star, Wallet, ArrowUpRight } from 'lucide-react';
 import { apiFetch, apiJson, resetCsrfCache } from '../../lib/api';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail, notifyAuthChanged } from '../../lib/authEvents';
+import toast from 'react-hot-toast';
 import { Reveal } from '../../components/motion/ScrollReveal';
 import Pagination from '../../components/ui/Pagination';
 
@@ -15,6 +16,7 @@ import ProfileSidebar from '../../components/profile/ProfileSidebar';
 import ProfileSettingsForm from '../../components/profile/ProfileSettingsForm';
 import EditPostModal from '../../components/blog/EditPostModal';
 import EditRecipeModal from '../../components/recipes/EditRecipeModal';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 const PROFILE_PAGE_SIZE = 6;
 type PagedTab = 'recipes' | 'posts' | 'saved' | 'wishlist';
@@ -28,6 +30,19 @@ export default function Profile() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'shop');
   const [showSuccessMenu, setShowSuccessMenu] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger',
+  });
 
   const [user, setUser] = useState<ProfileUser | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
@@ -218,24 +233,40 @@ export default function Profile() {
     navigate('/', { replace: true });
   };
 
-  const handleDeleteRecipe = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa công thức này?')) return;
-    try {
-      await apiFetch(`/api/recipes/${id}`, { method: 'DELETE' });
-      void loadTabData('recipes');
-    } catch {
-      alert('Không thể xóa công thức');
-    }
+  const handleDeleteRecipe = (id: number) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa công thức',
+      message: 'Bạn có chắc chắn muốn xóa công thức này? Hành động này sẽ gỡ công thức khỏi trang cá nhân và không thể hoàn tác.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await apiFetch(`/api/recipes/${id}`, { method: 'DELETE' });
+          void loadTabData('recipes');
+          toast.success('Đã xóa công thức thành công');
+        } catch {
+          toast.error('Không thể xóa công thức');
+        }
+      }
+    });
   };
 
-  const handleDeletePost = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) return;
-    try {
-      await apiFetch(`/api/blog/posts/${id}`, { method: 'DELETE' });
-      void loadTabData('posts');
-    } catch {
-      alert('Không thể xóa bài viết');
-    }
+  const handleDeletePost = (id: number) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa bài viết',
+      message: 'Bạn có chắc chắn muốn xóa bài viết này? Hành động này sẽ gỡ bài viết khỏi diễn đàn và không thể hoàn tác.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await apiFetch(`/api/blog/posts/${id}`, { method: 'DELETE' });
+          void loadTabData('posts');
+          toast.success('Đã xóa bài viết thành công');
+        } catch {
+          toast.error('Không thể xóa bài viết');
+        }
+      }
+    });
   };
 
   const handleProfilePageChange = (tab: PagedTab | 'shop', page: number) => {
@@ -720,6 +751,16 @@ export default function Profile() {
         onClose={() => setEditingRecipeId(null)}
         onSuccess={async () => { await loadTabData('recipes'); }}
         categoryOptions={recipeCategories}
+      />
+
+      {/* Confirm Deletion Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

@@ -13,11 +13,25 @@ import HealthPlanList from '../../components/health/HealthPlanList';
 import CreatePlanModal from '../../components/health/CreatePlanModal';
 import NutritionDashboard from '../../components/health/NutritionDashboard';
 import type { HealthPlanCard } from '../../components/health/types';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 export default function Health() {
   const [activeTab, setActiveTab] = useState('plans');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger',
+  });
 
   const [plans, setPlans] = useState<HealthPlanCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,19 +96,26 @@ export default function Health() {
     return () => window.removeEventListener(AUTH_CHANGE_EVENT, onAuthChange);
   }, [loadPlans]);
 
-  const handleDeletePlan = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa kế hoạch này?')) return;
-    try {
-      const res = await apiJson<{ success: boolean; message?: string }>(`/api/health/plans/${id}`, { method: 'DELETE' });
-      if (res.success) {
-        toast.success('Đã xóa kế hoạch');
-        await loadPlans();
-      } else {
-        toast.error(res.message || 'Lỗi khi xóa kế hoạch');
+  const handleDeletePlan = (id: number) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa kế hoạch',
+      message: 'Bạn có chắc chắn muốn xóa kế hoạch ăn uống này? Toàn bộ danh sách thực đơn và danh mục mua sắm liên quan sẽ bị xóa vĩnh viễn.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await apiJson<{ success: boolean; message?: string }>(`/api/health/plans/${id}`, { method: 'DELETE' });
+          if (res.success) {
+            toast.success('Đã xóa kế hoạch thành công');
+            await loadPlans();
+          } else {
+            toast.error(res.message || 'Lỗi khi xóa kế hoạch');
+          }
+        } catch {
+          toast.error('Lỗi khi xóa kế hoạch');
+        }
       }
-    } catch {
-      toast.error('Lỗi khi xóa kế hoạch');
-    }
+    });
   };
 
   // Lock scroll when modal is open
@@ -199,6 +220,16 @@ export default function Health() {
         defaultDates={defaultDates}
       />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onSuccess={loadPlans} />
+
+      {/* Confirm Deletion Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

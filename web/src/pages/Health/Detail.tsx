@@ -6,6 +6,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { apiJson, apiFetch } from '../../lib/api';
 import { HeroEnter, Reveal, RevealStaggerItem } from '../../components/motion/ScrollReveal';
 import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 interface HealthPlanRow {
   name: string;
@@ -69,6 +70,20 @@ export default function HealthDetail() {
   const [addingMeal, setAddingMeal] = useState<{date: string, type: string, displayDate: string} | null>(null);
   const [mealName, setMealName] = useState('');
   const [mealNote, setMealNote] = useState('');
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger',
+  });
 
   const loadPlanAndMeals = useCallback(async () => {
     if (!id) return;
@@ -157,15 +172,22 @@ export default function HealthDetail() {
   };
   const days = generateDays();
 
-  const handleDeletePlan = async () => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa kế hoạch này?')) return;
-    try {
-      await apiFetch(`/api/health/plans/${id}`, { method: 'DELETE' });
-      toast.success('Đã xóa kế hoạch');
-      navigate('/health');
-    } catch {
-      toast.error('Lỗi khi xóa kế hoạch');
-    }
+  const handleDeletePlan = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa kế hoạch',
+      message: 'Bạn có chắc chắn muốn xóa kế hoạch ăn uống này? Toàn bộ danh sách thực đơn và danh mục mua sắm liên quan sẽ bị xóa vĩnh viễn.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await apiFetch(`/api/health/plans/${id}`, { method: 'DELETE' });
+          toast.success('Đã xóa kế hoạch thành công');
+          navigate('/health');
+        } catch {
+          toast.error('Lỗi khi xóa kế hoạch');
+        }
+      }
+    });
   };
 
   const handleAddMeal = (date: string, mealType: string, displayDate: string) => {
@@ -202,28 +224,35 @@ export default function HealthDetail() {
     }
   };
 
-  const handleRemoveMeal = async (date: string, mealType: string, mealId: number) => {
-    if (!window.confirm('Bạn muốn xóa món này khỏi thực đơn?')) return;
-    try {
-      const res = await apiJson<{success: boolean}>('/api/health/meal-plan', {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'remove_recipe',
-          plan_id: Number(id),
-          date,
-          meal_type: mealType,
-          id: mealId
-        })
-      });
-      if (res.success) {
-        toast.success('Đã xóa món ăn');
-        void loadPlanAndMeals();
-      } else {
-        toast.error('Lỗi khi xóa món');
+  const handleRemoveMeal = (date: string, mealType: string, mealId: number) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa món ăn',
+      message: 'Bạn có chắc chắn muốn xóa món ăn này khỏi thực đơn?',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await apiJson<{success: boolean}>('/api/health/meal-plan', {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'remove_recipe',
+              plan_id: Number(id),
+              date,
+              meal_type: mealType,
+              id: mealId
+            })
+          });
+          if (res.success) {
+            toast.success('Đã xóa món ăn khỏi thực đơn');
+            void loadPlanAndMeals();
+          } else {
+            toast.error('Lỗi khi xóa món');
+          }
+        } catch {
+          toast.error('Lỗi khi xóa món');
+        }
       }
-    } catch {
-      toast.error('Lỗi khi xóa món');
-    }
+    });
   };
 
   const handleAddShoppingItem = async () => {
@@ -608,6 +637,16 @@ export default function HealthDetail() {
         </div>,
         document.body
       )}
+
+      {/* Confirm Deletion Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </main>
   );
 }

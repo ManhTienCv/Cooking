@@ -28,6 +28,11 @@ function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
 }
 
+function formatOrderCode(order: Order) {
+  const year = new Date(order.created_at).getFullYear();
+  return `DH-${year}-${String(order.id).padStart(6, '0')}`;
+}
+
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<(Order & { items: OrderItem[] }) | null>(null);
@@ -173,11 +178,21 @@ export default function OrderDetail() {
             <PageBackBar fallbackTo="/orders" label="Quay lại danh sách" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Đơn hàng #{order.id}
+            {order.items && order.items.length > 0 ? (
+              <>
+                {order.items[0].product_name}
+                {order.items[0].quantity > 1 && ` (x${order.items[0].quantity})`}
+                {order.items.length > 1 && ` và ${order.items.length - 1} sản phẩm khác`}
+              </>
+            ) : (
+              `Đơn hàng ${formatOrderCode(order)}`
+            )}
           </h1>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-            {new Date(order.created_at).toLocaleString('vi-VN')}
-          </p>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-2 font-medium">
+            <span className="font-semibold text-gray-700 dark:text-gray-300">Mã đơn: {formatOrderCode(order)}</span>
+            <span>•</span>
+            <span>{new Date(order.created_at).toLocaleString('vi-VN')}</span>
+          </div>
         </div>
       </div>
 

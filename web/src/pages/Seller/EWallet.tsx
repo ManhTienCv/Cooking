@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Wallet, ArrowUpRight, ArrowDownLeft, Building2, Plus, ArrowRightLeft, ShieldCheck, Clock, X, Landmark, PlusCircle } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownLeft, Building2, Plus, ArrowRightLeft, ShieldCheck, Clock, X, Landmark, PlusCircle, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { apiJson, apiFetch } from '../../lib/api';
@@ -117,6 +117,18 @@ export default function EWallet() {
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">Quản lý số dư, nạp tiền và rút tiền về ngân hàng</p>
       </div>
+
+      {banks.length === 0 && (
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-2xl flex items-start gap-3 text-red-800 dark:text-red-300 shadow-sm animate-pulse">
+          <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="font-semibold text-sm">Chưa liên kết tài khoản ngân hàng</h4>
+            <p className="text-xs mt-1 text-red-700 dark:text-red-400 leading-relaxed">
+              Bạn chưa xác thực đăng ký hoặc kết nối tài khoản ngân hàng nào. Vui lòng bấm vào nút <strong className="font-bold text-red-800 dark:text-red-300">"+"</strong> ở phần <strong>"Tài khoản ngân hàng"</strong> bên dưới để thực hiện liên kết trước khi nạp/rút tiền.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Balance Card */}
@@ -278,6 +290,8 @@ export default function EWallet() {
       <EWalletTopupModal
         open={showTopup}
         onClose={() => setShowTopup(false)}
+        onSuccess={() => void loadData()}
+        banks={banks}
       />
     </div>
   );

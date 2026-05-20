@@ -63,6 +63,22 @@ ewalletRouter.post('/topup/momo', requireAuth, requireCsrf, asyncHandler(async (
   res.json(result);
 }));
 
+// Bank Top-Up (Direct mock transfer from linked bank)
+ewalletRouter.post('/topup/bank', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
+  const amount = Number(req.body.amount);
+  const { bankAccountId } = req.body;
+  if (!amount || amount <= 0) {
+    res.status(400).json({ message: 'Invalid amount' });
+    return;
+  }
+  if (!bankAccountId) {
+    res.status(400).json({ message: 'Tài khoản ngân hàng liên kết là bắt buộc' });
+    return;
+  }
+  const result = await ewalletService.createBankTopup(req.session.userId!, amount, bankAccountId);
+  res.json(result);
+}));
+
 // MoMo IPN Webhook (No CSRF or Auth required as MoMo servers call this directly)
 ewalletRouter.post('/topup/momo-ipn', asyncHandler(async (req, res) => {
   const result = await ewalletService.processMomoIpn(req.body);

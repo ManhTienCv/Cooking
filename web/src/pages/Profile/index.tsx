@@ -323,8 +323,8 @@ export default function Profile() {
                               <div
                                 key={r.id}
                                 className={`group overflow-hidden rounded-xl border transition-shadow hover:shadow-md ${isPending
-                                    ? 'border-slate-300 bg-slate-100/80 dark:border-slate-600 dark:bg-slate-800/70'
-                                    : 'border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800'
+                                  ? 'border-slate-300 bg-slate-100/80 dark:border-slate-600 dark:bg-slate-800/70'
+                                  : 'border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800'
                                   }`}
                               >
                                 {r.image_url ? (
@@ -385,8 +385,8 @@ export default function Profile() {
                               <div
                                 key={p.id}
                                 className={`relative rounded-xl border p-5 transition-shadow hover:shadow-md ${isPending
-                                    ? 'border-slate-300 bg-slate-100/80 dark:border-slate-600 dark:bg-slate-800/70'
-                                    : 'border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800'
+                                  ? 'border-slate-300 bg-slate-100/80 dark:border-slate-600 dark:bg-slate-800/70'
+                                  : 'border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800'
                                   }`}
                               >
                                 {isPending && (
@@ -626,8 +626,8 @@ export default function Profile() {
                                   <p className="text-sm text-gray-500">{p.price.toLocaleString('vi-VN')}đ · Kho: {p.stock}</p>
                                 </div>
                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === 'approved' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                    p.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                      'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                  p.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                                   }`}>
                                   {p.status === 'approved' ? 'Đang bán' : p.status === 'pending' ? 'Chờ duyệt' : 'Từ chối'}
                                 </span>
@@ -677,7 +677,7 @@ export default function Profile() {
                         <div className="grid min-w-[220px] grid-cols-2 gap-3 text-center">
                           <div className="rounded-xl border border-white/70 bg-white/75 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/70">
                             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Nạp tiền</p>
-                            <p className="mt-1 text-lg font-black text-emerald-600">MoMo</p>
+                            <p className="mt-1 text-lg font-black text-emerald-600">Ngân Hàng</p>
                           </div>
                           <div className="rounded-xl border border-white/70 bg-white/75 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/70">
                             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Rút tiền</p>

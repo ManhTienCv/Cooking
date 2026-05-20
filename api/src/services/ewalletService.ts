@@ -409,6 +409,48 @@ export async function createMomoTopup(userId: number, amount: number) {
   }
 }
 
+export async function createBankTopup(userId: number, amount: number, bankAccountId: string) {
+  if (amount < 10000) throw httpError(400, 'Số tiền nạp tối thiểu là 10.000 VNĐ');
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Check if bank account exists and belongs to user
+    const bankRes = await client.query(
+      'SELECT bank_name, account_number FROM user_bank_accounts WHERE id = $1 AND user_id = $2',
+      [bankAccountId, userId]
+    );
+    if (bankRes.rows.length === 0) {
+      throw httpError(404, 'Không tìm thấy tài khoản ngân hàng liên kết.');
+    }
+    const bank = bankRes.rows[0];
+
+    const walletData = await getWallet(userId);
+
+    // Update balance directly
+    await client.query(
+      'UPDATE wallets SET balance = balance + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [amount, walletData.wallet.id]
+    );
+
+    // Create completed deposit transaction
+    await client.query(
+      `INSERT INTO wallet_transactions (wallet_id, amount, type, status, description)
+       VALUES ($1, $2, 'deposit', 'completed', $3)`,
+      [walletData.wallet.id, amount, `Nạp tiền từ ${bank.bank_name} (${bank.account_number.slice(-4)})`]
+    );
+
+    await client.query('COMMIT');
+    return { success: true, message: `Nạp thành công ${amount.toLocaleString('vi-VN')}đ từ ngân hàng ${bank.bank_name}.` };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 export async function processMomoIpn(query: any) {
   const isValid = verifyMoMoSignature(query);
   if (!isValid) {

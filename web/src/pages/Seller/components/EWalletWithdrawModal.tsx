@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ArrowUpRight, ShieldCheck, Mail, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -93,23 +94,25 @@ export default function EWalletWithdrawModal({ open, onClose, onSuccess, banks, 
     return Number(num).toLocaleString('vi-VN');
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
+          {/* Backdrop overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999]"
           />
-          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
+          {/* Modal Container */}
+          <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md pointer-events-auto overflow-hidden flex flex-col"
+              className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md pointer-events-auto overflow-hidden flex flex-col border border-gray-200/80 dark:border-slate-800"
             >
               <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -120,7 +123,7 @@ export default function EWalletWithdrawModal({ open, onClose, onSuccess, banks, 
                 </button>
               </div>
 
-              <div className="p-6 space-y-4">
+              <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
                 {step === 1 ? (
                   <>
                     <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl flex gap-3 items-start border border-amber-100 dark:border-amber-800/50">
@@ -131,32 +134,44 @@ export default function EWalletWithdrawModal({ open, onClose, onSuccess, banks, 
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Số tiền rút (VND)</label>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Số tiền rút (VND)</label>
                       <input 
                         value={form.amount}
                         onChange={e => setForm(f => ({ ...f, amount: formatAmountInput(e.target.value) }))}
                         placeholder="VD: 50,000"
-                        className="w-full px-4 py-3 text-lg font-bold rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                        className="w-full px-4 py-3 text-lg font-bold rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chuyển về tài khoản</label>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Chuyển về tài khoản</label>
                       {banks.length === 0 ? (
-                        <div className="text-sm text-red-500">Vui lòng thêm tài khoản ngân hàng trước khi rút tiền.</div>
+                        <div className="text-xs text-red-500 flex items-start gap-1 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-2xl">
+                          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span>Vui lòng thêm tài khoản ngân hàng trước khi rút tiền.</span>
+                        </div>
                       ) : (
-                        <select 
-                          value={form.bankAccountId}
-                          onChange={e => setForm(f => ({ ...f, bankAccountId: e.target.value }))}
-                          className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
-                        >
-                          <option value="">-- Chọn ngân hàng --</option>
+                        <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
                           {banks.map(b => (
-                            <option key={b.id} value={b.id}>
-                              {b.bank_name} - {b.account_number}
-                            </option>
+                            <div
+                              key={b.id}
+                              onClick={() => setForm(f => ({ ...f, bankAccountId: b.id }))}
+                              className={`flex items-center gap-3 p-3 rounded-2xl border-2 cursor-pointer transition-all ${
+                                form.bankAccountId === b.id
+                                  ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/20'
+                                  : 'border-gray-200 dark:border-slate-800 hover:border-gray-300 dark:hover:border-slate-700'
+                              }`}
+                            >
+                              <div className="w-8 h-8 bg-white dark:bg-slate-800 rounded-lg flex items-center justify-center border border-gray-200 dark:border-slate-700 font-bold text-gray-400 text-[10px] shrink-0">
+                                {b.bank_bin}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{b.bank_name}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{b.account_number} · {b.account_name}</p>
+                              </div>
+                            </div>
                           ))}
-                        </select>
+                        </div>
                       )}
                     </div>
 
@@ -199,6 +214,7 @@ export default function EWalletWithdrawModal({ open, onClose, onSuccess, banks, 
           </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

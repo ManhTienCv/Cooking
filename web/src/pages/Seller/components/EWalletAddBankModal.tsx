@@ -138,12 +138,12 @@ export default function EWalletAddBankModal({ open, onClose, onSuccess }: AddBan
             onClick={onClose}
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
           />
-          <div className="fixed inset-0 flex items-start justify-center z-50 pointer-events-none p-4 pt-20 sm:pt-10">
+          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md pointer-events-auto overflow-hidden flex flex-col max-h-[85vh] min-h-0"
+              className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md pointer-events-auto overflow-hidden flex flex-col max-h-[80vh] min-h-0"
             >
               <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">

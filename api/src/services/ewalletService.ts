@@ -30,7 +30,7 @@ export const bankAccountSchema = z.object({
 function parsePayload<T>(schema: z.ZodType<T>, input: unknown): T {
   const parsed = schema.safeParse(input);
   if (!parsed.success) {
-    throw httpError(422, parsed.error.issues[0]?.message ?? 'Invalid request payload.', {
+    throw httpError(422, parsed.error.issues[0]?.message ?? 'Dữ liệu yêu cầu không hợp lệ.', {
       details: parsed.error.flatten(),
     });
   }
@@ -231,11 +231,11 @@ export async function createWithdrawalRequest(userId: number, body: unknown) {
 
 export async function requestEwalletOtp(userId: number, action: string) {
   if (!['add_bank', 'withdraw'].includes(action)) {
-    throw httpError(400, 'Invalid OTP action.');
+    throw httpError(400, 'Hành động xác thực OTP không hợp lệ.');
   }
 
   const userRes = await pool.query('SELECT email FROM users WHERE id = $1', [userId]);
-  if (userRes.rows.length === 0) throw httpError(404, 'User not found.');
+  if (userRes.rows.length === 0) throw httpError(404, 'Không tìm thấy thông tin người dùng.');
   const email = userRes.rows[0].email;
 
   const otp = generateOtp();
@@ -256,9 +256,9 @@ export async function requestEwalletOtp(userId: number, action: string) {
   );
 
   const sent = await sendOtpEmail(email, otp, 'ewallet');
-  if (!sent) throw httpError(503, 'Unable to send OTP email.');
+  if (!sent) throw httpError(503, 'Không thể gửi email chứa mã OTP.');
 
-  return { success: true, message: 'OTP has been sent to your email.' };
+  return { success: true, message: 'Mã OTP đã được gửi đến email của bạn.' };
 }
 
 export async function verifyEwalletOtp(client: any, userId: number, action: string, otpCode: string) {
@@ -269,17 +269,17 @@ export async function verifyEwalletOtp(client: any, userId: number, action: stri
   const row = r.rows[0];
 
   if (!row || row.action !== action) {
-    throw httpError(400, 'No active OTP request for this action.');
+    throw httpError(400, 'Không tìm thấy yêu cầu OTP đang hoạt động cho hành động này.');
   }
 
   if (row.expires_at < new Date()) {
     await client.query('DELETE FROM ewallet_otps WHERE user_id = $1', [userId]);
-    throw httpError(400, 'OTP has expired. Please request again.');
+    throw httpError(400, 'Mã OTP đã hết hạn. Vui lòng gửi yêu cầu lấy mã mới.');
   }
 
   if (row.attempt_count >= OTP_MAX_ATTEMPTS) {
     await client.query('DELETE FROM ewallet_otps WHERE user_id = $1', [userId]);
-    throw httpError(429, 'Too many OTP attempts. Please request a new OTP.');
+    throw httpError(429, 'Bạn đã nhập sai OTP quá nhiều lần. Vui lòng yêu cầu mã OTP mới.');
   }
 
   const otpOk = await bcrypt.compare(otpCode, row.otp_hash);
@@ -287,13 +287,13 @@ export async function verifyEwalletOtp(client: any, userId: number, action: stri
     const nextAttempts = row.attempt_count + 1;
     if (nextAttempts >= OTP_MAX_ATTEMPTS) {
       await client.query('DELETE FROM ewallet_otps WHERE user_id = $1', [userId]);
-      throw httpError(429, 'Too many OTP attempts. Please request a new OTP.');
+      throw httpError(429, 'Bạn đã nhập sai OTP quá nhiều lần. Vui lòng yêu cầu mã OTP mới.');
     }
     await client.query('UPDATE ewallet_otps SET attempt_count = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2', [
       nextAttempts,
       userId,
     ]);
-    throw httpError(401, 'OTP is incorrect. ' + (OTP_MAX_ATTEMPTS - nextAttempts) + ' attempts remaining.');
+    throw httpError(401, 'Mã OTP không chính xác. Bạn còn lại ' + (OTP_MAX_ATTEMPTS - nextAttempts) + ' lần thử.');
   }
 
   // OTP is valid. Consume it.
@@ -522,7 +522,7 @@ export async function processMomoIpn(query: any) {
     
     if (transaction.status !== 'pending') {
       await client.query('ROLLBACK');
-      return { message: 'Transaction already processed' };
+      return { message: 'Giao dịch nạp tiền đã được xử lý thành công trước đó.' };
     }
     
     if (resultCode === 0) {

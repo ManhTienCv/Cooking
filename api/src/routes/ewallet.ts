@@ -45,7 +45,7 @@ ewalletRouter.post('/withdraw', requireAuth, requireCsrf, asyncHandler(async (re
 ewalletRouter.post('/pay-order', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
   const orderId = Number(req.body.orderId);
   if (!orderId) {
-    res.status(400).json({ message: 'orderId is required' });
+    res.status(400).json({ message: 'Mã đơn hàng orderId là bắt buộc' });
     return;
   }
   const result = await ewalletService.payOrder(req.session.userId!, orderId);
@@ -56,7 +56,7 @@ ewalletRouter.post('/pay-order', requireAuth, requireCsrf, asyncHandler(async (r
 ewalletRouter.post('/topup/momo', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
   const amount = Number(req.body.amount);
   if (!amount || amount <= 0) {
-    res.status(400).json({ message: 'Invalid amount' });
+    res.status(400).json({ message: 'Số tiền không hợp lệ' });
     return;
   }
   const result = await ewalletService.createMomoTopup(req.session.userId!, amount);
@@ -68,7 +68,7 @@ ewalletRouter.post('/topup/bank', requireAuth, requireCsrf, asyncHandler(async (
   const amount = Number(req.body.amount);
   const { bankAccountId } = req.body;
   if (!amount || amount <= 0) {
-    res.status(400).json({ message: 'Invalid amount' });
+    res.status(400).json({ message: 'Số tiền không hợp lệ' });
     return;
   }
   if (!bankAccountId) {

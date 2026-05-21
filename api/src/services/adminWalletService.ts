@@ -4,10 +4,10 @@ import { httpError } from '../lib/httpError.js';
 
 // Schemas
 export const adminBankAccountSchema = z.object({
-  bank_bin: z.string().min(3).max(10),
-  bank_name: z.string().min(2).max(100),
-  account_number: z.string().min(5).max(50),
-  account_name: z.string().min(2).max(100).toUpperCase(),
+  bank_bin: z.string().min(3, 'Mã BIN ngân hàng phải có ít nhất 3 ký tự').max(10),
+  bank_name: z.string().min(1, 'Tên ngân hàng không được để trống').max(100),
+  account_number: z.string().min(3, 'Số tài khoản phải có ít nhất 3 ký tự').max(50),
+  account_name: z.string().min(1, 'Tên chủ tài khoản không được để trống').max(100).toUpperCase(),
 });
 
 function parsePayload<T>(schema: z.ZodType<T>, input: unknown): T {

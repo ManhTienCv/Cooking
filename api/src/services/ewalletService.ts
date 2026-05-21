@@ -230,7 +230,7 @@ export async function createWithdrawalRequest(userId: number, body: unknown) {
 }
 
 export async function requestEwalletOtp(userId: number, action: string) {
-  if (!['add_bank', 'withdraw'].includes(action)) {
+  if (!['add_bank', 'withdraw', 'topup'].includes(action)) {
     throw httpError(400, 'Hành động xác thực OTP không hợp lệ.');
   }
 
@@ -417,12 +417,19 @@ export async function refundOrder(orderId: number, buyerId: number, amount: numb
  * MoMo — Nạp tiền qua MoMo
  * ================================================================ */
 
-export async function createMomoTopup(userId: number, amount: number) {
+export async function createMomoTopup(userId: number, amount: number, otpCode?: string) {
   if (amount < 10000) throw httpError(400, 'Số tiền nạp tối thiểu là 10,000 VND');
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    if (amount >= 5000000) {
+      if (!otpCode) {
+        throw httpError(400, 'Giao dịch nạp tiền từ 5.000.000đ trở lên yêu cầu xác thực OTP.');
+      }
+      await verifyEwalletOtp(client, userId, 'topup', otpCode);
+    }
     
     const walletData = await getWallet(userId);
     
@@ -453,12 +460,19 @@ export async function createMomoTopup(userId: number, amount: number) {
   }
 }
 
-export async function createBankTopup(userId: number, amount: number, bankAccountId: string) {
+export async function createBankTopup(userId: number, amount: number, bankAccountId: string, otpCode?: string) {
   if (amount < 10000) throw httpError(400, 'Số tiền nạp tối thiểu là 10.000 VNĐ');
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    if (amount >= 5000000) {
+      if (!otpCode) {
+        throw httpError(400, 'Giao dịch nạp tiền từ 5.000.000đ trở lên yêu cầu xác thực OTP.');
+      }
+      await verifyEwalletOtp(client, userId, 'topup', otpCode);
+    }
 
     // Check if bank account exists and belongs to user
     const bankRes = await client.query(

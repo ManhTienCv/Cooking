@@ -55,11 +55,12 @@ ewalletRouter.post('/pay-order', requireAuth, requireCsrf, asyncHandler(async (r
 // MoMo Top-Up
 ewalletRouter.post('/topup/momo', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
   const amount = Number(req.body.amount);
+  const otpCode = req.body.otpCode ? String(req.body.otpCode) : undefined;
   if (!amount || amount <= 0) {
     res.status(400).json({ message: 'Số tiền không hợp lệ' });
     return;
   }
-  const result = await ewalletService.createMomoTopup(req.session.userId!, amount);
+  const result = await ewalletService.createMomoTopup(req.session.userId!, amount, otpCode);
   res.json(result);
 }));
 
@@ -67,6 +68,7 @@ ewalletRouter.post('/topup/momo', requireAuth, requireCsrf, asyncHandler(async (
 ewalletRouter.post('/topup/bank', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
   const amount = Number(req.body.amount);
   const { bankAccountId } = req.body;
+  const otpCode = req.body.otpCode ? String(req.body.otpCode) : undefined;
   if (!amount || amount <= 0) {
     res.status(400).json({ message: 'Số tiền không hợp lệ' });
     return;
@@ -75,7 +77,7 @@ ewalletRouter.post('/topup/bank', requireAuth, requireCsrf, asyncHandler(async (
     res.status(400).json({ message: 'Tài khoản ngân hàng liên kết là bắt buộc' });
     return;
   }
-  const result = await ewalletService.createBankTopup(req.session.userId!, amount, bankAccountId);
+  const result = await ewalletService.createBankTopup(req.session.userId!, amount, bankAccountId, otpCode);
   res.json(result);
 }));
 

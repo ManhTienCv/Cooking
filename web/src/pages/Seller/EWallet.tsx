@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Wallet, ArrowUpRight, ArrowDownLeft, Building2, Plus, ArrowRightLeft, ShieldCheck, Clock, X, Landmark, PlusCircle, AlertCircle } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownLeft, Building2, Plus, ArrowRightLeft, ShieldCheck, Clock, X, Landmark, PlusCircle, AlertCircle, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { apiJson, apiFetch } from '../../lib/api';
 import EWalletAddBankModal from './components/EWalletAddBankModal';
 import EWalletWithdrawModal from './components/EWalletWithdrawModal';
 import EWalletTopupModal from './components/EWalletTopupModal';
+import EWalletTransactionDetailModal from './components/EWalletTransactionDetailModal';
 
 interface VietQrBank {
   bin: string;
@@ -40,7 +41,7 @@ interface BankAccount {
 }
 
 const TX_LABEL: Record<string, string> = {
-  deposit: 'Doanh thu',
+  deposit: 'Nạp tiền vào ví',
   withdrawal: 'Rút tiền',
   fee: 'Phí hoa hồng',
   refund: 'Hoàn tiền',
@@ -51,6 +52,7 @@ const STATUS_LABEL: Record<string, string> = {
   completed: 'Hoàn tất',
   pending: 'Đang xử lý',
   failed: 'Thất bại',
+  invalid: 'Không hợp lệ',
 };
 
 /** Tiền vào ví (deposit, refund) vs tiền ra ví (withdrawal, fee, payment) */
@@ -69,6 +71,7 @@ export default function EWallet() {
   const [banks, setBanks] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [bankLogos, setBankLogos] = useState<Record<string, string>>({});
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetch('https://api.vietqr.io/v2/banks')
@@ -90,6 +93,8 @@ export default function EWallet() {
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showAddBank, setShowAddBank] = useState(false);
   const [showTopup, setShowTopup] = useState(false);
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [showTxDetail, setShowTxDetail] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -132,6 +137,54 @@ export default function EWallet() {
 
   const balance = Number(wallet?.balance || 0);
   const frozen = Number(wallet?.frozen_balance || 0);
+
+  // Helper to determine status (checks for overdue pending transactions)
+  const getTxStatus = (tx: Transaction) => {
+    if (tx.status === 'pending') {
+      const createdTime = new Date(tx.created_at).getTime();
+      const oneHour = 3600000;
+      if (Date.now() - createdTime > oneHour) {
+        return 'invalid';
+      }
+    }
+    return tx.status;
+  };
+
+  // Filter transactions based on search term
+  const filteredTransactions = transactions.filter((tx) => {
+    const desc = (tx.description || TX_LABEL[tx.type] || 'Giao dịch').toLowerCase();
+    const amountStr = formatCurrency(tx.amount).toLowerCase();
+    const statusStr = (STATUS_LABEL[getTxStatus(tx)] || tx.status).toLowerCase();
+    const search = searchTerm.toLowerCase();
+    return desc.includes(search) || amountStr.includes(search) || statusStr.includes(search);
+  });
+
+  // Group transactions by date string
+  const groupedTransactions: Record<string, Transaction[]> = {};
+  filteredTransactions.forEach((tx) => {
+    const txDate = new Date(tx.created_at);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    let dateKey = '';
+    if (txDate.toDateString() === today.toDateString()) {
+      dateKey = 'Hôm nay';
+    } else if (txDate.toDateString() === yesterday.toDateString()) {
+      dateKey = 'Hôm qua';
+    } else {
+      dateKey = txDate.toLocaleDateString('vi-VN', {
+        day: 'numeric',
+        month: 'numeric',
+        year: 'numeric',
+      });
+    }
+
+    if (!groupedTransactions[dateKey]) {
+      groupedTransactions[dateKey] = [];
+    }
+    groupedTransactions[dateKey].push(tx);
+  });
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -251,52 +304,90 @@ export default function EWallet() {
 
       {/* Transaction History */}
       <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-700">
+        <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <ArrowRightLeft className="w-5 h-5 text-gray-400" /> Lịch sử giao dịch
           </h3>
+          
+          {/* Ô tìm kiếm ở góc trên */}
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm giao dịch..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-1.5 text-sm rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
+            />
+          </div>
         </div>
-        <div className="divide-y divide-gray-100 dark:divide-slate-700">
-          {transactions.length === 0 ? (
-            <p className="text-center py-10 text-gray-400 dark:text-gray-500">Chưa có giao dịch nào.</p>
-          ) : (
-            transactions.map((tx) => {
-              const income = isIncome(tx.type);
-              const iconBg = income
-                ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
-                : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400';
-              const amountColor = income ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white';
-              const statusBadge =
-                tx.status === 'completed'
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : tx.status === 'pending'
-                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
 
-              return (
-                <div key={tx.id} className="p-4 sm:px-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className={'w-10 h-10 rounded-full flex items-center justify-center ' + iconBg}>
-                      {income ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white text-sm">
-                        {tx.description || TX_LABEL[tx.type] || 'Giao dịch'}
-                      </p>
-                      <p className="text-xs text-gray-500">{new Date(tx.created_at).toLocaleString('vi-VN')}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={'font-bold ' + amountColor}>
-                      {income ? '+' : '-'}{formatCurrency(tx.amount)}
-                    </p>
-                    <span className={'text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 inline-block ' + statusBadge}>
-                      {STATUS_LABEL[tx.status] || tx.status}
-                    </span>
-                  </div>
+        {/* Khung chứa danh sách có nút cuộn khi quá dài */}
+        <div className="max-h-[500px] overflow-y-auto divide-y divide-gray-100 dark:divide-slate-700 pr-1 scrollbar-thin">
+          {Object.keys(groupedTransactions).length === 0 ? (
+            <p className="text-center py-10 text-gray-400 dark:text-gray-500">Không tìm thấy giao dịch nào.</p>
+          ) : (
+            Object.keys(groupedTransactions).map((dateKey) => (
+              <div key={dateKey} className="flex flex-col">
+                {/* Header Ngày giao dịch */}
+                <div className="bg-gray-50/70 dark:bg-slate-900/30 px-6 py-2 text-xs font-bold text-gray-500 dark:text-slate-400 sticky top-0 backdrop-blur-md z-10">
+                  Giao dịch {dateKey}
                 </div>
-              );
-            })
+
+                <div className="divide-y divide-gray-100 dark:divide-slate-700">
+                  {groupedTransactions[dateKey].map((tx) => {
+                    const income = isIncome(tx.type);
+                    const realStatus = getTxStatus(tx);
+                    const iconBg = income
+                      ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400';
+                    const amountColor = income ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white';
+                    
+                    const statusBadge =
+                      realStatus === 'completed'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : realStatus === 'pending'
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                          : realStatus === 'invalid'
+                            ? 'bg-red-50 text-red-600 dark:bg-red-950/20 dark:text-red-400 border border-red-200/30'
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+
+                    return (
+                      <div
+                        key={tx.id}
+                        onClick={() => {
+                          setSelectedTx({ ...tx, status: realStatus as any });
+                          setShowTxDetail(true);
+                        }}
+                        className="p-4 sm:px-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer active:scale-[0.99] select-none"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={'w-10 h-10 rounded-full flex items-center justify-center ' + iconBg}>
+                            {income ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-white text-sm">
+                              {tx.description || TX_LABEL[tx.type] || 'Giao dịch'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(tx.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={'font-bold ' + amountColor}>
+                            {income ? '+' : '-'}{formatCurrency(tx.amount)}
+                          </p>
+                          <span className={'text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 inline-block ' + statusBadge}>
+                            {STATUS_LABEL[realStatus] || realStatus}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
           )}
         </div>
       </div>
@@ -322,6 +413,15 @@ export default function EWallet() {
         onClose={() => setShowTopup(false)}
         onSuccess={() => void loadData()}
         banks={banks}
+      />
+
+      <EWalletTransactionDetailModal
+        open={showTxDetail}
+        onClose={() => {
+          setShowTxDetail(false);
+          setSelectedTx(null);
+        }}
+        transaction={selectedTx}
       />
     </div>
   );

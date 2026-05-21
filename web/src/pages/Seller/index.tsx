@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Store, Package, ShoppingBag, Plus, Trash2, Eye, TrendingUp, Pencil, Settings, CheckCircle, MessageCircle, Navigation } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { apiJson, apiFetch } from '../../lib/api';
+import { apiJson } from '../../lib/api';
 import CreateProductModal, { type EditingProduct } from './CreateProductModal';
 import { NotificationProvider } from '../../contexts/NotificationContext';
 import NotificationBell from '../../components/ui/NotificationBell';
@@ -10,6 +10,7 @@ import Pagination from '../../components/ui/Pagination';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../../lib/authEvents';
 import { SellerShippingModal, SellerTransitLogModal } from './components/SellerShippingModals';
 import CancelOrderModal from '../../components/CancelOrderModal';
+import DeleteProductModal from '../../components/DeleteProductModal';
 
 interface SellerProduct {
   id: number; name: string; slug: string; price: number; sale_price: number | null;
@@ -113,6 +114,7 @@ export default function SellerDashboard() {
   const [shippingOrderId, setShippingOrderId] = useState<number | null>(null);
   const [transitOrderId, setTransitOrderId] = useState<number | null>(null);
   const [cancelOrderId, setCancelOrderId] = useState<number | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<SellerProduct | null>(null);
 
   const [productPage, setProductPage] = useState(1);
   const [productTotal, setProductTotal] = useState(0);
@@ -216,14 +218,7 @@ export default function SellerDashboard() {
     } finally { setRegistering(false); }
   }, [regForm, loadData]);
 
-  const onDeleteProduct = useCallback(async (id: number) => {
-    if (!window.confirm('Xóa sản phẩm này?')) return;
-    try {
-      await apiFetch(`/api/marketplace/seller/products/${id}`, { method: 'DELETE' });
-      toast.success('Đã xóa!');
-      setProducts(prev => prev.filter(p => p.id !== id));
-    } catch { toast.error('Lỗi xóa sản phẩm'); }
-  }, []);
+
 
   const onUpdateOrderStatus = useCallback(async (id: number, status: string) => {
     try {
@@ -400,7 +395,13 @@ export default function SellerDashboard() {
                       }} className="p-2 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all" title="Sửa sản phẩm">
                         <Pencil className="w-4 h-4" />
                       </button>
-                      <button onClick={() => void onDeleteProduct(p.id)} className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" title="Xóa sản phẩm">
+                      <button onClick={() => {
+                        if (!profile?.is_verified) {
+                          toast.error('Tài khoản của bạn chưa được xác duyệt.');
+                          return;
+                        }
+                        setDeletingProduct(p);
+                      }} className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" title="Xóa sản phẩm">
                         <Trash2 className="h-4 w-4" />
                       </button>
 
@@ -587,6 +588,16 @@ export default function SellerDashboard() {
         onClose={() => setCancelOrderId(null)}
         onSuccess={() => void loadData()}
         role="seller"
+      />
+
+      <DeleteProductModal
+        open={deletingProduct !== null}
+        product={deletingProduct}
+        onClose={() => setDeletingProduct(null)}
+        onSuccess={(id) => {
+          setProducts(prev => prev.filter(p => p.id !== id));
+          void loadData();
+        }}
       />
     </NotificationProvider>
   );

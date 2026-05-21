@@ -158,7 +158,7 @@ marketplaceRouter.get('/orders/:id', requireAuth, asyncHandler(async (req, res) 
 
 marketplaceRouter.put('/orders/:id/cancel', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
   const result = await marketplaceService.buyerCancelOrder(req.session.userId!, req.params.id, req.body);
-  res.json({ success: true, ...result });
+  res.json(result);
 }));
 
 marketplaceRouter.get('/orders/:id/transit-logs', requireAuth, asyncHandler(async (req, res) => {

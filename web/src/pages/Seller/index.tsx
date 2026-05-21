@@ -67,7 +67,7 @@ const ORDER_STATUS_STEPS = [
   { key: 'completed', label: 'Hoàn thành' },
 ];
 
-function ConfirmOrderButton({ createdAt, onClick }: { createdAt: string; onClick: () => void }) {
+function AutoConfirmCountdown({ createdAt }: { createdAt: string }) {
   const [timeLeft, setTimeLeft] = useState(0);
 
   useEffect(() => {
@@ -89,24 +89,10 @@ function ConfirmOrderButton({ createdAt, onClick }: { createdAt: string; onClick
     return () => clearInterval(timer);
   }, [createdAt]);
 
-  if (timeLeft > 0) {
-    return (
-      <button
-        disabled
-        className="text-xs bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400 font-semibold py-1.5 px-3 rounded-lg cursor-not-allowed"
-      >
-        Chờ xác nhận ({timeLeft}s)
-      </button>
-    );
-  }
-
   return (
-    <button
-      onClick={onClick}
-      className="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors"
-    >
-      Xác nhận đơn
-    </button>
+    <span className="text-xs bg-amber-50 dark:bg-amber-900/10 text-amber-600 dark:text-amber-400 font-semibold py-1.5 px-3 rounded-lg border border-amber-100 dark:border-amber-900/30">
+      Tự động duyệt {timeLeft > 0 ? `(${timeLeft}s)` : 'ngay'}
+    </span>
   );
 }
 
@@ -476,7 +462,6 @@ export default function SellerDashboard() {
                             );
                           }
                           const nextStatusMap: Record<string, { val: string; label: string }> = {
-                            pending: { val: 'confirmed', label: 'Xác nhận đơn' },
                             confirmed: { val: 'preparing', label: 'Bắt đầu chuẩn bị' },
                             preparing: { val: 'shipping', label: 'Bắt đầu giao hàng' },
                           };
@@ -485,34 +470,30 @@ export default function SellerDashboard() {
                             ? o.status === 'pending'
                             : ['pending', 'confirmed', 'preparing'].includes(o.status);
 
-                          if (!next && !canSellerCancel) return null;
+                          if (!next && !canSellerCancel && o.status !== 'pending') return null;
                           return (
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 items-center">
+                              {o.status === 'pending' && (
+                                <AutoConfirmCountdown createdAt={o.created_at} />
+                              )}
                               {next && (
-                                next.val === 'confirmed' ? (
-                                  <ConfirmOrderButton
-                                    createdAt={o.created_at}
-                                    onClick={() => void onUpdateOrderStatus(o.id, next.val)}
-                                  />
-                                ) : (
-                                  <button
-                                    onClick={() => {
-                                      if (next.val === 'shipping' && !o.is_fast_food_only) {
-                                        setShippingOrderId(o.id);
-                                      } else {
-                                        void onUpdateOrderStatus(o.id, next.val);
-                                      }
-                                    }}
-                                    className="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors"
-                                  >
-                                    {next.label}
-                                  </button>
-                                )
+                                <button
+                                  onClick={() => {
+                                    if (next.val === 'shipping' && !o.is_fast_food_only) {
+                                      setShippingOrderId(o.id);
+                                    } else {
+                                      void onUpdateOrderStatus(o.id, next.val);
+                                    }
+                                  }}
+                                  className="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors"
+                                >
+                                  {next.label}
+                                </button>
                               )}
                               {canSellerCancel && (
                                 <button
                                   onClick={() => setCancelOrderId(o.id)}
-                                  className="text-xs bg-red-500 hover:bg-red-655 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors"
+                                  className="text-xs bg-red-500 hover:bg-red-600 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors"
                                 >
                                   Hủy đơn
                                 </button>

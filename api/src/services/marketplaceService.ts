@@ -283,7 +283,22 @@ export async function createOrder(userId: number, body: Record<string, unknown>)
   return { order_id: orderId, total_amount: totalAmount };
 }
 
+async function autoConfirmPendingOrders(): Promise<void> {
+  const { pool } = await import('../db/pool.js');
+  try {
+    await pool.query(`
+      UPDATE orders 
+      SET status = 'confirmed', updated_at = CURRENT_TIMESTAMP 
+      WHERE status = 'pending' 
+        AND created_at <= CURRENT_TIMESTAMP - INTERVAL '2 minutes'
+    `);
+  } catch (err) {
+    console.error('[auto-confirm] Failed to auto-confirm pending orders:', err);
+  }
+}
+
 export async function getMyOrders(userId: number, limitRaw: unknown, offsetRaw: unknown, q?: string) {
+  await autoConfirmPendingOrders();
   const limit = Math.min(50, Math.max(1, Number(limitRaw) || 10));
   const offset = Math.max(0, Number(offsetRaw) || 0);
   const { rows, total } = await marketplaceRepo.getOrdersByBuyer(userId, limit, offset, q);
@@ -291,6 +306,7 @@ export async function getMyOrders(userId: number, limitRaw: unknown, offsetRaw: 
 }
 
 export async function getOrderDetail(userId: number, idRaw: unknown) {
+  await autoConfirmPendingOrders();
   const id = Number(idRaw);
   if (!id) throw { status: 400, message: 'Mã đơn hàng không hợp lệ' };
 
@@ -428,6 +444,7 @@ export async function getOrderReviews(userId: number, idRaw: unknown) {
 }
 
 export async function getSellerOrders(userId: number, limitRaw: unknown, offsetRaw: unknown) {
+  await autoConfirmPendingOrders();
   const limit = Math.min(50, Math.max(1, Number(limitRaw) || 10));
   const offset = Math.max(0, Number(offsetRaw) || 0);
   const { rows, total } = await marketplaceRepo.getOrdersBySeller(userId, limit, offset);
@@ -463,6 +480,11 @@ export async function updateOrderStatus(
       const remainingSecs = Math.ceil((2 * 60 * 1000 - timeDiffMs) / 1000);
       throw { status: 400, message: `Đơn hàng vừa đặt. Vui lòng đợi thêm ${remainingSecs} giây để xác nhận.` };
     }
+  }
+
+  // 1b. Không cho phép chuẩn bị đơn hàng khi chưa xác nhận
+  if (status === 'preparing' && order.status === 'pending') {
+    throw { status: 400, message: 'Đơn hàng đang chờ được xác nhận tự động. Vui lòng quay lại sau khi đơn được xác nhận.' };
   }
 
   // 2. Kiểm tra điều kiện hủy đơn hàng
@@ -766,6 +788,7 @@ export async function buyerCancelOrder(userId: number, idRaw: unknown, body: Rec
 }
 
 export async function getPendingOrdersCount(userId: number) {
+  await autoConfirmPendingOrders();
   const { pool } = await import('../db/pool.js');
 
   // Đếm đơn hàng đang chờ xác nhận (status = 'pending')

@@ -18,9 +18,10 @@ interface EWalletTopupModalProps {
   onClose: () => void;
   onSuccess: () => void;
   banks: BankAccount[];
+  bankLogos: Record<string, string>;
 }
 
-export default function EWalletTopupModal({ open, onClose, onSuccess, banks }: EWalletTopupModalProps) {
+export default function EWalletTopupModal({ open, onClose, onSuccess, banks, bankLogos }: EWalletTopupModalProps) {
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<'momo' | 'bank'>('momo');
   const [selectedBankId, setSelectedBankId] = useState('');
@@ -251,17 +252,31 @@ export default function EWalletTopupModal({ open, onClose, onSuccess, banks }: E
                               <span>Chưa có tài khoản ngân hàng liên kết. Vui lòng đóng cửa sổ này và thêm tài khoản ở mục "Tài khoản ngân hàng".</span>
                             </div>
                           ) : (
-                            <select
-                              value={selectedBankId}
-                              onChange={(e) => setSelectedBankId(e.target.value)}
-                              className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20"
-                            >
+                            <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
                               {banks.map((b) => (
-                                <option key={b.id} value={b.id} className="dark:bg-slate-800">
-                                  {b.bank_name} - {b.account_number}
-                                </option>
+                                <div
+                                  key={b.id}
+                                  onClick={() => setSelectedBankId(b.id)}
+                                  className={`flex items-center gap-3 p-3 rounded-2xl border-2 cursor-pointer transition-all ${
+                                    selectedBankId === b.id
+                                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20'
+                                      : 'border-gray-200 dark:border-slate-800 hover:border-gray-300 dark:hover:border-slate-700'
+                                  }`}
+                                >
+                                  <div className="w-8 h-8 bg-white p-1 rounded-lg flex items-center justify-center border border-gray-200 dark:border-slate-300 font-bold text-gray-400 text-[10px] shrink-0 overflow-hidden shadow-sm">
+                                    {bankLogos[b.bank_bin] ? (
+                                      <img src={bankLogos[b.bank_bin]} alt={b.bank_name} className="w-full h-full object-contain" />
+                                    ) : (
+                                      b.bank_bin
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0 text-left">
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{b.bank_name}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">{b.account_number} · {b.account_name}</p>
+                                  </div>
+                                </div>
                               ))}
-                            </select>
+                            </div>
                           )}
                         </div>
                       )}

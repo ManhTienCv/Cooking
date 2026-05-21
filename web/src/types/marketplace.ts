@@ -68,6 +68,9 @@ export interface Order {
   created_at: string;
   updated_at: string;
   items?: OrderItem[];
+  payment_status?: 'unpaid' | 'paid' | 'refunded';
+  paid_amount?: number;
+  paid_via?: string | null;
 }
 
 export interface OrderItem {

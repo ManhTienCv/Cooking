@@ -94,7 +94,6 @@ export async function baselineExistingSchema(client: PoolClient): Promise<string
     { file: 'migration_ewallet.sql', table: 'wallets' },
     { file: 'migration_ewallet_otp.sql', table: 'ewallet_otps' },
     { file: 'migration_commission.sql', table: 'commission_settings' },
-    { file: 'migration_cookpay.sql', table: 'wallet_transactions' },
   ];
 
   for (const { file, table } of tableRules) {

@@ -1,4 +1,4 @@
-﻿-- =============================================================
+-- =============================================================
 -- Chat / Messages
 -- =============================================================
 
@@ -22,7 +22,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_chat_conversations_product
 
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_chat_conversations_general
   ON chat_conversations (buyer_id, seller_id)
-  WHERE product_id IS NULL;
+  WHERE product_id IS NULL AND order_id IS NULL;
 
 CREATE TABLE IF NOT EXISTS chat_messages (
   id SERIAL PRIMARY KEY,

@@ -63,13 +63,46 @@ export async function createConversation(
   productId: number | null,
   orderId: number | null
 ): Promise<ChatConversation> {
-  const { rows } = await pool.query(
-    `INSERT INTO chat_conversations (buyer_id, seller_id, product_id, order_id)
-     VALUES ($1, $2, $3, $4)
-     RETURNING *`,
-    [buyerId, sellerId, productId, orderId]
-  );
-  return rows[0] as ChatConversation;
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO chat_conversations (buyer_id, seller_id, product_id, order_id)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [buyerId, sellerId, productId, orderId]
+    );
+    return rows[0] as ChatConversation;
+  } catch (err: any) {
+    if (err.code === '23505') {
+      if (orderId) {
+        const { rows } = await pool.query(
+          `SELECT * FROM chat_conversations WHERE buyer_id = $1 AND seller_id = $2 AND order_id = $3`,
+          [buyerId, sellerId, orderId]
+        );
+        if (rows.length > 0) return rows[0] as ChatConversation;
+      }
+      if (productId) {
+        const { rows } = await pool.query(
+          `SELECT * FROM chat_conversations WHERE buyer_id = $1 AND seller_id = $2 AND product_id = $3 AND order_id IS NULL`,
+          [buyerId, sellerId, productId]
+        );
+        if (rows.length > 0) return rows[0] as ChatConversation;
+      } else {
+        const { rows } = await pool.query(
+          `SELECT * FROM chat_conversations WHERE buyer_id = $1 AND seller_id = $2 AND product_id IS NULL AND order_id IS NULL`,
+          [buyerId, sellerId]
+        );
+        if (rows.length > 0) return rows[0] as ChatConversation;
+      }
+      const { rows: fallbackRows } = await pool.query(
+        `SELECT * FROM chat_conversations 
+         WHERE buyer_id = $1 AND seller_id = $2 
+         ORDER BY updated_at DESC LIMIT 1`,
+        [buyerId, sellerId]
+      );
+      if (fallbackRows.length > 0) return fallbackRows[0] as ChatConversation;
+    }
+    throw err;
+  }
 }
 
 export async function listConversationsForUser(userId: number): Promise<ChatConversationSummary[]> {

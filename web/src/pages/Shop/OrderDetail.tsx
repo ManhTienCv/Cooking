@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MapPin, Phone, User, CreditCard, Package, CheckCircle, Star, MessageCircle, Truck, Calendar, AlertTriangle, Clock } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 import { apiFetch, apiJson } from '../../lib/api';
@@ -38,6 +39,7 @@ export default function OrderDetail() {
   const [order, setOrder] = useState<(Order & { items: OrderItem[] }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviewForms, setReviewForms] = useState<Record<number, { rating: number; comment: string; submitting: boolean; submitted: boolean }>>({});
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [transitData, setTransitData] = useState<{
     status: string;
     estimated_delivery_at: string | null;
@@ -87,6 +89,14 @@ export default function OrderDetail() {
   }, [id]);
 
   const canReview = order ? ['delivered', 'completed'].includes(order.status) : false;
+  const isPaid = order?.payment_status === 'paid';
+  const getPaidViaLabel = (via: string | null | undefined) => {
+    if (!via) return 'Ví Cook';
+    if (via === 'cookpay') return 'Ví Cook';
+    if (via === 'momo') return 'Ví MoMo';
+    if (via === 'cod') return 'Thanh toán khi nhận hàng';
+    return via;
+  };
 
   const orderSellers = useMemo(() => {
     if (!order) return [];
@@ -191,8 +201,7 @@ export default function OrderDetail() {
     }
   };
 
-  const completeOrder = async () => {
-    if (!window.confirm('Xác nhận bạn đã nhận được hàng và hoàn thành đơn?')) return;
+  const handleConfirmComplete = async () => {
     try {
       const response = await apiFetch(`/api/marketplace/orders/${order.id}/complete`, {
         method: 'PUT',
@@ -206,6 +215,10 @@ export default function OrderDetail() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Đã có lỗi xảy ra');
     }
+  };
+
+  const completeOrder = () => {
+    setShowCompleteModal(true);
   };
 
   return (
@@ -434,9 +447,36 @@ export default function OrderDetail() {
                 );
               })}
             </div>
-            <div className="px-6 py-4 border-t border-gray-100 dark:border-slate-700/50 flex justify-between">
-              <span className="font-bold text-gray-900 dark:text-white">Tổng cộng</span>
-              <span className="text-xl font-extrabold text-red-600 dark:text-red-400">{formatPrice(order.total_amount)}</span>
+            <div className="px-6 py-4 border-t border-gray-100 dark:border-slate-700/50 space-y-2">
+              {isPaid ? (
+                <>
+                  <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
+                    <span>Trạng thái thanh toán</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      Đã thanh toán qua {getPaidViaLabel(order.paid_via)} vào hồi {new Date(order.updated_at || order.created_at).toLocaleString('vi-VN')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-gray-900 dark:text-white">Cần thanh toán</span>
+                    <span className="text-xl font-extrabold text-green-600 dark:text-green-400">0đ</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
+                    <span>Trạng thái</span>
+                    <span>Đã đặt đơn vào hồi {new Date(order.created_at).toLocaleString('vi-VN')}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
+                    <span>Hình thức thanh toán</span>
+                    <span>{order.payment_method === 'cod' ? 'Thanh toán khi nhận hàng' : 'Chuyển khoản ngân hàng'}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-t border-gray-50 dark:border-slate-800/50 pt-2">
+                    <span className="font-bold text-gray-900 dark:text-white">Tổng cộng</span>
+                    <span className="text-xl font-extrabold text-red-600 dark:text-red-400">{formatPrice(order.total_amount)}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </Reveal>
@@ -492,7 +532,12 @@ export default function OrderDetail() {
                 </p>
               )}
               <p className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                <CreditCard className="w-3.5 h-3.5" /> {order.payment_method === 'cod' ? 'Thanh toán khi nhận hàng' : 'Chuyển khoản ngân hàng'}
+                <CreditCard className="w-3.5 h-3.5" />
+                {isPaid ? (
+                  <span>Đã thanh toán qua {getPaidViaLabel(order.paid_via)}</span>
+                ) : (
+                  <span>Hình thức thanh toán: {order.payment_method === 'cod' ? 'Thanh toán khi nhận hàng' : 'Chuyển khoản ngân hàng'}</span>
+                )}
               </p>
               {order.note && (
                 <p className="text-gray-500 dark:text-gray-500 italic mt-2">📝 {order.note}</p>
@@ -501,6 +546,54 @@ export default function OrderDetail() {
           </div>
         </Reveal>
       </div>
+
+      {/* Complete Confirmation Modal */}
+      <AnimatePresence>
+        {showCompleteModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCompleteModal(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999]"
+            />
+            <div className="fixed inset-0 flex items-center justify-center z-[9999] p-4 pointer-events-none">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-sm w-full border border-gray-100 dark:border-slate-800/80 shadow-2xl pointer-events-auto text-center"
+              >
+                <div className="w-16 h-16 bg-green-50 dark:bg-green-950/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-500" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Hoàn thành đơn hàng</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  Xác nhận bạn đã nhận được đầy đủ sản phẩm và hài lòng với đơn hàng này? Thao tác này không thể hoàn tác.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowCompleteModal(false)}
+                    className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-slate-700 font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setShowCompleteModal(false);
+                      await handleConfirmComplete();
+                    }}
+                    className="flex-1 bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 transition-colors"
+                  >
+                    Xác nhận
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

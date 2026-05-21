@@ -413,6 +413,7 @@ export default function EWallet() {
         onClose={() => setShowTopup(false)}
         onSuccess={() => void loadData()}
         banks={banks}
+        bankLogos={bankLogos}
       />
 
       <EWalletTransactionDetailModal

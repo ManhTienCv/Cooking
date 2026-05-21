@@ -92,6 +92,15 @@ export default function OrderDetail() {
 
   const canReview = order ? ['delivered', 'completed'].includes(order.status) : false;
   const isPaid = order?.payment_status === 'paid';
+  const isCancelled = order?.status === 'cancelled';
+  const canCancel = useMemo(() => {
+    if (!order || isCancelled || order.status === 'completed') return false;
+    if (order.is_fast_food_only) {
+      return order.status === 'pending';
+    } else {
+      return ['pending', 'confirmed', 'preparing'].includes(order.status);
+    }
+  }, [order, isCancelled]);
   const getPaidViaLabel = (via: string | null | undefined) => {
     if (!via) return 'Ví Cook';
     if (via === 'cookpay') return 'Ví Cook';
@@ -174,16 +183,7 @@ export default function OrderDetail() {
     );
   }
 
-  const isCancelled = order.status === 'cancelled';
   const stepIndex = isCancelled ? -1 : STATUS_STEPS.findIndex((s) => s.key === order.status);
-  const canCancel = useMemo(() => {
-    if (!order || isCancelled || order.status === 'completed') return false;
-    if (order.is_fast_food_only) {
-      return order.status === 'pending';
-    } else {
-      return ['pending', 'confirmed', 'preparing'].includes(order.status);
-    }
-  }, [order, isCancelled]);
 
   const submitReview = async (item: OrderItem) => {
     const form = reviewForms[item.product_id] ?? { rating: 5, comment: '', submitting: false, submitted: false };

@@ -40,6 +40,7 @@ export default function Navbar() {
   const [authInitialSignUp, setAuthInitialSignUp] = useState(false);
   const [me, setMe] = useState<MeState | null>(null);
   const [messageUnreadCount, setMessageUnreadCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
   const { count: cartCount } = useCart();
   const location = useLocation();
   const navigate = useNavigate();
@@ -72,6 +73,19 @@ export default function Navbar() {
     }
   }, [me?.authenticated]);
 
+  const loadPendingOrdersCount = useCallback(async () => {
+    if (!me?.authenticated) {
+      setPendingCount(0);
+      return;
+    }
+    try {
+      const data = await apiJson<{ pendingCount: number }>('/api/marketplace/orders/pending-count');
+      setPendingCount(data.pendingCount ?? 0);
+    } catch {
+      setPendingCount(0);
+    }
+  }, [me?.authenticated]);
+
   useEffect(() => {
     void refreshMe();
   }, [refreshMe]);
@@ -79,10 +93,20 @@ export default function Navbar() {
   useEffect(() => {
     if (me?.authenticated) {
       void loadMessageUnread();
+      void loadPendingOrdersCount();
       return;
     }
     setMessageUnreadCount(0);
-  }, [me, loadMessageUnread]);
+    setPendingCount(0);
+  }, [me, loadMessageUnread, loadPendingOrdersCount]);
+
+  useEffect(() => {
+    if (!me?.authenticated) return;
+    const interval = setInterval(() => {
+      void loadPendingOrdersCount();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [me?.authenticated, loadPendingOrdersCount]);
 
   useEffect(() => {
     const onAuth = (event: Event) => {
@@ -90,6 +114,7 @@ export default function Navbar() {
       if (detail.authenticated === false) {
         setMe({ authenticated: false });
         setMessageUnreadCount(0);
+        setPendingCount(0);
         return;
       }
       void refreshMe();
@@ -102,9 +127,15 @@ export default function Navbar() {
     if (!me?.authenticated) return;
 
     const es = new EventSource('/api/messages/stream', { withCredentials: true });
-    const refresh = () => void loadMessageUnread();
+    const refresh = () => {
+      void loadMessageUnread();
+      void loadPendingOrdersCount();
+    };
 
-    const onRead = () => void loadMessageUnread();
+    const onRead = () => {
+      void loadMessageUnread();
+      void loadPendingOrdersCount();
+    };
     window.addEventListener('messages:read', onRead);
 
     es.addEventListener('message', refresh);
@@ -116,7 +147,7 @@ export default function Navbar() {
       es.removeEventListener('ready', refresh);
       es.close();
     };
-  }, [me?.authenticated, loadMessageUnread]);
+  }, [me?.authenticated, loadMessageUnread, loadPendingOrdersCount]);
 
   const openLogin = () => {
     setAuthInitialSignUp(false);
@@ -137,6 +168,7 @@ export default function Navbar() {
     resetCsrfCache();
     setMe({ authenticated: false });
     setMessageUnreadCount(0);
+    setPendingCount(0);
     notifyAuthChanged({ authenticated: false });
     setIsMenuOpen(false);
     if (location.pathname !== '/') {
@@ -210,6 +242,11 @@ export default function Navbar() {
                     />
                   )}
                   <Store className="w-5 h-5 relative z-10" />
+                  {pendingCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm z-20 animate-pulse">
+                      {pendingCount}
+                    </span>
+                  )}
                 </Link>
               )}
 
@@ -234,9 +271,9 @@ export default function Navbar() {
                   />
                 )}
                 <ShoppingCart className="w-5 h-5 relative z-10" />
-                {cartCount > 0 && (
+                {(pendingCount > 0 || cartCount > 0) && (
                   <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm z-20">
-                    {cartCount > 99 ? '99+' : cartCount}
+                    {pendingCount > 0 ? pendingCount : (cartCount > 99 ? '99+' : cartCount)}
                   </span>
                 )}
               </Link>
@@ -264,9 +301,9 @@ export default function Navbar() {
                       />
                     )}
                     <MessageCircle className="w-5 h-5 relative z-10" />
-                    {messageUnreadCount > 0 && (
+                    {(pendingCount > 0 || messageUnreadCount > 0) && (
                       <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm z-20">
-                        {messageUnreadCount > 99 ? '99+' : messageUnreadCount}
+                        {pendingCount > 0 ? pendingCount : (messageUnreadCount > 99 ? '99+' : messageUnreadCount)}
                       </span>
                     )}
                   </Link>
@@ -290,6 +327,11 @@ export default function Navbar() {
                       />
                     )}
                     <ClipboardList className="w-5 h-5 relative z-10" />
+                    {pendingCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm z-20 animate-pulse">
+                        {pendingCount}
+                      </span>
+                    )}
                   </Link>
                 </>
               )}

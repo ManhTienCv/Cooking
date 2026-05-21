@@ -146,8 +146,18 @@ marketplaceRouter.get('/orders', requireAuth, asyncHandler(async (req, res) => {
   res.json({ success: true, ...result });
 }));
 
+marketplaceRouter.get('/orders/pending-count', requireAuth, asyncHandler(async (req, res) => {
+  const result = await marketplaceService.getPendingOrdersCount(req.session.userId!);
+  res.json({ success: true, ...result });
+}));
+
 marketplaceRouter.get('/orders/:id', requireAuth, asyncHandler(async (req, res) => {
   const result = await marketplaceService.getOrderDetail(req.session.userId!, req.params.id);
+  res.json({ success: true, ...result });
+}));
+
+marketplaceRouter.put('/orders/:id/cancel', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
+  const result = await marketplaceService.buyerCancelOrder(req.session.userId!, req.params.id, req.body);
   res.json({ success: true, ...result });
 }));
 

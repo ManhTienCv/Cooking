@@ -71,6 +71,7 @@ export interface Order {
   payment_status?: 'unpaid' | 'paid' | 'refunded';
   paid_amount?: number;
   paid_via?: string | null;
+  is_fast_food_only?: boolean;
 }
 
 export interface OrderItem {

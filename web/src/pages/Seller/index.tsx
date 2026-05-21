@@ -9,6 +9,7 @@ import NotificationBell from '../../components/ui/NotificationBell';
 import Pagination from '../../components/ui/Pagination';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../../lib/authEvents';
 import { SellerShippingModal, SellerTransitLogModal } from './components/SellerShippingModals';
+import CancelOrderModal from '../../components/CancelOrderModal';
 
 interface SellerProduct {
   id: number; name: string; slug: string; price: number; sale_price: number | null;
@@ -66,6 +67,49 @@ const ORDER_STATUS_STEPS = [
   { key: 'completed', label: 'Hoàn thành' },
 ];
 
+function ConfirmOrderButton({ createdAt, onClick }: { createdAt: string; onClick: () => void }) {
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const diffMs = (2 * 60 * 1000) - (Date.now() - new Date(createdAt).getTime());
+      return diffMs > 0 ? Math.ceil(diffMs / 1000) : 0;
+    };
+
+    setTimeLeft(calculateTimeLeft());
+
+    const timer = setInterval(() => {
+      const remaining = calculateTimeLeft();
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [createdAt]);
+
+  if (timeLeft > 0) {
+    return (
+      <button
+        disabled
+        className="text-xs bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400 font-semibold py-1.5 px-3 rounded-lg cursor-not-allowed"
+      >
+        Chờ xác nhận ({timeLeft}s)
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      className="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors"
+    >
+      Xác nhận đơn
+    </button>
+  );
+}
+
 export default function SellerDashboard() {
   const [tab, setTab] = useState<'products' | 'orders'>('products');
   const [profile, setProfile] = useState<SellerProfile | null>(null);
@@ -82,6 +126,7 @@ export default function SellerDashboard() {
 
   const [shippingOrderId, setShippingOrderId] = useState<number | null>(null);
   const [transitOrderId, setTransitOrderId] = useState<number | null>(null);
+  const [cancelOrderId, setCancelOrderId] = useState<number | null>(null);
 
   const [productPage, setProductPage] = useState(1);
   const [productTotal, setProductTotal] = useState(0);
@@ -201,7 +246,9 @@ export default function SellerDashboard() {
       });
       toast.success('Đã cập nhật!');
       void loadData();
-    } catch { toast.error('Lỗi cập nhật'); }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi cập nhật');
+    }
   }, [loadData]);
 
   if (loading) return (
@@ -434,20 +481,43 @@ export default function SellerDashboard() {
                             preparing: { val: 'shipping', label: 'Bắt đầu giao hàng' },
                           };
                           const next = nextStatusMap[o.status];
-                          if (!next) return null;
+                          const canSellerCancel = o.is_fast_food_only
+                            ? o.status === 'pending'
+                            : ['pending', 'confirmed', 'preparing'].includes(o.status);
+
+                          if (!next && !canSellerCancel) return null;
                           return (
-                            <button
-                              onClick={() => {
-                                if (next.val === 'shipping' && !o.is_fast_food_only) {
-                                  setShippingOrderId(o.id);
-                                } else {
-                                  void onUpdateOrderStatus(o.id, next.val);
-                                }
-                              }}
-                              className="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors"
-                            >
-                              {next.label}
-                            </button>
+                            <div className="flex gap-2">
+                              {next && (
+                                next.val === 'confirmed' ? (
+                                  <ConfirmOrderButton
+                                    createdAt={o.created_at}
+                                    onClick={() => void onUpdateOrderStatus(o.id, next.val)}
+                                  />
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      if (next.val === 'shipping' && !o.is_fast_food_only) {
+                                        setShippingOrderId(o.id);
+                                      } else {
+                                        void onUpdateOrderStatus(o.id, next.val);
+                                      }
+                                    }}
+                                    className="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors"
+                                  >
+                                    {next.label}
+                                  </button>
+                                )
+                              )}
+                              {canSellerCancel && (
+                                <button
+                                  onClick={() => setCancelOrderId(o.id)}
+                                  className="text-xs bg-red-500 hover:bg-red-655 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors"
+                                >
+                                  Hủy đơn
+                                </button>
+                              )}
+                            </div>
                           );
                         })()}
                       </div>
@@ -528,6 +598,14 @@ export default function SellerDashboard() {
         orderId={transitOrderId}
         onClose={() => setTransitOrderId(null)}
         onSuccess={() => void loadData()}
+      />
+
+      <CancelOrderModal
+        open={cancelOrderId !== null}
+        orderId={cancelOrderId}
+        onClose={() => setCancelOrderId(null)}
+        onSuccess={() => void loadData()}
+        role="seller"
       />
     </NotificationProvider>
   );

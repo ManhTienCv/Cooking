@@ -456,6 +456,28 @@ export async function updateOrderStatus(
     if (!isSeller) throw { status: 403, message: 'Không có quyền cập nhật đơn hàng này.' };
   }
 
+  // 1. Kiểm tra delay khoảng 2 phút trước khi xác nhận đơn
+  if (status === 'confirmed') {
+    const timeDiffMs = Date.now() - new Date(order.created_at).getTime();
+    if (timeDiffMs < 2 * 60 * 1000) {
+      const remainingSecs = Math.ceil((2 * 60 * 1000 - timeDiffMs) / 1000);
+      throw { status: 400, message: `Đơn hàng vừa đặt. Vui lòng đợi thêm ${remainingSecs} giây để xác nhận.` };
+    }
+  }
+
+  // 2. Kiểm tra điều kiện hủy đơn hàng
+  if (status === 'cancelled') {
+    if (order.is_fast_food_only) {
+      if (order.status !== 'pending') {
+        throw { status: 400, message: 'Đơn hàng đồ ăn nhanh không được phép hủy sau khi được xác nhận.' };
+      }
+    } else {
+      if (['shipping', 'delivered', 'completed'].includes(order.status)) {
+        throw { status: 400, message: 'Đơn hàng lớn không được phép hủy sau khi đã vận chuyển.' };
+      }
+    }
+  }
+
   const reason = status === 'cancelled' ? String(body?.reason ?? '').trim() || null : undefined;
   const ok = await marketplaceRepo.updateOrderStatus(id, status, reason ?? undefined);
   if (!ok) throw { status: 400, message: 'Không thể cập nhật trạng thái.' };
@@ -689,4 +711,84 @@ export async function getRelatedProducts(productIdRaw: unknown, limitRaw: unknow
 
   const filtered = rows.filter(r => r.id !== productId).slice(0, limit);
   return { products: filtered };
+}
+
+export async function buyerCancelOrder(userId: number, idRaw: unknown, body: Record<string, unknown>) {
+  const id = Number(idRaw);
+  if (!id) throw { status: 400, message: 'Mã đơn hàng không hợp lệ' };
+
+  const order = await marketplaceRepo.getOrderById(id);
+  if (!order) throw { status: 404, message: 'Đơn hàng không tồn tại.' };
+
+  if (order.buyer_id !== userId) {
+    throw { status: 403, message: 'Chỉ người mua mới có quyền hủy đơn hàng này.' };
+  }
+
+  if (order.status === 'cancelled') {
+    throw { status: 400, message: 'Đơn hàng đã được hủy trước đó.' };
+  }
+  if (order.status === 'completed') {
+    throw { status: 400, message: 'Không thể hủy đơn hàng đã hoàn thành.' };
+  }
+
+  // Kiểm tra điều kiện hủy đơn hàng
+  if (order.is_fast_food_only) {
+    if (order.status !== 'pending') {
+      throw { status: 400, message: 'Đơn hàng đồ ăn nhanh không được phép hủy sau khi được xác nhận.' };
+    }
+  } else {
+    if (['shipping', 'delivered', 'completed'].includes(order.status)) {
+      throw { status: 400, message: 'Đơn hàng lớn không được phép hủy sau khi đã vận chuyển.' };
+    }
+  }
+
+  const reason = String(body?.reason ?? '').trim() || 'Người mua yêu cầu hủy';
+
+  const ok = await marketplaceRepo.updateOrderStatus(id, 'cancelled', reason);
+  if (!ok) throw { status: 400, message: 'Không thể hủy đơn hàng.' };
+
+  // ── Auto-refund khi hủy đơn đã thanh toán bằng CookPay ──
+  const rawOrder = order as unknown as Record<string, unknown>;
+  const paidVia = String(rawOrder.paid_via ?? '');
+  const paidAmount = Number(rawOrder.paid_amount ?? 0);
+  const paymentStatus = String(rawOrder.payment_status ?? 'unpaid');
+
+  if (paidVia === 'cookpay' && paymentStatus === 'paid' && paidAmount > 0) {
+    try {
+      const { refundOrder } = await import('./ewalletService.js');
+      await refundOrder(id, order.buyer_id, paidAmount);
+    } catch (err) {
+      console.error('[refund] Auto-refund failed for order #' + id, err instanceof Error ? err.message : err);
+    }
+  }
+
+  return { success: true };
+}
+
+export async function getPendingOrdersCount(userId: number) {
+  const { pool } = await import('../db/pool.js');
+
+  // Đếm đơn hàng đang chờ xác nhận (status = 'pending')
+  // 1. Dành cho người mua (buyer)
+  const buyerRes = await pool.query(
+    "SELECT COUNT(*) AS count FROM orders WHERE buyer_id = $1 AND status = 'pending'",
+    [userId]
+  );
+  const buyerPending = Number(buyerRes.rows[0]?.count ?? 0);
+
+  // 2. Dành cho người bán (seller)
+  const sellerRes = await pool.query(
+    `SELECT COUNT(DISTINCT o.id) AS count 
+     FROM orders o 
+     JOIN order_items oi ON oi.order_id = o.id 
+     WHERE oi.seller_id = $1 AND o.status = 'pending'`,
+    [userId]
+  );
+  const sellerPending = Number(sellerRes.rows[0]?.count ?? 0);
+
+  return {
+    pendingCount: buyerPending + sellerPending,
+    buyerPending,
+    sellerPending
+  };
 }

@@ -9,6 +9,7 @@ import { Reveal } from '../../components/motion/ScrollReveal';
 import PageBackBar from '../../components/ui/PageBackBar';
 import { scrollWindowToTop } from '../../lib/scroll';
 import type { Order, OrderItem } from '../../types/marketplace';
+import CancelOrderModal from '../../components/CancelOrderModal';
 
 type OrderReview = {
   product_id: number;
@@ -40,6 +41,7 @@ export default function OrderDetail() {
   const [loading, setLoading] = useState(true);
   const [reviewForms, setReviewForms] = useState<Record<number, { rating: number; comment: string; submitting: boolean; submitted: boolean }>>({});
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [transitData, setTransitData] = useState<{
     status: string;
     estimated_delivery_at: string | null;
@@ -174,6 +176,14 @@ export default function OrderDetail() {
 
   const isCancelled = order.status === 'cancelled';
   const stepIndex = isCancelled ? -1 : STATUS_STEPS.findIndex((s) => s.key === order.status);
+  const canCancel = useMemo(() => {
+    if (!order || isCancelled || order.status === 'completed') return false;
+    if (order.is_fast_food_only) {
+      return order.status === 'pending';
+    } else {
+      return ['pending', 'confirmed', 'preparing'].includes(order.status);
+    }
+  }, [order, isCancelled]);
 
   const submitReview = async (item: OrderItem) => {
     const form = reviewForms[item.product_id] ?? { rating: 5, comment: '', submitting: false, submitted: false };
@@ -296,6 +306,19 @@ export default function OrderDetail() {
                   className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded-full font-bold transition-all transform hover:scale-105 shadow-md hover:shadow-lg shadow-amber-500/30"
                 >
                   Xác nhận đã nhận hàng
+                </button>
+              </div>
+            )}
+
+            {canCancel && (
+              <div className="mt-6 text-center border-t border-gray-100 dark:border-slate-700/50 pt-6">
+                <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">Bạn có thể yêu cầu hủy đơn hàng này nếu không muốn tiếp tục mua nữa.</p>
+                <button
+                  type="button"
+                  onClick={() => setShowCancelModal(true)}
+                  className="bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-full font-bold transition-all transform hover:scale-105 shadow-md hover:shadow-lg shadow-red-500/30"
+                >
+                  Hủy đơn hàng
                 </button>
               </div>
             )}
@@ -594,6 +617,16 @@ export default function OrderDetail() {
           </>
         )}
       </AnimatePresence>
+
+      <CancelOrderModal
+        open={showCancelModal}
+        orderId={order ? order.id : null}
+        onClose={() => setShowCancelModal(false)}
+        onSuccess={() => {
+          setOrder(prev => prev ? { ...prev, status: 'cancelled' } : null);
+        }}
+        role="buyer"
+      />
     </div>
   );
 }

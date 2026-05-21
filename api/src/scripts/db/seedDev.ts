@@ -102,13 +102,6 @@ export async function seedDevData(
     fullName: config.adminName,
   });
 
-  const sellerId = await upsertUser(pool, {
-    email: 'demo-seller@cook.local',
-    fullName: 'Nguyễn Văn Demo',
-    password: 'Demo@Cook123456',
-    bio: 'Tài khoản demo người bán — dùng cho dev.',
-  });
-
   await upsertUser(pool, {
     email: 'demo-buyer@cook.local',
     fullName: 'Khách Demo',
@@ -116,37 +109,8 @@ export async function seedDevData(
     bio: 'Tài khoản demo người mua.',
   });
 
-  await pool.query(
-    `INSERT INTO seller_profiles (user_id, store_name, store_description, phone, address, is_verified)
-     VALUES ($1, $2, $3, $4, $5, TRUE)
-     ON CONFLICT (user_id) DO UPDATE SET
-       store_name = EXCLUDED.store_name,
-       store_description = EXCLUDED.store_description,
-       is_verified = EXCLUDED.is_verified`,
-    [
-      sellerId,
-      'Meo Meo Kitchen',
-      'Cửa hàng demo — nguyên liệu & đồ ăn sẵn.',
-      '0901234567',
-      '123 Đường Demo, Hà Nội',
-    ],
-  );
-
-  await pool.query(
-    `INSERT INTO seller_verification_profiles (user_id, verification_status, verified_at)
-     VALUES ($1, 'verified', CURRENT_TIMESTAMP)
-     ON CONFLICT (user_id) DO UPDATE SET
-       verification_status = 'verified',
-       verified_at = COALESCE(seller_verification_profiles.verified_at, EXCLUDED.verified_at)`,
-    [sellerId],
-  );
-
-  await pool.query(
-    `INSERT INTO seller_settings (user_id)
-     VALUES ($1)
-     ON CONFLICT (user_id) DO NOTHING`,
-    [sellerId],
-  );
+  const userRes = await pool.query('SELECT id FROM users ORDER BY id ASC LIMIT 1');
+  const sellerId = userRes.rows[0]?.id || 1;
 
   const recipeCats = await ensureRecipeCategories(pool);
   const blogCats = await ensureBlogCategories(pool);

@@ -142,6 +142,26 @@
 
   </td>
   </tr>
+  <tr>
+    <td width="50%">
+
+### 💳 Ví điện tử & Thanh toán (CookPay)
+- **Ví số dư tích hợp** dùng thanh toán đơn hàng & nhận tiền bán hàng
+- **Nạp tiền qua MoMo** giả lập bằng QR Code và mã giao dịch tự động
+- **Rút tiền ngân hàng** về tài khoản cá nhân, cập nhật số dư tức thì
+- **Lịch sử giao dịch** chi tiết (nạp, rút, thanh toán đơn, hoàn tiền)
+
+    </td>
+    <td width="50%">
+
+### 🚚 Vận chuyển thông minh & Lịch trình bưu cục
+- **Tích hợp GHN / GHTK** giả lập mã vận đơn và ngày giao dự kiến (ETA)
+- **Lịch trình bưu cục (Transit Logs)** cập nhật chặng đường chi tiết từng kho phát
+- **Đền bù trễ hạn** tự động gửi voucher nếu quá hạn giao hàng dự kiến
+- **Phân tách luồng đồ ăn nhanh** tự động phát hiện và bỏ qua bưu cục trung chuyển, giao trực tiếp
+
+    </td>
+  </tr>
 </table>
 
 ---
@@ -244,7 +264,7 @@
 
 ## 🗄️ Cơ sở dữ liệu
 
-Hệ thống sử dụng **22 bảng** quan hệ với ràng buộc chặt chẽ:
+Hệ thống sử dụng **26 bảng** quan hệ với ràng buộc chặt chẽ:
 
 ```
 ┌──────────────────┐       ┌──────────────────────┐
@@ -358,6 +378,9 @@ Tất cả API endpoints đều có prefix `/api` và trả về JSON.
 | `GET` | `/admin/users` | Danh sách người dùng | Admin |
 | `PUT` | `/admin/recipes/:id/status` | Duyệt / từ chối công thức | Admin |
 | `PUT` | `/admin/blog/:id/status` | Duyệt / từ chối bài viết | Admin |
+| `GET` | `/admin/withdrawals` | Danh sách yêu cầu rút tiền | Admin |
+| `PUT` | `/admin/withdrawals/:id` | Phê duyệt / từ chối rút tiền | Admin |
+| `GET` | `/admin/commission-wallet` | Xem số dư ví hoa hồng của Admin | Admin |
 
 ### 🛒 Marketplace (`/api/marketplace`)
 
@@ -372,6 +395,7 @@ Tất cả API endpoints đều có prefix `/api` và trả về JSON.
 | `POST` | `/orders` | Đặt hàng (checkout) | Auth |
 | `GET` | `/orders` | Danh sách đơn hàng | Auth |
 | `GET` | `/orders/:id` | Chi tiết đơn hàng | Auth |
+| `GET` | `/orders/:id/transit-logs` | Lấy lộ trình vận đơn của đơn hàng | Auth |
 
 ### 🏪 Seller (`/api/marketplace/seller`)
 
@@ -383,6 +407,23 @@ Tất cả API endpoints đều có prefix `/api` và trả về JSON.
 | `POST` | `/products` | Tạo sản phẩm mới | Seller |
 | `GET` | `/orders` | Đơn hàng của seller | Seller |
 | `PUT` | `/orders/:id/status` | Cập nhật trạng thái đơn | Seller |
+| `POST` | `/orders/:id/shipping` | Khởi tạo vận đơn vận chuyển (GHTK/GHN) | Seller + CSRF |
+| `POST` | `/orders/:id/transit-logs` | Thêm cột mốc lộ trình bưu cục mới | Seller + CSRF |
+
+### 💳 Ví điện tử (`/api/ewallet`)
+
+| Method | Endpoint | Mô tả | Bảo vệ |
+| :---: | :--- | :--- | :---: |
+| `GET` | `/me` | Lấy thông tin ví và số dư | Auth |
+| `GET` | `/banks` | Danh sách tài khoản ngân hàng liên kết | Auth |
+| `POST` | `/banks` | Liên kết tài khoản ngân hàng mới | Auth + CSRF |
+| `DELETE` | `/banks/:id` | Hủy liên kết tài khoản ngân hàng | Auth + CSRF |
+| `POST` | `/otp` | Gửi mã OTP xác nhận nạp/rút tiền | Auth + CSRF |
+| `POST` | `/withdraw` | Khởi tạo yêu cầu rút tiền | Auth + CSRF |
+| `POST` | `/pay-order` | Thanh toán đơn hàng bằng số dư ví | Auth + CSRF |
+| `POST` | `/topup/momo` | Khởi tạo giao dịch nạp tiền qua MoMo | Auth + CSRF |
+| `POST` | `/topup/bank` | Nạp tiền từ tài khoản ngân hàng liên kết | Auth + CSRF |
+| `POST` | `/topup/momo-ipn` | Webhook xử lý IPN xác nhận từ MoMo | Public |
 
 ---
 
@@ -641,11 +682,15 @@ Bộ tài liệu toàn diện dành cho lập trình viên muốn cài đặt, m
 | `/cart` | `Cart` | Giỏ hàng | 🔒 Auth |
 | `/checkout` | `Checkout` | Thanh toán đơn hàng | 🔒 Auth |
 | `/orders` | `Orders` | Lịch sử đơn hàng | 🔒 Auth |
+| `/orders/:id` | `OrderDetailPage` | Chi tiết đơn hàng & Lịch trình bưu cục | 🔒 Auth |
+| `/wallet` / `/seller/wallet` | `CookPayWallet` | Ví điện tử CookPay, nạp/rút số dư | 🔒 Auth |
 | `/seller` | `SellerDashboard` | Bảng điều khiển người bán | 🔒 Seller |
 | `/admin/login` | `AdminLogin` | Đăng nhập quản trị | 🌐 Public |
 | `/admin` | `AdminPage` | Bảng điều khiển quản trị | 🔐 Admin |
 | `/admin/market-products` | `MarketProductsTab` | Quản lý sản phẩm marketplace | 🔐 Admin |
 | `/admin/market-orders` | `MarketOrdersTab` | Quản lý đơn hàng marketplace | 🔐 Admin |
+| `/admin/withdrawals` | `AdminWithdrawalsTab` | Phê duyệt yêu cầu rút tiền của Seller | 🔐 Admin |
+| `/admin/commission-wallet` | `AdminCommissionWalletTab` | Xem ví hoa hồng hoa lợi của sàn | 🔐 Admin |
 
 ---
 

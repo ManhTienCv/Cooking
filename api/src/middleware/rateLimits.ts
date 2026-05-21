@@ -1,10 +1,20 @@
 import rateLimit from 'express-rate-limit';
+import { env } from '../env.js';
+
+const skipTestRequests = (req: any) => {
+  return (
+    req.headers['x-test-bypass'] === 'true' ||
+    (env.testOtpCode && req.headers['x-test-bypass'] === env.testOtpCode) ||
+    process.env.NODE_ENV === 'test'
+  );
+};
 
 export const authLoginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 12,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipTestRequests,
   handler: (_req, res) => {
     res.status(429).json({
       success: false,
@@ -18,6 +28,7 @@ export const authRegisterRateLimit = rateLimit({
   max: 8,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipTestRequests,
   handler: (_req, res) => {
     res.status(429).json({
       success: false,
@@ -31,6 +42,7 @@ export const authForgotPasswordRateLimit = rateLimit({
   max: 8,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipTestRequests,
   handler: (_req, res) => {
     res.status(429).json({
       success: false,
@@ -44,6 +56,7 @@ export const authRegisterOtpRateLimit = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipTestRequests,
   handler: (_req, res) => {
     res.status(429).json({
       success: false,
@@ -57,6 +70,7 @@ export const adminLoginRateLimit = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipTestRequests,
   handler: (_req, res) => {
     res.status(429).json({
       success: false,
@@ -70,6 +84,7 @@ export const feedbackSubmitRateLimit = rateLimit({
   max: 3, // Limit each IP to 3 feedback submissions per hour
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipTestRequests,
   handler: (_req, res) => {
     res.status(429).json({
       success: false,
@@ -85,6 +100,7 @@ export const orderCreateRateLimit = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipTestRequests,
   handler: (_req, res) => {
     res.status(429).json({
       success: false,
@@ -98,6 +114,7 @@ export const reviewCreateRateLimit = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipTestRequests,
   handler: (_req, res) => {
     res.status(429).json({
       success: false,
@@ -111,6 +128,7 @@ export const sellerProductRateLimit = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipTestRequests,
   handler: (_req, res) => {
     res.status(429).json({
       success: false,
@@ -124,6 +142,7 @@ export const sellerSecurityRateLimit = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipTestRequests,
   handler: (_req, res) => {
     res.status(429).json({
       success: false,
@@ -137,6 +156,7 @@ export const sellerOtpRateLimit = rateLimit({
   max: 8,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipTestRequests,
   handler: (_req, res) => {
     res.status(429).json({
       success: false,

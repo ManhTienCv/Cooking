@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -47,6 +47,27 @@ function makeId() {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
     : String(Date.now());
+}
+
+interface VietQrBank {
+  bin: string;
+  shortName: string;
+  name: string;
+  logo: string;
+}
+
+interface PayoutAccountSync {
+  id: number;
+  bank_name: string;
+  account_name: string;
+  account_number_last4: string;
+  is_default: boolean;
+}
+
+interface SellerProfileSync {
+  store_name: string;
+  store_description?: string;
+  phone?: string;
 }
 
 function maskBankNumber(value: string) {
@@ -100,6 +121,75 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [editingBankId, setEditingBankId] = useState<string | null>(null);
 
+  const [banksList, setBanksList] = useState<VietQrBank[]>([]);
+  const [bankQuery, setBankQuery] = useState('');
+  const [showBankList, setShowBankList] = useState(false);
+  const [bankLoading, setBankLoading] = useState(false);
+
+  useEffect(() => {
+    if (view !== 'banks' || banksList.length > 0) return;
+    setBankLoading(true);
+    fetch('https://api.vietqr.io/v2/banks')
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.json() as Promise<{ data?: VietQrBank[] }>;
+      })
+      .then((data) => {
+        setBanksList(Array.isArray(data.data) ? data.data : []);
+      })
+      .catch(() => {})
+      .finally(() => setBankLoading(false));
+  }, [view, banksList.length]);
+
+  const filteredBanks = useMemo(() => {
+    const q = bankQuery.trim().toLowerCase();
+    if (!q) return banksList;
+    return banksList.filter((b) => {
+      const name = `${b.name} ${b.shortName} ${b.bin}`.toLowerCase();
+      return name.includes(q);
+    });
+  }, [bankQuery, banksList]);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    apiJson<{ payout_accounts?: PayoutAccountSync[] }>('/api/marketplace/seller/settings')
+      .then((data) => {
+        if (data && Array.isArray(data.payout_accounts)) {
+          const prefs = loadProfilePreferences(user.email);
+          let updated = false;
+          data.payout_accounts.forEach((payout) => {
+            const match = prefs.banks.find(
+              (b) =>
+                b.bankName.toLowerCase() === payout.bank_name.toLowerCase() &&
+                (b.accountNumber.endsWith(payout.account_number_last4) || payout.account_number_last4.endsWith(b.accountNumber.slice(-4)))
+            );
+            if (!match) {
+              prefs.banks.push({
+                id: String(payout.id),
+                bankName: payout.bank_name,
+                accountName: payout.account_name,
+                accountNumber: `**** **** **** ${payout.account_number_last4}`,
+                isDefault: payout.is_default,
+              });
+              updated = true;
+            } else {
+              if (match.isDefault !== payout.is_default) {
+                match.isDefault = payout.is_default;
+                updated = true;
+              }
+            }
+          });
+          if (updated) {
+            setBanks(prefs.banks);
+            saveProfilePreferences(user.email, prefs);
+          }
+        }
+      })
+      .catch(() => {
+        // Not a seller, ignore
+      });
+  }, [user?.email]);
+
   useEffect(() => {
     const prefs = loadProfilePreferences(user?.email);
     setAddresses(prefs.addresses);
@@ -122,6 +212,28 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
     setBanks(nextBanks);
     saveProfilePreferences(user?.email, { addresses: nextAddresses, banks: nextBanks });
     onSuccessSubmit();
+
+    // Sync default address to seller store address if seller profile is active
+    const defaultAddr = nextAddresses.find((a) => a.isDefault) ?? nextAddresses[0];
+    if (defaultAddr && user?.email) {
+      apiJson<{ profile?: SellerProfileSync }>('/api/marketplace/seller/settings')
+        .then((data) => {
+          if (data && data.profile) {
+            return apiJson('/api/marketplace/seller/settings/store', {
+              method: 'PUT',
+              body: JSON.stringify({
+                store_name: data.profile.store_name,
+                store_description: data.profile.store_description ?? '',
+                phone: data.profile.phone ?? defaultAddr.phone,
+                address: defaultAddr.address,
+              }),
+            });
+          }
+        })
+        .catch(() => {
+          // Ignore
+        });
+    }
   };
 
   const handleProfileSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -265,6 +377,7 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
       : [...banks, nextBank];
     persist(addresses, nextBanks);
     setBankForm(blankBank);
+    setBankQuery('');
     setEditingBankId(null);
   };
 
@@ -509,7 +622,7 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
                   </div>
                   <div className="flex shrink-0 gap-2">
                     {!item.isDefault && <button type="button" onClick={() => persist(addresses, banks.map((b) => ({ ...b, isDefault: b.id === item.id })))} className="text-xs font-semibold text-amber-600">Mặc định</button>}
-                    <button type="button" onClick={() => { setEditingBankId(item.id); setBankForm({ bankName: item.bankName, accountName: item.accountName, accountNumber: item.accountNumber }); }} className="text-xs font-semibold text-blue-600">Sửa</button>
+                    <button type="button" onClick={() => { setEditingBankId(item.id); setBankForm({ bankName: item.bankName, accountName: item.accountName, accountNumber: item.accountNumber }); setBankQuery(item.bankName); }} className="text-xs font-semibold text-blue-600">Sửa</button>
                     <button type="button" onClick={() => persist(addresses, banks.filter((b) => b.id !== item.id))} className="text-red-500"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </div>
@@ -520,13 +633,58 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
           <form onSubmit={handleBankSubmit} className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
             <h3 className="mb-4 flex items-center gap-2 font-bold text-gray-950 dark:text-white"><Plus className="h-4 w-4" /> {editingBankId ? 'Cập nhật tài khoản ngân hàng' : 'Thêm tài khoản ngân hàng'}</h3>
             <div className="grid gap-4 md:grid-cols-3">
-              <input value={bankForm.bankName} onChange={(e) => setBankForm((f) => ({ ...f, bankName: e.target.value }))} placeholder="Tên ngân hàng" className={inputClass} />
+              <div className="relative">
+                <input
+                  className={inputClass}
+                  placeholder="Tên ngân hàng"
+                  value={bankQuery}
+                  onChange={(e) => {
+                    setBankQuery(e.target.value);
+                    setBankForm((f) => ({ ...f, bankName: e.target.value }));
+                    setShowBankList(true);
+                  }}
+                  onFocus={() => setShowBankList(true)}
+                />
+                {showBankList && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowBankList(false)} />
+                    <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                      {bankLoading && <div className="p-3 text-sm text-slate-500">Đang tải...</div>}
+                      {!bankLoading && filteredBanks.length === 0 && (
+                        <div className="p-3 text-sm text-slate-500">Không tìm thấy ngân hàng.</div>
+                      )}
+                      {filteredBanks.map((bank) => (
+                        <button
+                          key={bank.bin}
+                          type="button"
+                          onClick={() => {
+                            setBankForm((f) => ({ ...f, bankName: bank.shortName || bank.name }));
+                            setBankQuery(bank.shortName || bank.name);
+                            setShowBankList(false);
+                          }}
+                          className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-amber-50 dark:hover:bg-slate-800"
+                        >
+                          {bank.logo ? (
+                            <img src={bank.logo} alt={bank.shortName} className="h-6 w-6 rounded-full object-contain bg-white shrink-0" />
+                          ) : (
+                            <div className="h-6 w-6 rounded-full bg-slate-200 dark:bg-slate-700 shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold truncate">{bank.shortName}</p>
+                            <p className="text-xs text-slate-400 truncate">{bank.name}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
               <input value={bankForm.accountName} onChange={(e) => setBankForm((f) => ({ ...f, accountName: e.target.value }))} placeholder="Tên chủ tài khoản" className={inputClass} />
               <input value={bankForm.accountNumber} onChange={(e) => setBankForm((f) => ({ ...f, accountNumber: e.target.value }))} placeholder="Số tài khoản" className={inputClass} />
             </div>
             <div className="mt-4 flex gap-3">
               <button type="submit" className="rounded-lg bg-black px-5 py-2 font-semibold text-white dark:bg-white dark:text-slate-950">{editingBankId ? 'Lưu tài khoản' : 'Liên kết ngân hàng'}</button>
-              {editingBankId && <button type="button" onClick={() => { setEditingBankId(null); setBankForm(blankBank); }} className="rounded-lg border border-gray-200 px-5 py-2 font-semibold text-gray-600 dark:border-slate-700 dark:text-slate-300">Hủy</button>}
+              {editingBankId && <button type="button" onClick={() => { setEditingBankId(null); setBankForm(blankBank); setBankQuery(''); }} className="rounded-lg border border-gray-200 px-5 py-2 font-semibold text-gray-600 dark:border-slate-700 dark:text-slate-300">Hủy</button>}
             </div>
           </form>
         </div>

@@ -16,6 +16,14 @@ import {
 import toast from 'react-hot-toast';
 import { apiJson } from '../../lib/api';
 import PageBackBar from '../../components/ui/PageBackBar';
+import { loadProfilePreferences, saveProfilePreferences, type LinkedBankAccount } from '../../lib/profilePreferences';
+
+interface VietQrBank {
+  bin: string;
+  shortName: string;
+  name: string;
+  logo: string;
+}
 
 type VerificationStatus = 'draft' | 'pending' | 'verified' | 'rejected' | 'suspended';
 type BusinessType = 'individual' | 'household' | 'company';
@@ -234,6 +242,57 @@ export default function SellerSettings() {
     is_default: true,
   });
 
+  const [banksList, setBanksList] = useState<VietQrBank[]>([]);
+  const [bankQuery, setBankQuery] = useState('');
+  const [showBankList, setShowBankList] = useState(false);
+  const [bankLoading, setBankLoading] = useState(false);
+
+  useEffect(() => {
+    if (openSection !== 'payout' || banksList.length > 0) return;
+    setBankLoading(true);
+    fetch('https://api.vietqr.io/v2/banks')
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.json() as Promise<{ data?: VietQrBank[] }>;
+      })
+      .then((data) => {
+        setBanksList(Array.isArray(data.data) ? data.data : []);
+      })
+      .catch(() => {})
+      .finally(() => setBankLoading(false));
+  }, [openSection, banksList.length]);
+
+  const filteredBanks = useMemo(() => {
+    const q = bankQuery.trim().toLowerCase();
+    if (!q) return banksList;
+    return banksList.filter((b) => {
+      const name = `${b.name} ${b.shortName} ${b.bin}`.toLowerCase();
+      return name.includes(q);
+    });
+  }, [bankQuery, banksList]);
+
+  const [localBanksToSync, setLocalBanksToSync] = useState<LinkedBankAccount[]>([]);
+
+  useEffect(() => {
+    if (!profile?.email) {
+      setLocalBanksToSync([]);
+      return;
+    }
+    try {
+      const prefs = loadProfilePreferences(profile.email);
+      const filtered = prefs.banks.filter((lb) => {
+        return !payouts.some(
+          (db) =>
+            db.bank_name.toLowerCase() === lb.bankName.toLowerCase() &&
+            (lb.accountNumber.endsWith(db.account_number_last4) || db.account_number_last4.endsWith(lb.accountNumber.slice(-4)))
+        );
+      });
+      setLocalBanksToSync(filtered);
+    } catch {
+      setLocalBanksToSync([]);
+    }
+  }, [profile, payouts]);
+
   const loadSettings = useCallback(async () => {
     setLoading(true);
     try {
@@ -255,6 +314,77 @@ export default function SellerSettings() {
         // do not populate full identity into the form; keep it empty and show masked value separately
         identity_number: '',
       });
+
+      // Synchronize address with localStorage
+      try {
+        const prefs = loadProfilePreferences(data.profile.email);
+        const dbAddress = data.profile.address;
+        const defaultAddr = prefs.addresses.find((a) => a.isDefault);
+
+        if (dbAddress && (!defaultAddr || defaultAddr.address !== dbAddress)) {
+          const newAddress = {
+            id: defaultAddr?.id ?? String(Date.now()),
+            name: defaultAddr?.name ?? data.profile.full_name ?? 'Cửa hàng',
+            phone: defaultAddr?.phone ?? data.profile.phone ?? '',
+            address: dbAddress,
+            isDefault: true,
+          };
+          const otherAddresses = prefs.addresses.filter((a) => a.id !== newAddress.id).map((a) => ({ ...a, isDefault: false }));
+          prefs.addresses = [newAddress, ...otherAddresses];
+          saveProfilePreferences(data.profile.email, prefs);
+        } else if (!dbAddress && defaultAddr) {
+          // Sync default address from localStorage to database
+          apiJson<{ profile: SellerProfileSettings }>('/api/marketplace/seller/settings/store', {
+            method: 'PUT',
+            body: JSON.stringify({
+              store_name: data.profile.store_name,
+              store_description: data.profile.store_description ?? '',
+              phone: data.profile.phone ?? defaultAddr.phone,
+              address: defaultAddr.address,
+            }),
+          }).then((res) => {
+            if (res && res.profile) {
+              setProfile(res.profile);
+              setStoreForm((f) => ({ ...f, address: res.profile.address ?? '' }));
+            }
+          }).catch((err) => console.warn('Sync address to DB failed:', err));
+        }
+      } catch (err) {
+        console.warn('Sync address error:', err);
+      }
+
+      // Synchronize bank accounts with localStorage
+      try {
+        const prefs = loadProfilePreferences(data.profile.email);
+        let updatedPrefs = false;
+        data.payout_accounts.forEach((payout) => {
+          const match = prefs.banks.find(
+            (b) =>
+              b.bankName.toLowerCase() === payout.bank_name.toLowerCase() &&
+              (b.accountNumber.endsWith(payout.account_number_last4) || payout.account_number_last4.endsWith(b.accountNumber.slice(-4)))
+          );
+          if (!match) {
+            prefs.banks.push({
+              id: String(payout.id),
+              bankName: payout.bank_name,
+              accountName: payout.account_name,
+              accountNumber: `**** **** **** ${payout.account_number_last4}`,
+              isDefault: payout.is_default,
+            });
+            updatedPrefs = true;
+          } else {
+            if (match.isDefault !== payout.is_default) {
+              match.isDefault = payout.is_default;
+              updatedPrefs = true;
+            }
+          }
+        });
+        if (updatedPrefs) {
+          saveProfilePreferences(data.profile.email, prefs);
+        }
+      } catch (err) {
+        console.warn('Sync bank error:', err);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Không tải được cài đặt seller');
     } finally {
@@ -367,6 +497,26 @@ export default function SellerSettings() {
       });
       setProfile(data.profile);
       toast.success('Đã lưu thông tin cửa hàng');
+
+      // Sync store address to localStorage default address
+      if (data.profile.email && data.profile.address) {
+        try {
+          const prefs = loadProfilePreferences(data.profile.email);
+          const defaultAddr = prefs.addresses.find((a) => a.isDefault);
+          const newAddress = {
+            id: defaultAddr?.id ?? String(Date.now()),
+            name: defaultAddr?.name ?? data.profile.full_name ?? 'Cửa hàng',
+            phone: defaultAddr?.phone ?? data.profile.phone ?? '',
+            address: data.profile.address,
+            isDefault: true,
+          };
+          const otherAddresses = prefs.addresses.filter((a) => a.id !== newAddress.id).map((a) => ({ ...a, isDefault: false }));
+          prefs.addresses = [newAddress, ...otherAddresses];
+          saveProfilePreferences(data.profile.email, prefs);
+        } catch (e) {
+          console.warn('Sync address to localStorage failed:', e);
+        }
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Không lưu được');
     } finally {
@@ -431,7 +581,27 @@ export default function SellerSettings() {
         method: 'POST',
         body: JSON.stringify(payoutForm),
       });
+      // Add to localStorage bank accounts list
+      if (profile?.email) {
+        try {
+          const prefs = loadProfilePreferences(profile.email);
+          const exists = prefs.banks.some((b) => b.accountNumber === payoutForm.account_number);
+          if (!exists) {
+            prefs.banks.push({
+              id: String(Date.now()),
+              bankName: payoutForm.bank_name,
+              accountName: payoutForm.account_name,
+              accountNumber: payoutForm.account_number,
+              isDefault: payoutForm.is_default,
+            });
+            saveProfilePreferences(profile.email, prefs);
+          }
+        } catch (e) {
+          console.warn('Sync added bank error:', e);
+        }
+      }
       setPayoutForm({ bank_name: '', account_name: '', account_number: '', is_default: true });
+      setBankQuery('');
       await loadSettings();
       toast.success('Đã thêm tài khoản ngân hàng');
     } catch (err) {
@@ -449,6 +619,25 @@ export default function SellerSettings() {
       return;
     }
     try {
+      // Delete from localStorage bank accounts list
+      if (profile?.email) {
+        try {
+          const prefs = loadProfilePreferences(profile.email);
+          const match = payouts.find((p) => p.id === id);
+          if (match) {
+            prefs.banks = prefs.banks.filter(
+              (b) =>
+                !(
+                  b.bankName.toLowerCase() === match.bank_name.toLowerCase() &&
+                  b.accountNumber.endsWith(match.account_number_last4)
+                )
+            );
+            saveProfilePreferences(profile.email, prefs);
+          }
+        } catch (e) {
+          console.warn('Sync deleted bank error:', e);
+        }
+      }
       await apiJson(`/api/marketplace/seller/payout-accounts/${id}`, { method: 'DELETE' });
       setPayouts((prev) => prev.filter((item) => item.id !== id));
       toast.success('Đã xóa tài khoản');
@@ -466,6 +655,24 @@ export default function SellerSettings() {
     }
     try {
       await apiJson(`/api/marketplace/seller/payout-accounts/${id}/default`, { method: 'PUT' });
+      // Update in localStorage
+      if (profile?.email) {
+        try {
+          const prefs = loadProfilePreferences(profile.email);
+          const match = payouts.find((p) => p.id === id);
+          if (match) {
+            prefs.banks = prefs.banks.map((b) => ({
+              ...b,
+              isDefault:
+                b.bankName.toLowerCase() === match.bank_name.toLowerCase() &&
+                b.accountNumber.endsWith(match.account_number_last4),
+            }));
+            saveProfilePreferences(profile.email, prefs);
+          }
+        } catch (e) {
+          console.warn('Sync default bank error:', e);
+        }
+      }
       setPayouts((prev) => prev.map((item) => ({ ...item, is_default: item.id === id })));
       toast.success('Đã đặt mặc định');
     } catch (err) {
@@ -667,8 +874,90 @@ export default function SellerSettings() {
                   ))
                 )}
               </div>
+
+              {localBanksToSync.length > 0 && (
+                <div className="mb-5 rounded-xl border border-dashed border-amber-300 bg-amber-50/30 p-4 dark:border-slate-700 dark:bg-slate-800/40">
+                  <p className="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider mb-2">Nhập nhanh từ ngân hàng liên kết cá nhân</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {localBanksToSync.map((bank) => (
+                      <div key={bank.id} className="flex items-center justify-between gap-3 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 shadow-sm">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{bank.bankName}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{bank.accountName} - {bank.accountNumber}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPayoutForm((f) => ({
+                              ...f,
+                              bank_name: bank.bankName,
+                              account_name: bank.accountName,
+                              account_number: bank.accountNumber.replace(/[* ]/g, ''),
+                            }));
+                            setBankQuery(bank.bankName);
+                            if (bank.accountNumber.includes('*')) {
+                              toast.error('Vui lòng điền nốt số tài khoản đầy đủ.');
+                            } else {
+                              toast.success('Đã điền thông tin ngân hàng.');
+                            }
+                          }}
+                          className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs px-2.5 py-1 rounded transition-colors"
+                        >
+                          Nhập nhanh
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <form onSubmit={addPayout} className="grid gap-4 md:grid-cols-3">
-                <input className={inputClass} placeholder="Tên ngân hàng" value={payoutForm.bank_name} onChange={(e) => setPayoutForm((f) => ({ ...f, bank_name: e.target.value }))} />
+                <div className="relative">
+                  <input
+                    className={inputClass}
+                    placeholder="Tên ngân hàng"
+                    value={bankQuery}
+                    onChange={(e) => {
+                      setBankQuery(e.target.value);
+                      setPayoutForm((f) => ({ ...f, bank_name: e.target.value }));
+                      setShowBankList(true);
+                    }}
+                    onFocus={() => setShowBankList(true)}
+                  />
+                  {showBankList && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowBankList(false)} />
+                      <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                        {bankLoading && <div className="p-3 text-sm text-slate-500">Đang tải...</div>}
+                        {!bankLoading && filteredBanks.length === 0 && (
+                          <div className="p-3 text-sm text-slate-500">Không tìm thấy ngân hàng.</div>
+                        )}
+                        {filteredBanks.map((bank) => (
+                          <button
+                            key={bank.bin}
+                            type="button"
+                            onClick={() => {
+                              setPayoutForm((f) => ({ ...f, bank_name: bank.shortName || bank.name }));
+                              setBankQuery(bank.shortName || bank.name);
+                              setShowBankList(false);
+                            }}
+                            className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-amber-50 dark:hover:bg-slate-800"
+                          >
+                            {bank.logo ? (
+                              <img src={bank.logo} alt={bank.shortName} className="h-6 w-6 rounded-full object-contain bg-white shrink-0" />
+                            ) : (
+                              <div className="h-6 w-6 rounded-full bg-slate-200 dark:bg-slate-700 shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold truncate">{bank.shortName}</p>
+                              <p className="text-xs text-slate-400 truncate">{bank.name}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
                 <input className={inputClass} placeholder="Tên chủ tài khoản" value={payoutForm.account_name} onChange={(e) => setPayoutForm((f) => ({ ...f, account_name: e.target.value }))} />
                 <input className={inputClass} placeholder="Số tài khoản" value={payoutForm.account_number} onChange={(e) => setPayoutForm((f) => ({ ...f, account_number: e.target.value }))} />
                 <div className="md:col-span-3">

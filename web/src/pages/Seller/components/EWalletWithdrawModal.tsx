@@ -163,9 +163,9 @@ export default function EWalletWithdrawModal({ open, onClose, onSuccess, banks, 
                                   : 'border-gray-200 dark:border-slate-800 hover:border-gray-300 dark:hover:border-slate-700'
                               }`}
                             >
-                              <div className="w-8 h-8 bg-white dark:bg-slate-800 rounded-lg flex items-center justify-center border border-gray-200 dark:border-slate-700 font-bold text-gray-400 text-[10px] shrink-0 overflow-hidden">
+                              <div className="w-8 h-8 bg-white dark:bg-slate-100 p-1 rounded-lg flex items-center justify-center border border-gray-200 dark:border-slate-300 font-bold text-gray-400 text-[10px] shrink-0 overflow-hidden shadow-sm">
                                 {bankLogos[b.bank_bin] ? (
-                                  <img src={bankLogos[b.bank_bin]} alt={b.bank_name} className="w-6 h-6 object-contain" />
+                                  <img src={bankLogos[b.bank_bin]} alt={b.bank_name} className="w-full h-full object-contain" />
                                 ) : (
                                   b.bank_bin
                                 )}

@@ -7,6 +7,13 @@ import EWalletAddBankModal from './components/EWalletAddBankModal';
 import EWalletWithdrawModal from './components/EWalletWithdrawModal';
 import EWalletTopupModal from './components/EWalletTopupModal';
 
+interface VietQrBank {
+  bin: string;
+  shortName: string;
+  name: string;
+  logo: string;
+}
+
 interface WalletData {
   id: string;
   balance: string;
@@ -66,10 +73,10 @@ export default function EWallet() {
   useEffect(() => {
     fetch('https://api.vietqr.io/v2/banks')
       .then((res) => res.json())
-      .then((res: any) => {
+      .then((res: { data?: VietQrBank[] }) => {
         if (res && Array.isArray(res.data)) {
           const map: Record<string, string> = {};
-          res.data.forEach((item: any) => {
+          res.data.forEach((item) => {
             if (item.bin && item.logo) {
               map[item.bin] = item.logo;
             }
@@ -217,9 +224,9 @@ export default function EWallet() {
             ) : (
               banks.map((b) => (
                 <div key={b.id} className="flex items-center gap-3 p-3 rounded-2xl border border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
-                  <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center border border-gray-200 dark:border-slate-600 font-bold text-gray-400 text-xs overflow-hidden shrink-0">
+                  <div className="w-10 h-10 bg-white dark:bg-slate-100 p-1.5 rounded-xl flex items-center justify-center border border-gray-200 dark:border-slate-300 font-bold text-gray-400 text-xs overflow-hidden shrink-0 shadow-sm">
                     {bankLogos[b.bank_bin] ? (
-                      <img src={bankLogos[b.bank_bin]} alt={b.bank_name} className="w-8 h-8 object-contain" />
+                      <img src={bankLogos[b.bank_bin]} alt={b.bank_name} className="w-full h-full object-contain" />
                     ) : (
                       b.bank_bin
                     )}

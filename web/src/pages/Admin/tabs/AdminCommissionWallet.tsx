@@ -48,10 +48,10 @@ export default function AdminCommissionWallet() {
   useEffect(() => {
     fetch('https://api.vietqr.io/v2/banks')
       .then((res) => res.json())
-      .then((res: any) => {
+      .then((res: { data?: VietQrBank[] }) => {
         if (res && Array.isArray(res.data)) {
           const map: Record<string, string> = {};
-          res.data.forEach((item: any) => {
+          res.data.forEach((item) => {
             if (item.bin && item.logo) {
               map[item.bin] = item.logo;
             }
@@ -201,9 +201,9 @@ export default function AdminCommissionWallet() {
                   key={b.id}
                   className="flex items-center gap-3 p-3 rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50"
                 >
-                  <div className="w-9 h-9 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center border border-slate-200 dark:border-slate-700 font-bold text-slate-400 text-[10px] overflow-hidden shrink-0">
+                  <div className="w-9 h-9 bg-white dark:bg-slate-100 p-1.5 rounded-xl flex items-center justify-center border border-slate-200 dark:border-slate-300 font-bold text-slate-400 text-[10px] overflow-hidden shrink-0 shadow-sm">
                     {bankLogos[b.bank_bin] ? (
-                      <img src={bankLogos[b.bank_bin]} alt={b.bank_name} className="w-7 h-7 object-contain" />
+                      <img src={bankLogos[b.bank_bin]} alt={b.bank_name} className="w-full h-full object-contain" />
                     ) : (
                       b.bank_bin
                     )}
@@ -656,9 +656,9 @@ function AdminWithdrawModal({ open, onClose, onSuccess, banks, maxAmount, bankLo
                                 : 'border-slate-200 dark:border-slate-700 hover:border-slate-350'
                             }`}
                           >
-                            <div className="w-8 h-8 bg-white dark:bg-slate-800 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 font-extrabold text-slate-400 text-[10px] overflow-hidden shrink-0">
+                            <div className="w-8 h-8 bg-white dark:bg-slate-100 p-1 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-300 font-extrabold text-slate-400 text-[10px] overflow-hidden shrink-0 shadow-sm">
                               {bankLogos[b.bank_bin] ? (
-                                <img src={bankLogos[b.bank_bin]} alt={b.bank_name} className="w-6 h-6 object-contain" />
+                                <img src={bankLogos[b.bank_bin]} alt={b.bank_name} className="w-full h-full object-contain" />
                               ) : (
                                 b.bank_bin
                               )}

@@ -20,7 +20,7 @@ const adminLoginSchema = z.object({
 function parseAdminLogin(input: unknown): z.infer<typeof adminLoginSchema> {
   const parsed = adminLoginSchema.safeParse(input);
   if (!parsed.success) {
-    throw httpError(422, parsed.error.issues[0]?.message ?? 'Invalid login payload.', {
+    throw httpError(422, parsed.error.issues[0]?.message ?? 'Dữ liệu đăng nhập không hợp lệ.', {
       details: parsed.error.flatten(),
     });
   }
@@ -45,7 +45,7 @@ export async function login(req: Request) {
     const ip = String(req.ip || req.socket.remoteAddress || '');
     const ok = await verifyRecaptchaV3(env.recaptchaSecretKey, payload.recaptchaToken, 'admin_login', env.recaptchaMinScore, ip);
     if (!ok) {
-      throw httpError(400, 'Complete reCAPTCHA verification.', { captchaRequired: true });
+      throw httpError(400, 'Vui lòng hoàn thành xác minh reCAPTCHA.', { captchaRequired: true });
     }
   }
 
@@ -57,7 +57,7 @@ export async function login(req: Request) {
   if (!admin) {
     recordLoginFailure('admin', req);
     const captchaNow = Boolean(env.recaptchaSecretKey && captchaRequiredAfterFailures('admin', req));
-    throw httpError(401, 'Invalid credentials.', { captchaRequired: captchaNow });
+    throw httpError(401, 'Thông tin đăng nhập không chính xác.', { captchaRequired: captchaNow });
   }
 
   let ok = false;
@@ -73,7 +73,7 @@ export async function login(req: Request) {
     recordLoginFailure('admin', req);
     logAuthLogin('admin', { success: false, email: payload.email, req });
     const captchaNow = Boolean(env.recaptchaSecretKey && captchaRequiredAfterFailures('admin', req));
-    throw httpError(401, 'Invalid credentials.', { captchaRequired: captchaNow });
+    throw httpError(401, 'Thông tin đăng nhập không chính xác.', { captchaRequired: captchaNow });
   }
 
   clearLoginFailure('admin', req);
@@ -85,39 +85,39 @@ export async function login(req: Request) {
 
 export async function resetAdminPassword(idRaw: unknown, newPasswordRaw: unknown) {
   const id = Number(idRaw);
-  if (!id) throw { status: 400, message: 'Invalid admin id.' };
+  if (!id) throw { status: 400, message: 'Mã quản trị viên không hợp lệ.' };
   const newPassword = String(newPasswordRaw ?? '');
-  if (newPassword.length < 8) throw { status: 422, message: 'Password must be at least 8 chars.' };
+  if (newPassword.length < 8) throw { status: 422, message: 'Mật khẩu mới phải có ít nhất 8 ký tự.' };
   await adminRepo.resetAdminPassword(id, newPassword);
-  return { success: true, message: 'Admin password reset successful.' };
+  return { success: true, message: 'Đặt lại mật khẩu quản trị viên thành công.' };
 }
 
 export async function createCategory(typeRaw: string, nameRaw: unknown) {
   const type = typeRaw;
-  if (type !== 'recipe' && type !== 'blog') throw { status: 400, message: 'Invalid category type' };
+  if (type !== 'recipe' && type !== 'blog') throw { status: 400, message: 'Loại danh mục không hợp lệ' };
   const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
   
   const name = String(nameRaw ?? '').trim();
-  if (!name) throw { status: 400, message: 'Name is required' };
+  if (!name) throw { status: 400, message: 'Tên là bắt buộc' };
   const slug = slugify(name);
-  if (!slug) throw { status: 422, message: 'Invalid category name.' };
+  if (!slug) throw { status: 422, message: 'Tên danh mục không hợp lệ.' };
   
   const created = await adminRepo.createCategory(table, name, slug);
-  if (!created) throw { status: 409, message: 'Category already exists.' };
+  if (!created) throw { status: 409, message: 'Danh mục đã tồn tại.' };
   return { success: true };
 }
 
 export async function updateCategory(typeRaw: string, idRaw: unknown, nameRaw: unknown) {
   const type = typeRaw;
-  if (type !== 'recipe' && type !== 'blog') throw { status: 400, message: 'Invalid category type' };
+  if (type !== 'recipe' && type !== 'blog') throw { status: 400, message: 'Loại danh mục không hợp lệ' };
   const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
   const id = Number(idRaw);
-  if (!id) throw { status: 400, message: 'Invalid category id.' };
+  if (!id) throw { status: 400, message: 'Mã danh mục không hợp lệ.' };
   
   const name = String(nameRaw ?? '').trim();
   if (!name) throw { status: 400, message: 'Name is required' };
   const slug = slugify(name);
-  if (!slug) throw { status: 422, message: 'Invalid category name.' };
+  if (!slug) throw { status: 422, message: 'Tên danh mục không hợp lệ.' };
   
   await adminRepo.updateCategory(table, id, name, slug);
   return { success: true };
@@ -125,10 +125,10 @@ export async function updateCategory(typeRaw: string, idRaw: unknown, nameRaw: u
 
 export async function deleteCategory(typeRaw: string, idRaw: unknown) {
   const type = typeRaw;
-  if (type !== 'recipe' && type !== 'blog') throw { status: 400, message: 'Invalid category type' };
+  if (type !== 'recipe' && type !== 'blog') throw { status: 400, message: 'Loại danh mục không hợp lệ' };
   const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
   const id = Number(idRaw);
-  if (!id) throw { status: 400, message: 'Invalid category id.' };
+  if (!id) throw { status: 400, message: 'Mã danh mục không hợp lệ.' };
   
   await adminRepo.deleteCategory(table, id);
   return { success: true };
@@ -139,9 +139,9 @@ export async function processWithdrawal(id: string, action: 'approve' | 'reject'
   try {
     await client.query('BEGIN');
     const wRes = await client.query('SELECT * FROM withdrawal_requests WHERE id = $1 FOR UPDATE', [id]);
-    if (wRes.rowCount === 0) throw new Error('Not found');
+    if (wRes.rowCount === 0) throw new Error('Không tìm thấy yêu cầu rút tiền');
     const w = wRes.rows[0];
-    if (w.status !== 'pending' && w.status !== 'processing') throw new Error('Invalid status');
+    if (w.status !== 'pending' && w.status !== 'processing') throw new Error('Trạng thái không hợp lệ');
     
     if (action === 'approve') {
       await client.query('UPDATE withdrawal_requests SET status = $1, admin_note = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3', ['completed', adminNote, id]);

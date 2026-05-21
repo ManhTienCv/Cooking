@@ -81,7 +81,7 @@ export async function getConversationMessages(
   offsetRaw: unknown
 ) {
   const conversationId = Number(conversationIdRaw);
-  if (!conversationId) throw { status: 400, message: 'Invalid conversation ID.' };
+  if (!conversationId) throw { status: 400, message: 'Mã cuộc trò chuyện không hợp lệ.' };
 
   const conversation = await messagesRepo.getConversationById(conversationId);
   if (!conversation) throw { status: 404, message: 'Cuộc trò chuyện không tồn tại.' };
@@ -103,7 +103,7 @@ export async function sendMessage(
   body: Record<string, unknown>
 ) {
   const conversationId = Number(conversationIdRaw);
-  if (!conversationId) throw { status: 400, message: 'Invalid conversation ID.' };
+  if (!conversationId) throw { status: 400, message: 'Mã cuộc trò chuyện không hợp lệ.' };
 
   const messageText = String(body?.message ?? '').trim();
   if (!messageText) throw { status: 422, message: 'Tin nhắn trống.' };
@@ -129,7 +129,7 @@ export async function sendMessage(
 
 export async function markConversationRead(userId: number, conversationIdRaw: unknown) {
   const conversationId = Number(conversationIdRaw);
-  if (!conversationId) throw { status: 400, message: 'Invalid conversation ID.' };
+  if (!conversationId) throw { status: 400, message: 'Mã cuộc trò chuyện không hợp lệ.' };
 
   const conversation = await messagesRepo.getConversationById(conversationId);
   if (!conversation) throw { status: 404, message: 'Cuộc trò chuyện không tồn tại.' };

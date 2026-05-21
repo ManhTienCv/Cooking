@@ -47,7 +47,7 @@ const payoutSchema = z.object({
 function parsePayload<T>(schema: z.ZodType<T>, input: unknown): T {
   const parsed = schema.safeParse(input);
   if (!parsed.success) {
-    throw httpError(422, parsed.error.issues[0]?.message ?? 'Invalid request payload.', {
+    throw httpError(422, parsed.error.issues[0]?.message ?? 'Dữ liệu yêu cầu không hợp lệ.', {
       details: parsed.error.flatten(),
     });
   }
@@ -69,7 +69,7 @@ function maskPayout(row: sellerRepo.SellerPayoutAccountRow) {
 
 export async function getSettings(userId: number) {
   const profile = await sellerRepo.getSellerProfileSettings(userId);
-  if (!profile) throw httpError(403, 'Ban chua dang ky ban hang.');
+  if (!profile) throw httpError(403, 'Bạn chưa đăng ký bán hàng.');
 
   const settings = await sellerRepo.ensureSellerSettings(userId);
   const payoutAccounts = await sellerRepo.listPayoutAccounts(userId);
@@ -84,7 +84,7 @@ export async function getSettings(userId: number) {
 export async function updateStore(userId: number, body: unknown) {
   const payload = parsePayload(storeSchema, body);
   const profile = await sellerRepo.updateStoreProfile(userId, payload);
-  if (!profile) throw httpError(404, 'Seller profile not found.');
+  if (!profile) throw httpError(404, 'Không tìm thấy hồ sơ người bán.');
   return { success: true, profile };
 }
 
@@ -93,10 +93,10 @@ export async function submitVerification(userId: number, body: unknown) {
   // server-side recaptcha v3: if configured, require token inside body
   const token = (body as any)?.recaptcha_token as string | undefined;
   if (env.recaptchaSecretKey) {
-    if (!token) throw httpError(403, 'Missing reCAPTCHA token.');
+    if (!token) throw httpError(403, 'Thiếu mã reCAPTCHA.');
     const ok = await verifyRecaptchaV3(env.recaptchaSecretKey, token, 'seller_verification', env.recaptchaMinScore);
     if (!ok) {
-      throw httpError(403, 'reCAPTCHA verification failed.');
+      throw httpError(403, 'Xác minh reCAPTCHA thất bại.');
     }
   }
   const identityLast4 = payload.identity_number.replace(/\D/g, '').slice(-4).padStart(4, '0');
@@ -106,7 +106,7 @@ export async function submitVerification(userId: number, body: unknown) {
     tax_code: payload.tax_code,
     identity_last4: identityLast4,
   });
-  if (!profile) throw httpError(404, 'Seller profile not found.');
+  if (!profile) throw httpError(404, 'Không tìm thấy hồ sơ người bán.');
   return { success: true, profile };
 }
 
@@ -132,9 +132,9 @@ export async function createPayoutAccount(userId: number, body: unknown) {
 
 export async function deletePayoutAccount(userId: number, idRaw: unknown) {
   const id = Number(idRaw);
-  if (!Number.isInteger(id) || id <= 0) throw httpError(400, 'Invalid payout account ID.');
+  if (!Number.isInteger(id) || id <= 0) throw httpError(400, 'Mã tài khoản thanh toán không hợp lệ.');
   const ok = await sellerRepo.deletePayoutAccount(userId, id);
-  if (!ok) throw httpError(404, 'Payout account not found.');
+  if (!ok) throw httpError(404, 'Không tìm thấy tài khoản thanh toán.');
   return { success: true };
 }
 

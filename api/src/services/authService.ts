@@ -88,7 +88,7 @@ type PasswordResetRow = {
 function parsePayload<T>(schema: z.ZodType<T>, input: unknown): T {
   const parsed = schema.safeParse(input);
   if (!parsed.success) {
-    throw httpError(422, parsed.error.issues[0]?.message ?? 'Invalid request payload.', {
+    throw httpError(422, parsed.error.issues[0]?.message ?? 'Dữ liệu yêu cầu không hợp lệ.', {
       details: parsed.error.flatten(),
     });
   }
@@ -123,7 +123,7 @@ async function verifyRecaptchaIfConfigured(
   req: Request,
   token: string,
   action: string,
-  message = 'reCAPTCHA verification failed.'
+  message = 'Xác minh reCAPTCHA thất bại.'
 ): Promise<void> {
   if (!env.recaptchaSecretKey) return;
   const ok = await verifyRecaptchaV3(env.recaptchaSecretKey, token, action, env.recaptchaMinScore, remoteIp(req));
@@ -169,7 +169,7 @@ export async function login(req: Request) {
   const needCaptcha = Boolean(env.recaptchaSecretKey && captchaRequiredAfterFailures('user', req));
 
   if (needCaptcha) {
-    await verifyRecaptchaIfConfigured(req, payload.recaptchaToken, 'login', 'Please complete reCAPTCHA verification.');
+    await verifyRecaptchaIfConfigured(req, payload.recaptchaToken, 'login', 'Vui lòng hoàn thành xác minh reCAPTCHA.');
   }
 
   const r = await pool.query<{
@@ -188,7 +188,7 @@ export async function login(req: Request) {
     recordLoginFailure('user', req);
     logAuthLogin('user', { success: false, email: payload.email, req });
     const captchaNow = Boolean(env.recaptchaSecretKey && captchaRequiredAfterFailures('user', req));
-    throw httpError(401, 'Invalid email or password.', { captchaRequired: captchaNow });
+    throw httpError(401, 'Email hoặc mật khẩu không đúng.', { captchaRequired: captchaNow });
   }
 
   clearLoginFailure('user', req);
@@ -209,7 +209,7 @@ export async function requestRegisterOtp(req: Request) {
   await verifyRecaptchaIfConfigured(req, payload.recaptchaToken, 'register');
 
   const existing = await pool.query<{ id: number }>('SELECT id FROM users WHERE email = $1 LIMIT 1', [payload.email]);
-  if (existing.rows.length > 0) throw httpError(409, 'Email is already registered.');
+  if (existing.rows.length > 0) throw httpError(409, 'Email này đã được đăng ký.');
 
   const pending = await pool.query<Pick<PendingRegistrationRow, 'expires_at' | 'resend_count' | 'updated_at'>>(
     'SELECT expires_at, resend_count, updated_at FROM pending_registrations WHERE email = $1 LIMIT 1',
@@ -266,16 +266,16 @@ export async function verifyRegisterOtp(body: unknown) {
     );
     const row = r.rows[0];
 
-    if (!row) throw httpError(400, 'No active registration request for this email.');
+    if (!row) throw httpError(400, 'Không tìm thấy yêu cầu đăng ký cho email này.');
 
     if (row.expires_at < new Date()) {
       await client.query('DELETE FROM pending_registrations WHERE email = $1', [payload.email]);
-      throw httpError(400, 'OTP has expired. Please register again.');
+      throw httpError(400, 'Mã OTP đã hết hạn. Vui lòng đăng ký lại.');
     }
 
     if (row.attempt_count >= OTP_MAX_ATTEMPTS) {
       await client.query('DELETE FROM pending_registrations WHERE email = $1', [payload.email]);
-      throw httpError(429, 'Too many OTP attempts. Please request a new OTP.');
+      throw httpError(429, 'Nhập sai OTP quá nhiều lần. Vui lòng yêu cầu mã mới.');
     }
 
     const otpOk = await verifyOtpHash(payload.email, payload.otp, row.otp_hash);
@@ -283,13 +283,13 @@ export async function verifyRegisterOtp(body: unknown) {
       const nextAttempts = row.attempt_count + 1;
       if (nextAttempts >= OTP_MAX_ATTEMPTS) {
         await client.query('DELETE FROM pending_registrations WHERE email = $1', [payload.email]);
-        throw httpError(429, 'Too many OTP attempts. Please request a new OTP.');
+        throw httpError(429, 'Nhập sai OTP quá nhiều lần. Vui lòng yêu cầu mã mới.');
       }
       await client.query('UPDATE pending_registrations SET attempt_count = $1, updated_at = CURRENT_TIMESTAMP WHERE email = $2', [
         nextAttempts,
         payload.email,
       ]);
-      throw httpError(401, `OTP is incorrect. ${OTP_MAX_ATTEMPTS - nextAttempts} attempts remaining.`);
+      throw httpError(401, `Mã OTP không chính xác. Bạn còn lại ${OTP_MAX_ATTEMPTS - nextAttempts} lần thử.`);
     }
 
     await client.query('DELETE FROM pending_registrations WHERE email = $1', [payload.email]);
@@ -325,7 +325,7 @@ export async function forgotPassword(req: Request) {
 
   const u = await pool.query<{ id: number }>('SELECT id FROM users WHERE email = $1 LIMIT 1', [payload.email]);
   if (u.rows.length === 0) {
-    return { success: true, message: 'If the email exists, an OTP has been sent.' };
+    return { success: true, message: 'Nếu email tồn tại, mã OTP đã được gửi.' };
   }
 
   const otp = generateOtp();
@@ -337,9 +337,9 @@ export async function forgotPassword(req: Request) {
   );
 
   const sent = await sendOtpEmail(payload.email, otp, 'reset');
-  if (!sent) throw httpError(503, 'Unable to send OTP email.');
+  if (!sent) throw httpError(503, 'Không thể gửi email chứa mã OTP.');
 
-  return { success: true, message: 'If the email exists, an OTP has been sent.' };
+  return { success: true, message: 'Nếu email tồn tại, mã OTP đã được gửi.' };
 }
 
 export async function resetPassword(body: unknown) {
@@ -352,21 +352,21 @@ export async function resetPassword(body: unknown) {
   const row = r.rows[0];
 
   if (!row?.reset_token || !row.reset_token_expiry) {
-    throw httpError(400, 'No active password reset request.');
+    throw httpError(400, 'Không có yêu cầu đặt lại mật khẩu nào đang hoạt động.');
   }
 
   if (row.reset_token_expiry < new Date()) {
     await pool.query('UPDATE users SET reset_token = NULL, reset_token_expiry = NULL, reset_token_attempts = 0 WHERE id = $1', [
       row.id,
     ]);
-    throw httpError(400, 'OTP has expired. Please request a new code.');
+    throw httpError(400, 'Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.');
   }
 
   if (row.reset_token_attempts >= OTP_MAX_ATTEMPTS) {
     await pool.query('UPDATE users SET reset_token = NULL, reset_token_expiry = NULL, reset_token_attempts = 0 WHERE id = $1', [
       row.id,
     ]);
-    throw httpError(429, 'Too many OTP attempts. Please request a new code.');
+    throw httpError(429, 'Nhập sai OTP quá nhiều lần. Vui lòng yêu cầu mã mới.');
   }
 
   const otpOk = await bcrypt.compare(payload.otp, row.reset_token);
@@ -376,10 +376,10 @@ export async function resetPassword(body: unknown) {
       await pool.query('UPDATE users SET reset_token = NULL, reset_token_expiry = NULL, reset_token_attempts = 0 WHERE id = $1', [
         row.id,
       ]);
-      throw httpError(429, 'Too many OTP attempts. Please request a new code.');
+      throw httpError(429, 'Nhập sai OTP quá nhiều lần. Vui lòng yêu cầu mã mới.');
     }
     await pool.query('UPDATE users SET reset_token_attempts = $1 WHERE id = $2', [nextAttempts, row.id]);
-    throw httpError(401, `OTP is incorrect. ${OTP_MAX_ATTEMPTS - nextAttempts} attempts remaining.`);
+    throw httpError(401, `Mã OTP không chính xác. Bạn còn lại ${OTP_MAX_ATTEMPTS - nextAttempts} lần thử.`);
   }
 
   const hash = await bcrypt.hash(payload.new_password, BCRYPT_COST);
@@ -388,7 +388,7 @@ export async function resetPassword(body: unknown) {
     [hash, row.id]
   );
 
-  return { success: true, message: 'Password reset successful. You can sign in now.' };
+  return { success: true, message: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập ngay.' };
 }
 
 export async function updateProfile(userId: number, body: unknown) {
@@ -399,8 +399,8 @@ export async function updateProfile(userId: number, body: unknown) {
     'UPDATE users SET full_name = $1, bio = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id, full_name, email, avatar_url, bio',
     [payload.full_name, bio, userId]
   );
-  if (r.rows.length === 0) throw httpError(404, 'User not found.');
-  return { success: true, message: 'Profile updated successfully.', user: r.rows[0] };
+  if (r.rows.length === 0) throw httpError(404, 'Không tìm thấy người dùng.');
+  return { success: true, message: 'Cập nhật hồ sơ thành công.', user: r.rows[0] };
 }
 
 export async function requestEmailChangeOtp(userId: number, body: unknown) {
@@ -409,7 +409,7 @@ export async function requestEmailChangeOtp(userId: number, body: unknown) {
 
   const current = await pool.query<{ email: string }>('SELECT email FROM users WHERE id = $1', [userId]);
   const row = current.rows[0];
-  if (!row) throw httpError(404, 'User not found.');
+  if (!row) throw httpError(404, 'Không tìm thấy người dùng.');
   if (row.email.toLowerCase() === newEmail) {
     throw httpError(400, 'Email mới trùng với email hiện tại.');
   }
@@ -450,7 +450,7 @@ export async function verifyEmailChangeOtp(userId: number, body: unknown) {
     [userId]
   );
   const row = r.rows[0];
-  if (!row) throw httpError(404, 'User not found.');
+  if (!row) throw httpError(404, 'Không tìm thấy người dùng.');
   if (!row.pending_email || !row.email_otp || !row.email_otp_expiry) {
     throw httpError(400, 'Không có yêu cầu đổi email nào.');
   }
@@ -475,7 +475,7 @@ export async function verifyEmailChangeOtp(userId: number, body: unknown) {
     [row.pending_email, userId]
   );
   const user = updated.rows[0];
-  if (!user) throw httpError(404, 'User not found.');
+  if (!user) throw httpError(404, 'Không tìm thấy người dùng.');
 
   return { success: true, message: 'Đổi email thành công.', user };
 }
@@ -484,14 +484,14 @@ export async function changePassword(userId: number, body: unknown) {
   const payload = parsePayload(changePasswordSchema, body);
 
   const r = await pool.query<{ password_hash: string }>('SELECT password_hash FROM users WHERE id = $1', [userId]);
-  if (r.rows.length === 0) throw httpError(404, 'User not found.');
+  if (r.rows.length === 0) throw httpError(404, 'Không tìm thấy người dùng.');
   const row = r.rows[0];
 
   const currentMatch = await bcrypt.compare(payload.current_password, row.password_hash);
-  if (!currentMatch) throw httpError(401, 'Current password is incorrect.');
+  if (!currentMatch) throw httpError(401, 'Mật khẩu hiện tại không chính xác.');
 
   const newHash = await bcrypt.hash(payload.new_password, BCRYPT_COST);
   await pool.query('UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [newHash, userId]);
 
-  return { success: true, message: 'Password changed successfully.' };
+  return { success: true, message: 'Đổi mật khẩu thành công.' };
 }

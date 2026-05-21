@@ -29,13 +29,13 @@ export class MealPlanHandler {
 
     const withNutrition = { ...recipe, nutrition };
     const ok = await healthRepo.addMeal(this.pool, this.planId, date, mealType, withNutrition);
-    if (!ok) return { success: false, message: 'Failed to save meal into database.' };
+    if (!ok) return { success: false, message: 'Không thể lưu món ăn vào cơ sở dữ liệu.' };
 
     const mealPlan = await this.getMealPlan();
     const day = mealPlan[date]?.[mealType as 'breakfast' | 'lunch' | 'dinner'] ?? [];
     return {
       success: true,
-      message: `Added ${recipe.name} to plan.`,
+      message: `Đã thêm ${recipe.name} vào thực đơn.`,
       mealPlan: day,
       nutritionTotals: healthRepo.getNutritionTotalsFromMeals(mealPlan),
     };
@@ -52,13 +52,13 @@ export class MealPlanHandler {
     nutritionTotals?: { calories: number; protein: number; carbs: number; fat: number };
   }> {
     const ok = await healthRepo.removeMeal(this.pool, mealId, this.planId);
-    if (!ok) return { success: false, message: 'Meal not found or remove failed.' };
+    if (!ok) return { success: false, message: 'Không tìm thấy món ăn hoặc xóa thất bại.' };
 
     const mealPlan = await this.getMealPlan();
     const day = mealPlan[date]?.[mealType as 'breakfast' | 'lunch' | 'dinner'] ?? [];
     return {
       success: true,
-      message: 'Meal removed.',
+      message: 'Đã xóa món ăn.',
       mealPlan: day,
       nutritionTotals: healthRepo.getNutritionTotalsFromMeals(mealPlan),
     };
@@ -74,10 +74,10 @@ export class MealPlanHandler {
     shoppingList?: { id: number; name: string; quantity: string; checked: boolean }[];
   }> {
     const n = name.trim();
-    if (!n) return { success: false, message: 'Name is required.' };
+    if (!n) return { success: false, message: 'Tên là bắt buộc.' };
     const ok = await healthRepo.addShoppingItem(this.pool, this.planId, n, quantity.trim());
-    if (!ok) return { success: false, message: 'Failed to save shopping item.' };
-    return { success: true, message: `Added ${n}.`, shoppingList: await this.getShoppingList() };
+    if (!ok) return { success: false, message: 'Không thể lưu mục mua sắm.' };
+    return { success: true, message: `Đã thêm ${n}.`, shoppingList: await this.getShoppingList() };
   }
 
   async toggleShoppingItem(itemId: number): Promise<{
@@ -86,7 +86,7 @@ export class MealPlanHandler {
     shoppingList?: { id: number; name: string; quantity: string; checked: boolean }[];
   }> {
     const ok = await healthRepo.toggleShoppingItem(this.pool, itemId, this.planId);
-    if (!ok) return { success: false, message: 'Update failed.' };
+    if (!ok) return { success: false, message: 'Cập nhật thất bại.' };
     return { success: true, shoppingList: await this.getShoppingList() };
   }
 
@@ -96,8 +96,8 @@ export class MealPlanHandler {
     shoppingList?: { id: number; name: string; quantity: string; checked: boolean }[];
   }> {
     const ok = await healthRepo.removeShoppingItem(this.pool, itemId, this.planId);
-    if (!ok) return { success: false, message: 'Delete failed.' };
-    return { success: true, message: 'Deleted.', shoppingList: await this.getShoppingList() };
+    if (!ok) return { success: false, message: 'Xóa thất bại.' };
+    return { success: true, message: 'Đã xóa.', shoppingList: await this.getShoppingList() };
   }
 
   /**

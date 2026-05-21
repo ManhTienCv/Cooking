@@ -93,7 +93,7 @@ export async function createRecipe(userId: number, body: Record<string, unknown>
 export async function toggleSaveRecipe(userId: number, recipeIdRaw: unknown) {
   const recipeId = Number(recipeIdRaw);
   if (!recipeId) {
-    throw { status: 400, message: 'Invalid recipe ID' };
+    throw { status: 400, message: 'Mã công thức không hợp lệ' };
   }
   const saved = await recipeRepo.toggleSave(userId, recipeId);
   return { saved };
@@ -112,11 +112,11 @@ export async function fridgeSearch(ingredientsRaw: unknown, limitRaw: unknown, o
 export async function getRecipeDetail(idRaw: unknown, viewerId: number | null): Promise<{ recipe: RecipeWithAuthor; isSaved: boolean }> {
   const id = Number(idRaw);
   if (!id) {
-    throw { status: 400, message: 'Invalid id' };
+    throw { status: 400, message: 'Mã không hợp lệ' };
   }
   const recipe = await recipeRepo.getRecipeById(id, viewerId);
   if (!recipe) {
-    throw { status: 404, message: 'Not found' };
+    throw { status: 404, message: 'Không tìm thấy công thức.' };
   }
   let isSaved = false;
   if (viewerId) {
@@ -128,7 +128,7 @@ export async function getRecipeDetail(idRaw: unknown, viewerId: number | null): 
 export async function incrementRecipeViews(idRaw: unknown, userId: number | null) {
   const id = Number(idRaw);
   if (!id) {
-    throw { status: 400, message: 'Invalid id' };
+    throw { status: 400, message: 'Mã không hợp lệ' };
   }
   const incremented = await recipeRepo.incrementViews(id, userId);
   return { incremented };
@@ -136,11 +136,11 @@ export async function incrementRecipeViews(idRaw: unknown, userId: number | null
 
 export async function updateRecipe(idRaw: unknown, userId: number, body: Record<string, unknown>) {
   const id = Number(idRaw);
-  if (!id) throw { status: 400, message: 'Invalid id' };
+  if (!id) throw { status: 400, message: 'Mã không hợp lệ' };
 
   const existing = await recipeRepo.getRecipeById(id, userId);
   if (!existing || existing.author_id !== userId) {
-    throw { status: 403, message: 'Forbidden' };
+    throw { status: 403, message: 'Bạn không có quyền thực hiện thao tác này.' };
   }
 
   const title = body?.title !== undefined ? String(body.title).trim() : undefined;
@@ -177,9 +177,9 @@ export async function updateRecipe(idRaw: unknown, userId: number, body: Record<
 
 export async function deleteRecipe(idRaw: unknown, userId: number) {
   const id = Number(idRaw);
-  if (!id) throw { status: 400, message: 'Invalid id' };
+  if (!id) throw { status: 400, message: 'Mã không hợp lệ' };
   const recipe = await recipeRepo.getRecipeById(id, userId);
-  if (!recipe || recipe.author_id !== userId) throw { status: 403, message: 'Forbidden' };
+  if (!recipe || recipe.author_id !== userId) throw { status: 403, message: 'Bạn không có quyền thực hiện thao tác này.' };
   await recipeRepo.deleteRecipe(id);
   return { success: true };
 }

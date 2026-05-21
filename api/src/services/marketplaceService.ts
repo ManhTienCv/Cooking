@@ -30,7 +30,7 @@ export async function searchProducts(query: {
 
 export async function getProductDetail(slugOrId: unknown) {
   const raw = String(slugOrId ?? '').trim();
-  if (!raw) throw { status: 400, message: 'Invalid product ID' };
+  if (!raw) throw { status: 400, message: 'Mã sản phẩm không hợp lệ' };
 
   const isNumeric = /^\d+$/.test(raw);
   const product = isNumeric
@@ -133,7 +133,7 @@ export async function createProduct(userId: number, body: Record<string, unknown
 
 export async function updateProduct(userId: number, idRaw: unknown, body: Record<string, unknown>) {
   const id = Number(idRaw);
-  if (!id) throw { status: 400, message: 'Invalid product ID' };
+  if (!id) throw { status: 400, message: 'Mã sản phẩm không hợp lệ' };
 
   const existing = await marketplaceRepo.getProductById(id);
   if (!existing || existing.seller_id !== userId) {
@@ -164,7 +164,7 @@ export async function updateProduct(userId: number, idRaw: unknown, body: Record
 
 export async function deleteProduct(userId: number, idRaw: unknown) {
   const id = Number(idRaw);
-  if (!id) throw { status: 400, message: 'Invalid product ID' };
+  if (!id) throw { status: 400, message: 'Mã sản phẩm không hợp lệ' };
   const ok = await marketplaceRepo.deleteProduct(id, userId);
   if (!ok) throw { status: 403, message: 'Bạn không có quyền xóa sản phẩm này.' };
   return { success: true };
@@ -191,7 +191,7 @@ export async function addToCart(userId: number, body: Record<string, unknown>) {
   const productId = Number(body?.product_id ?? 0);
   const quantity = Math.max(1, Number(body?.quantity ?? 1));
 
-  if (!productId) throw { status: 400, message: 'Invalid product ID' };
+  if (!productId) throw { status: 400, message: 'Mã sản phẩm không hợp lệ' };
 
   const product = await marketplaceRepo.getProductById(productId);
   if (!product) throw { status: 404, message: 'Sản phẩm không tồn tại.' };
@@ -212,7 +212,7 @@ export async function addToCart(userId: number, body: Record<string, unknown>) {
 export async function updateCartItem(userId: number, itemIdRaw: unknown, body: Record<string, unknown>) {
   const itemId = Number(itemIdRaw);
   const quantity = Math.max(1, Number(body?.quantity ?? 1));
-  if (!itemId) throw { status: 400, message: 'Invalid cart item ID' };
+  if (!itemId) throw { status: 400, message: 'Mã mục giỏ hàng không hợp lệ' };
 
   const ok = await marketplaceRepo.updateCartQuantity(userId, itemId, quantity);
   if (!ok) throw { status: 404, message: 'Không tìm thấy mục giỏ hàng.' };
@@ -292,7 +292,7 @@ export async function getMyOrders(userId: number, limitRaw: unknown, offsetRaw: 
 
 export async function getOrderDetail(userId: number, idRaw: unknown) {
   const id = Number(idRaw);
-  if (!id) throw { status: 400, message: 'Invalid order ID' };
+  if (!id) throw { status: 400, message: 'Mã đơn hàng không hợp lệ' };
 
   const order = await marketplaceRepo.getOrderById(id);
   if (!order) throw { status: 404, message: 'Đơn hàng không tồn tại.' };
@@ -486,7 +486,7 @@ export async function updateOrderStatus(
 
 export async function getReviews(productIdRaw: unknown, limitRaw: unknown, offsetRaw: unknown) {
   const productId = Number(productIdRaw);
-  if (!productId) throw { status: 400, message: 'Invalid product ID' };
+  if (!productId) throw { status: 400, message: 'Mã sản phẩm không hợp lệ' };
 
   const limit = Math.min(50, Math.max(1, Number(limitRaw) || 10));
   const offset = Math.max(0, Number(offsetRaw) || 0);
@@ -500,7 +500,7 @@ export async function createReview(userId: number, body: Record<string, unknown>
   const rating = Number(body?.rating ?? 0);
   const comment = String(body?.comment ?? '').trim() || null;
 
-  if (!productId || !orderId) throw { status: 400, message: 'Missing product or order ID.' };
+  if (!productId || !orderId) throw { status: 400, message: 'Thiếu mã sản phẩm hoặc mã đơn hàng.' };
   if (rating < 1 || rating > 5) throw { status: 422, message: 'Rating phải từ 1 đến 5.' };
 
   // Kiểm tra order thuộc về user và đã delivered/completed
@@ -531,7 +531,7 @@ export async function getWishlist(userId: number) {
 
 export async function toggleWishlist(userId: number, productIdRaw: unknown) {
   const productId = Number(productIdRaw);
-  if (!productId) throw { status: 400, message: 'Invalid product ID' };
+  if (!productId) throw { status: 400, message: 'Mã sản phẩm không hợp lệ' };
   const wishlisted = await marketplaceRepo.toggleWishlist(userId, productId);
   return { wishlisted };
 }
@@ -555,7 +555,7 @@ export async function getActiveBundles(limitRaw: unknown) {
 
 export async function getBundleDetail(slugRaw: unknown) {
   const slug = String(slugRaw ?? '').trim();
-  if (!slug) throw { status: 400, message: 'Invalid bundle slug' };
+  if (!slug) throw { status: 400, message: 'Mã gói combo không hợp lệ' };
   const bundle = await marketplaceRepo.getBundleBySlug(slug);
   if (!bundle) throw { status: 404, message: 'Gói combo không tồn tại.' };
   return { bundle };
@@ -670,7 +670,7 @@ Response format (JSON only, no explanation):
  */
 export async function getRelatedProducts(productIdRaw: unknown, limitRaw: unknown) {
   const productId = Number(productIdRaw);
-  if (!productId) throw { status: 400, message: 'Invalid product ID' };
+  if (!productId) throw { status: 400, message: 'Mã sản phẩm không hợp lệ' };
 
   const product = await marketplaceRepo.getProductById(productId);
   if (!product) return { products: [] };

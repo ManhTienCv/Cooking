@@ -46,6 +46,7 @@ export default function OrderDetail() {
     tracking_number: string | null;
     delay_resolution: string;
     is_delayed: boolean;
+    eligible?: boolean;
     logs: { id: string; status: string; current_location: string; description: string; created_at: string }[];
   } | null>(null);
 
@@ -71,6 +72,7 @@ export default function OrderDetail() {
             tracking_number: string | null;
             delay_resolution: string;
             is_delayed: boolean;
+            eligible?: boolean;
             logs: TransitLog[];
           }
           return apiJson<TransitDataResponse>(`/api/marketplace/orders/${id}/transit-logs`);
@@ -288,7 +290,7 @@ export default function OrderDetail() {
         </Reveal>
 
         {/* Lộ trình Vận chuyển & Định vị */}
-        {transitData && (
+        {transitData && transitData.eligible !== false && (
           <Reveal y={12} delay={0.03}>
             <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-gray-100 dark:border-slate-700/50 p-6 space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100 dark:border-slate-700">

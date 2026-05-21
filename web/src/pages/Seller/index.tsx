@@ -19,6 +19,7 @@ interface SellerProduct {
 interface SellerOrder {
   id: number; buyer_id: number; total_amount: number; status: string; shipping_name: string;
   created_at: string; items: { product_name: string; quantity: number }[];
+  is_fast_food_only?: boolean;
 }
 interface SellerProfile {
   id: number;
@@ -408,6 +409,16 @@ export default function SellerDashboard() {
                         {(() => {
                           if (['completed', 'cancelled'].includes(o.status)) return null;
                           if (o.status === 'shipping' || o.status === 'delayed') {
+                            if (o.is_fast_food_only) {
+                              return (
+                                <button
+                                  onClick={() => void onUpdateOrderStatus(o.id, 'delivered')}
+                                  className="text-xs bg-green-600 hover:bg-green-700 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors"
+                                >
+                                  Đánh dấu đã giao
+                                </button>
+                              );
+                            }
                             return (
                               <button
                                 onClick={() => setTransitOrderId(o.id)}
@@ -427,7 +438,7 @@ export default function SellerDashboard() {
                           return (
                             <button
                               onClick={() => {
-                                if (next.val === 'shipping') {
+                                if (next.val === 'shipping' && !o.is_fast_food_only) {
                                   setShippingOrderId(o.id);
                                 } else {
                                   void onUpdateOrderStatus(o.id, next.val);

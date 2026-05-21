@@ -495,7 +495,12 @@ export async function getOrdersByBuyer(
   offset: number,
   q?: string
 ): Promise<{ rows: OrderWithItems[]; total: number }> {
-  let dataSql = 'SELECT * FROM orders WHERE buyer_id = $1';
+  let dataSql = `SELECT *, NOT EXISTS (
+    SELECT 1 FROM order_items oi 
+    JOIN products p ON oi.product_id = p.id 
+    JOIN product_categories pc ON p.category_id = pc.id 
+    WHERE oi.order_id = orders.id AND pc.slug != 'do-an-san'
+  ) AS is_fast_food_only FROM orders WHERE buyer_id = $1`;
   let countSql = 'SELECT COUNT(*) AS total FROM orders WHERE buyer_id = $1';
   const params: unknown[] = [buyerId];
 
@@ -548,7 +553,15 @@ export async function getOrdersByBuyer(
 }
 
 export async function getOrderById(orderId: number): Promise<OrderWithItems | null> {
-  const { rows: orderRows } = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
+  const { rows: orderRows } = await pool.query(
+    `SELECT *, NOT EXISTS (
+      SELECT 1 FROM order_items oi 
+      JOIN products p ON oi.product_id = p.id 
+      JOIN product_categories pc ON p.category_id = pc.id 
+      WHERE oi.order_id = orders.id AND pc.slug != 'do-an-san'
+    ) AS is_fast_food_only FROM orders WHERE id = $1`,
+    [orderId]
+  );
   if (orderRows.length === 0) return null;
 
   const { rows: itemRows } = await pool.query(
@@ -571,7 +584,12 @@ export async function getOrdersBySeller(
   limit: number,
   offset: number
 ): Promise<{ rows: Order[]; total: number }> {
-  const dataSql = `SELECT DISTINCT o.*
+  const dataSql = `SELECT DISTINCT o.*, NOT EXISTS (
+      SELECT 1 FROM order_items oi2 
+      JOIN products p ON oi2.product_id = p.id 
+      JOIN product_categories pc ON p.category_id = pc.id 
+      WHERE oi2.order_id = o.id AND pc.slug != 'do-an-san'
+    ) AS is_fast_food_only
     FROM orders o
     JOIN order_items oi ON oi.order_id = o.id
     WHERE oi.seller_id = $1

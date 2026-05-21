@@ -11,7 +11,15 @@ export interface TransitLogPayload {
 
 /** Check if user has access to order (buyer or seller) */
 async function verifyOrderAccess(client: any, orderId: number, userId: number): Promise<{ isBuyer: boolean; isSeller: boolean; order: any }> {
-  const orderRes = await client.query('SELECT * FROM orders WHERE id = $1', [orderId]);
+  const orderRes = await client.query(
+    `SELECT *, NOT EXISTS (
+       SELECT 1 FROM order_items oi 
+       JOIN products p ON oi.product_id = p.id 
+       JOIN product_categories pc ON p.category_id = pc.id 
+       WHERE oi.order_id = orders.id AND pc.slug != 'do-an-san'
+     ) AS is_fast_food_only FROM orders WHERE id = $1`,
+    [orderId]
+  );
   const order = orderRes.rows[0];
   if (!order) {
     throw httpError(404, 'Đơn hàng không tồn tại.');
@@ -35,6 +43,21 @@ export async function getTransitLogs(orderId: number, userId: number) {
   const client = await pool.connect();
   try {
     const { order } = await verifyOrderAccess(client, orderId, userId);
+
+    if (order.is_fast_food_only) {
+      return {
+        order_id: orderId,
+        status: order.status,
+        estimated_delivery_at: null,
+        actual_delivery_at: order.actual_delivery_at,
+        carrier_name: null,
+        tracking_number: null,
+        delay_resolution: 'none',
+        is_delayed: false,
+        eligible: false,
+        logs: [],
+      };
+    }
 
     const logsRes = await client.query(
       'SELECT * FROM order_transit_logs WHERE order_id = $1 ORDER BY created_at DESC',
@@ -77,9 +100,12 @@ export async function initializeShipping(
   try {
     await client.query('BEGIN');
 
-    const { isSeller } = await verifyOrderAccess(client, orderId, userId);
+    const { isSeller, order } = await verifyOrderAccess(client, orderId, userId);
     if (!isSeller) {
       throw httpError(403, 'Chỉ người bán mới có quyền bắt đầu giao hàng.');
+    }
+    if (order.is_fast_food_only) {
+      throw httpError(400, 'Đơn hàng thức ăn nhanh không áp dụng hình thức vận chuyển đường dài.');
     }
 
     const estimatedDays = Number(body.estimated_days) || 3;
@@ -128,6 +154,9 @@ export async function addTransitLog(orderId: number, userId: number, payload: Tr
     const { isSeller, order } = await verifyOrderAccess(client, orderId, userId);
     if (!isSeller) {
       throw httpError(403, 'Chỉ người bán mới có quyền cập nhật lộ trình.');
+    }
+    if (order.is_fast_food_only) {
+      throw httpError(400, 'Đơn hàng thức ăn nhanh không áp dụng hình thức vận chuyển đường dài.');
     }
 
     // Insert log

@@ -106,6 +106,7 @@ export interface Order {
   cancelled_reason: string | null;
   created_at: Date;
   updated_at: Date;
+  is_fast_food_only?: boolean;
 }
 
 export interface OrderWithItems extends Order {

@@ -26,7 +26,7 @@ interface Transaction {
   id: string;
   amount: string;
   type: 'deposit' | 'withdrawal' | 'fee' | 'refund' | 'payment';
-  status: 'pending' | 'completed' | 'failed';
+  status: 'pending' | 'completed' | 'failed' | 'invalid';
   description: string;
   created_at: string;
 }
@@ -66,6 +66,7 @@ function formatCurrency(amount: string | number) {
 
 
 export default function EWallet() {
+  const [now, setNow] = useState(0);
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [banks, setBanks] = useState<BankAccount[]>([]);
@@ -113,6 +114,7 @@ export default function EWallet() {
   }, []);
 
   useEffect(() => {
+    setNow(Date.now());
     void loadData();
   }, [loadData]);
 
@@ -143,7 +145,7 @@ export default function EWallet() {
     if (tx.status === 'pending') {
       const createdTime = new Date(tx.created_at).getTime();
       const oneHour = 3600000;
-      if (Date.now() - createdTime > oneHour) {
+      if (now - createdTime > oneHour) {
         return 'invalid';
       }
     }
@@ -356,7 +358,7 @@ export default function EWallet() {
                       <div
                         key={tx.id}
                         onClick={() => {
-                          setSelectedTx({ ...tx, status: realStatus as any });
+                          setSelectedTx({ ...tx, status: realStatus });
                           setShowTxDetail(true);
                         }}
                         className="p-4 sm:px-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer active:scale-[0.99] select-none"

@@ -19,9 +19,10 @@ interface WithdrawModalProps {
   onSuccess: () => void;
   banks: BankAccount[];
   maxAmount: number;
+  bankLogos: Record<string, string>;
 }
 
-export default function EWalletWithdrawModal({ open, onClose, onSuccess, banks, maxAmount }: WithdrawModalProps) {
+export default function EWalletWithdrawModal({ open, onClose, onSuccess, banks, maxAmount, bankLogos }: WithdrawModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -162,8 +163,12 @@ export default function EWalletWithdrawModal({ open, onClose, onSuccess, banks, 
                                   : 'border-gray-200 dark:border-slate-800 hover:border-gray-300 dark:hover:border-slate-700'
                               }`}
                             >
-                              <div className="w-8 h-8 bg-white dark:bg-slate-800 rounded-lg flex items-center justify-center border border-gray-200 dark:border-slate-700 font-bold text-gray-400 text-[10px] shrink-0">
-                                {b.bank_bin}
+                              <div className="w-8 h-8 bg-white dark:bg-slate-800 rounded-lg flex items-center justify-center border border-gray-200 dark:border-slate-700 font-bold text-gray-400 text-[10px] shrink-0 overflow-hidden">
+                                {bankLogos[b.bank_bin] ? (
+                                  <img src={bankLogos[b.bank_bin]} alt={b.bank_name} className="w-6 h-6 object-contain" />
+                                ) : (
+                                  b.bank_bin
+                                )}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{b.bank_name}</p>

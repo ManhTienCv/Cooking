@@ -61,6 +61,24 @@ export default function EWallet() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [banks, setBanks] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bankLogos, setBankLogos] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch('https://api.vietqr.io/v2/banks')
+      .then((res) => res.json())
+      .then((res: any) => {
+        if (res && Array.isArray(res.data)) {
+          const map: Record<string, string> = {};
+          res.data.forEach((item: any) => {
+            if (item.bin && item.logo) {
+              map[item.bin] = item.logo;
+            }
+          });
+          setBankLogos(map);
+        }
+      })
+      .catch((err) => console.error('Lỗi tải logo ngân hàng:', err));
+  }, []);
 
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showAddBank, setShowAddBank] = useState(false);
@@ -199,8 +217,12 @@ export default function EWallet() {
             ) : (
               banks.map((b) => (
                 <div key={b.id} className="flex items-center gap-3 p-3 rounded-2xl border border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
-                  <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center border border-gray-200 dark:border-slate-600 font-bold text-gray-400 text-xs">
-                    {b.bank_bin}
+                  <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center border border-gray-200 dark:border-slate-600 font-bold text-gray-400 text-xs overflow-hidden shrink-0">
+                    {bankLogos[b.bank_bin] ? (
+                      <img src={bankLogos[b.bank_bin]} alt={b.bank_name} className="w-8 h-8 object-contain" />
+                    ) : (
+                      b.bank_bin
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{b.bank_name}</p>
@@ -285,6 +307,7 @@ export default function EWallet() {
         onSuccess={() => void loadData()}
         banks={banks}
         maxAmount={balance}
+        bankLogos={bankLogos}
       />
 
       <EWalletTopupModal

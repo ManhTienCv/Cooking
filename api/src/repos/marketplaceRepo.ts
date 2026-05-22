@@ -17,6 +17,7 @@ import type {
   CreateProductInput,
 } from '../types/marketplace.js';
 
+// Chuyển đổi dữ liệu tổng số lượng sang kiểu số hợp lệ
 function parseTotal(v: unknown): number {
   return Number(v ?? 0);
 }
@@ -25,6 +26,7 @@ function parseTotal(v: unknown): number {
  * Product Categories
  * ================================================================ */
 
+// Lấy danh sách các danh mục sản phẩm (có thể lọc theo loại)
 export async function getCategories(type?: string): Promise<ProductCategory[]> {
   const cond = type ? 'WHERE type = $1' : '';
   const params = type ? [type] : [];
@@ -39,6 +41,7 @@ export async function getCategories(type?: string): Promise<ProductCategory[]> {
  * Seller Profiles
  * ================================================================ */
 
+// Lấy thông tin hồ sơ bán hàng (Seller Profile) kèm thông tin người dùng
 export async function getSellerProfile(userId: number): Promise<SellerProfileWithUser | null> {
   const { rows } = await pool.query(
     `SELECT
@@ -64,6 +67,7 @@ export async function getSellerProfile(userId: number): Promise<SellerProfileWit
   return (rows[0] as SellerProfileWithUser) ?? null;
 }
 
+// Tính toán các số liệu thống kê của người bán (Doanh thu, Đơn hàng, Tổng sản phẩm)
 export async function getSellerStats(userId: number) {
   const prodRes = await pool.query(
     `SELECT COUNT(id) as total_products, COALESCE(SUM(total_sold), 0) as total_sold
@@ -86,6 +90,7 @@ export async function getSellerStats(userId: number) {
   };
 }
 
+// Tạo hồ sơ người bán hàng mới hoặc cập nhật hồ sơ cũ nếu đã tồn tại
 export async function createSellerProfile(
   userId: number,
   data: { store_name: string; store_description: string | null; phone: string | null; address: string | null }
@@ -104,6 +109,7 @@ export async function createSellerProfile(
   return (rowCount ?? 0) > 0;
 }
 
+// Kiểm tra xem một người dùng đã đăng ký tài khoản người bán (Seller) hay chưa
 export async function isSeller(userId: number): Promise<boolean> {
   const { rows } = await pool.query(
     `SELECT 1
@@ -117,6 +123,7 @@ export async function isSeller(userId: number): Promise<boolean> {
   return rows.length > 0;
 }
 
+// Lấy danh sách sản phẩm công khai của một người bán cụ thể (phân trang)
 export async function getPublicProductsBySeller(
   sellerId: number,
   limit: number,
@@ -146,6 +153,7 @@ export async function getPublicProductsBySeller(
   };
 }
 
+// Kiểm tra quyền truy cập vào đơn hàng của một người dùng cụ thể (người mua hoặc người bán trong đơn hàng)
 export async function userHasOrderAccess(
   orderId: number,
   userId: number
@@ -162,6 +170,7 @@ export async function userHasOrderAccess(
  * Products
  * ================================================================ */
 
+// Tìm kiếm sản phẩm nâng cao lọc theo từ khóa, danh mục, loại sản phẩm và sắp xếp kết quả
 export async function searchProducts(
   search: string | null,
   category: string | null,
@@ -227,6 +236,7 @@ export async function searchProducts(
   };
 }
 
+// Lấy chi tiết thông tin sản phẩm dựa trên đường dẫn slug thân thiện
 export async function getProductBySlug(slug: string): Promise<ProductWithSeller | null> {
   const { rows } = await pool.query(
     `SELECT p.*,
@@ -243,6 +253,7 @@ export async function getProductBySlug(slug: string): Promise<ProductWithSeller 
   return (rows[0] as ProductWithSeller) ?? null;
 }
 
+// Lấy chi tiết thông tin sản phẩm dựa trên mã ID sản phẩm
 export async function getProductById(id: number): Promise<ProductWithSeller | null> {
   const { rows } = await pool.query(
     `SELECT p.*,
@@ -259,6 +270,7 @@ export async function getProductById(id: number): Promise<ProductWithSeller | nu
   return (rows[0] as ProductWithSeller) ?? null;
 }
 
+// Lấy danh sách sản phẩm nổi bật
 export async function getFeaturedProducts(limit: number): Promise<ProductWithSeller[]> {
   const { rows } = await pool.query(
     `SELECT p.*,
@@ -288,6 +300,7 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
+// Tạo sản phẩm mới đăng bán từ người bán hàng
 export async function createProduct(
   sellerId: number,
   data: CreateProductInput
@@ -311,6 +324,7 @@ export async function createProduct(
   return Number(rows[0]?.id ?? 0) || null;
 }
 
+// Cập nhật thông tin chi tiết của sản phẩm đã đăng bán
 export async function updateProduct(
   id: number,
   sellerId: number,
@@ -342,6 +356,7 @@ export async function updateProduct(
   return (rowCount ?? 0) > 0;
 }
 
+// Xóa sản phẩm của người bán (cập nhật trạng thái sang 'deleted')
 export async function deleteProduct(id: number, sellerId: number): Promise<boolean> {
   const { rowCount } = await pool.query(
     `UPDATE products SET status = 'deleted', is_available = FALSE WHERE id = $1 AND seller_id = $2`,
@@ -350,6 +365,7 @@ export async function deleteProduct(id: number, sellerId: number): Promise<boole
   return (rowCount ?? 0) > 0;
 }
 
+// Lấy danh sách sản phẩm của một người bán hàng cụ thể
 export async function getProductsBySeller(
   sellerId: number,
   limit: number,
@@ -377,6 +393,7 @@ export async function getProductsBySeller(
  * Cart
  * ================================================================ */
 
+// Lấy các mặt hàng hiện có trong giỏ hàng của người dùng
 export async function getCartItems(userId: number): Promise<CartItem[]> {
   const { rows } = await pool.query(
     `SELECT ci.*,
@@ -394,6 +411,7 @@ export async function getCartItems(userId: number): Promise<CartItem[]> {
   return rows as CartItem[];
 }
 
+// Thêm mặt hàng mới hoặc tăng số lượng của mặt hàng trong giỏ hàng
 export async function addCartItem(userId: number, productId: number, quantity: number): Promise<number> {
   const { rows } = await pool.query(
     `INSERT INTO cart_items (user_id, product_id, quantity)
@@ -405,6 +423,7 @@ export async function addCartItem(userId: number, productId: number, quantity: n
   return Number(rows[0]?.id ?? 0);
 }
 
+// Cập nhật số lượng của một mặt hàng cụ thể trong giỏ hàng
 export async function updateCartQuantity(userId: number, itemId: number, quantity: number): Promise<boolean> {
   const { rowCount } = await pool.query(
     'UPDATE cart_items SET quantity = $1 WHERE id = $2 AND user_id = $3',
@@ -413,6 +432,7 @@ export async function updateCartQuantity(userId: number, itemId: number, quantit
   return (rowCount ?? 0) > 0;
 }
 
+// Xóa một mặt hàng khỏi giỏ hàng
 export async function removeCartItem(userId: number, itemId: number): Promise<boolean> {
   const { rowCount } = await pool.query(
     'DELETE FROM cart_items WHERE id = $1 AND user_id = $2',
@@ -421,10 +441,12 @@ export async function removeCartItem(userId: number, itemId: number): Promise<bo
   return (rowCount ?? 0) > 0;
 }
 
+// Xóa toàn bộ giỏ hàng của người dùng
 export async function clearCart(userId: number): Promise<void> {
   await pool.query('DELETE FROM cart_items WHERE user_id = $1', [userId]);
 }
 
+// Lấy tổng số lượng mặt hàng trong giỏ hàng của người dùng
 export async function getCartCount(userId: number): Promise<number> {
   const { rows } = await pool.query(
     'SELECT COALESCE(SUM(quantity), 0) AS total FROM cart_items WHERE user_id = $1',
@@ -437,6 +459,7 @@ export async function getCartCount(userId: number): Promise<number> {
  * Orders
  * ================================================================ */
 
+// Tạo đơn hàng mới trong cơ sở dữ liệu (sử dụng Transactions đảm bảo tính nhất quán của stock)
 export async function createOrder(
   buyerId: number,
   totalAmount: number,
@@ -489,6 +512,7 @@ export async function createOrder(
   }
 }
 
+// Lấy danh sách đơn hàng đã mua của người dùng (phân trang và hỗ trợ tìm kiếm)
 export async function getOrdersByBuyer(
   buyerId: number,
   limit: number,
@@ -552,6 +576,7 @@ export async function getOrdersByBuyer(
   };
 }
 
+// Lấy thông tin chi tiết của một đơn hàng theo ID kèm danh sách sản phẩm
 export async function getOrderById(orderId: number): Promise<OrderWithItems | null> {
   const { rows: orderRows } = await pool.query(
     `SELECT *, NOT EXISTS (
@@ -579,6 +604,7 @@ export async function getOrderById(orderId: number): Promise<OrderWithItems | nu
   };
 }
 
+// Lấy danh sách đơn hàng mà người bán hàng nhận được từ người mua
 export async function getOrdersBySeller(
   sellerId: number,
   limit: number,
@@ -611,6 +637,7 @@ export async function getOrdersBySeller(
   };
 }
 
+// Cập nhật trạng thái của đơn hàng (có hỗ trợ lý do hủy đơn hàng)
 export async function updateOrderStatus(orderId: number, status: string, reason?: string): Promise<boolean> {
   const sets = ['status = $1', 'updated_at = NOW()'];
   const params: unknown[] = [status];
@@ -632,6 +659,7 @@ export async function updateOrderStatus(orderId: number, status: string, reason?
  * Reviews
  * ================================================================ */
 
+// Lấy danh sách đánh giá sản phẩm của người dùng
 export async function getProductReviews(
   productId: number,
   limit: number,
@@ -655,6 +683,7 @@ export async function getProductReviews(
   };
 }
 
+// Tạo đánh giá cho sản phẩm thuộc đơn hàng của người dùng (tự động cập nhật số liệu rating trung bình sản phẩm)
 export async function createReview(
   userId: number,
   productId: number,
@@ -694,6 +723,7 @@ export async function createReview(
   }
 }
 
+// Lấy danh sách đánh giá của một đơn hàng cụ thể từ người dùng
 export async function getOrderReviews(
   orderId: number,
   userId: number
@@ -713,6 +743,7 @@ export async function getOrderReviews(
  * Wishlist
  * ================================================================ */
 
+// Lấy danh sách các sản phẩm yêu thích (Wishlist) của người dùng
 export async function getWishlist(userId: number): Promise<WishlistItem[]> {
   const { rows } = await pool.query(
     `SELECT wi.*, p.name AS product_name, p.slug AS product_slug, p.image_url AS product_image,
@@ -731,6 +762,7 @@ export async function getWishlist(userId: number): Promise<WishlistItem[]> {
   return rows as WishlistItem[];
 }
 
+// Bật/tắt trạng thái yêu thích của một sản phẩm
 export async function toggleWishlist(userId: number, productId: number): Promise<boolean> {
   const { rows } = await pool.query(
     'SELECT id FROM wishlist_items WHERE user_id = $1 AND product_id = $2',
@@ -744,6 +776,7 @@ export async function toggleWishlist(userId: number, productId: number): Promise
   return true;
 }
 
+// Kiểm tra xem sản phẩm có nằm trong danh sách yêu thích của người dùng không
 export async function isInWishlist(userId: number, productId: number): Promise<boolean> {
   const { rows } = await pool.query(
     'SELECT id FROM wishlist_items WHERE user_id = $1 AND product_id = $2',
@@ -756,6 +789,7 @@ export async function isInWishlist(userId: number, productId: number): Promise<b
  * Bundles
  * ================================================================ */
 
+// Lấy danh sách các gói combo (bundles) đang hoạt động
 export async function getActiveBundles(limit: number): Promise<ProductBundle[]> {
   const { rows } = await pool.query(
     'SELECT * FROM product_bundles WHERE is_active = TRUE ORDER BY created_at DESC LIMIT $1',
@@ -764,6 +798,7 @@ export async function getActiveBundles(limit: number): Promise<ProductBundle[]> 
   return rows as ProductBundle[];
 }
 
+// Lấy thông tin chi tiết một gói combo sản phẩm theo slug
 export async function getBundleBySlug(slug: string): Promise<BundleWithItems | null> {
   const { rows: bundleRows } = await pool.query(
     'SELECT * FROM product_bundles WHERE slug = $1',
@@ -787,6 +822,7 @@ export async function getBundleBySlug(slug: string): Promise<BundleWithItems | n
  * Admin — duyệt sản phẩm
  * ================================================================ */
 
+// Quản trị viên lấy danh sách toàn bộ sản phẩm của hệ thống (phân trang và lọc theo trạng thái duyệt)
 export async function getAllProductsAdmin(
   limit: number,
   offset: number,
@@ -828,6 +864,7 @@ export async function getAllProductsAdmin(
   };
 }
 
+// Quản trị viên cập nhật trạng thái duyệt của sản phẩm (approved, pending, rejected)
 export async function updateProductStatus(productId: number, status: string): Promise<boolean> {
   const { rowCount } = await pool.query(
     'UPDATE products SET status = $1, updated_at = NOW() WHERE id = $2',
@@ -844,7 +881,8 @@ export async function updateProductStatus(productId: number, status: string): Pr
  * Tìm sản phẩm khớp với danh sách nguyên liệu (fuzzy ILIKE search).
  * Mỗi keyword tạo OR condition → trả về danh sách products phù hợp nhất.
  */
-export async function matchProductsByIngredients(
+  // Tìm kiếm sản phẩm phù hợp với danh sách nguyên liệu (fuzzy ILIKE search)
+  export async function matchProductsByIngredients(
   ingredientKeywords: string[],
   limit = 20
 ): Promise<ProductWithSeller[]> {
@@ -886,7 +924,8 @@ export async function matchProductsByIngredients(
 /**
  * Lấy danh sách products theo mảng IDs (cho AI recommend).
  */
-export async function getProductsByIds(ids: number[]): Promise<ProductWithSeller[]> {
+  // Lấy danh sách products theo mảng IDs (cho AI recommend)
+  export async function getProductsByIds(ids: number[]): Promise<ProductWithSeller[]> {
   if (ids.length === 0) return [];
 
   const { rows } = await pool.query(

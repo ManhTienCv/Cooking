@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { MessageCircle, Send, Store, User, ShoppingBag, ArrowRight, X, Trash2 } from 'lucide-react';
+import { MessageCircle, Send, Store, User, ShoppingBag, ArrowRight, X, Trash2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, useAnimation } from 'framer-motion';
+import { motion, useAnimation, AnimatePresence } from 'framer-motion';
+import type { PanInfo } from 'framer-motion';
 
+import type { Order, OrderItem } from '../types/marketplace';
 import { apiJson } from '../lib/api';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../lib/authEvents';
 import PageBackBar from '../components/ui/PageBackBar';
@@ -66,7 +68,7 @@ interface ConversationListItemProps {
   isActive: boolean;
   onSelect: () => void;
   getConversationName: (c: ConversationSummary) => string;
-  onDelete: (id: number) => Promise<void>;
+  onDelete: (id: number) => void;
 }
 
 function ConversationListItem({
@@ -78,7 +80,7 @@ function ConversationListItem({
 }: ConversationListItemProps) {
   const controls = useAnimation();
 
-  const handleDragEnd = async (_event: any, info: any) => {
+  const handleDragEnd = async (_event: unknown, info: PanInfo) => {
     if (info.offset.x < -40) {
       await controls.start({ x: -80, transition: { type: 'spring', stiffness: 300, damping: 30 } });
     } else {
@@ -92,13 +94,10 @@ function ConversationListItem({
       <div className="absolute inset-y-0 right-0 w-20 flex justify-end">
         <button
           type="button"
-          onClick={async (e) => {
+          onClick={(e) => {
             e.stopPropagation();
-            if (confirm('Bạn có chắc chắn muốn xóa cuộc trò chuyện này?')) {
-              await onDelete(conversation.id);
-            } else {
-              void controls.start({ x: 0, transition: { type: 'spring', stiffness: 300, damping: 30 } });
-            }
+            void controls.start({ x: 0, transition: { type: 'spring', stiffness: 300, damping: 30 } });
+            onDelete(conversation.id);
           }}
           className="bg-red-500 text-white w-full h-full flex flex-col items-center justify-center gap-1 hover:bg-red-600 transition-colors"
         >
@@ -160,7 +159,8 @@ export default function Messages() {
     const id = Number(searchParams.get('orderId') || 0);
     return id > 0 ? id : null;
   });
-  const [referencedOrder, setReferencedOrder] = useState<any>(null);
+  const [referencedOrder, setReferencedOrder] = useState<Order | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const initialConvIdRef = useRef<number | null>(null);
 
   const activeIdRef = useRef<number | null>(null);
@@ -271,7 +271,7 @@ export default function Messages() {
       setReferencedOrder(null);
       return;
     }
-    apiJson<{ success: boolean; order: any }>(`/api/marketplace/orders/${referencedOrderId}`)
+    apiJson<{ success: boolean; order: Order }>(`/api/marketplace/orders/${referencedOrderId}`)
       .then((d) => {
         if (d.success && d.order) {
           setReferencedOrder(d.order);
@@ -558,7 +558,7 @@ export default function Messages() {
                         Đơn hàng ({ORDER_STATUS_LABEL[referencedOrder.status] ?? referencedOrder.status}) — {Number(referencedOrder.total_amount).toLocaleString('vi-VN')}đ
                       </p>
                       <p className="text-xs text-gray-600 dark:text-slate-300 truncate">
-                        Sản phẩm: {referencedOrder.items?.map((i: any) => i.product_name).join(', ')}
+                        Sản phẩm: {referencedOrder.items?.map((i: OrderItem) => i.product_name).join(', ')}
                       </p>
                     </div>
                   </div>
@@ -566,7 +566,7 @@ export default function Messages() {
                     <button
                       type="button"
                       onClick={async () => {
-                        const messageText = `Tôi muốn hỏi về đơn hàng (${referencedOrder.items?.map((i: any) => i.product_name).join(', ')}) với tổng giá trị ${Number(referencedOrder.total_amount).toLocaleString('vi-VN')}đ.`;
+                        const messageText = `Tôi muốn hỏi về đơn hàng (${referencedOrder.items?.map((i: OrderItem) => i.product_name).join(', ')}) với tổng giá trị ${Number(referencedOrder.total_amount).toLocaleString('vi-VN')}đ.`;
                         try {
                           setSending(true);
                           const data = await apiJson<{ message: ChatMessage }>(
@@ -638,6 +638,58 @@ export default function Messages() {
           )}
         </main>
       </div>
+
+      <AnimatePresence>
+        {deleteConfirmId !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 10, opacity: 0 }}
+              transition={{ type: 'spring', duration: 0.3 }}
+              className="w-full max-w-sm overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="rounded-full bg-red-100 p-3 dark:bg-red-950/30 text-red-600 dark:text-red-400">
+                  <AlertTriangle className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-950 dark:text-white">Xóa cuộc trò chuyện?</h3>
+                  <p className="mt-2 text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
+                    Lưu ý: Thao tác này sẽ xóa vĩnh viễn toàn bộ lịch sử tin nhắn của cuộc trò chuyện này và không thể khôi phục.
+                  </p>
+                </div>
+                <div className="flex w-full gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmId(null)}
+                    className="flex-1 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800 rounded-full transition-colors"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (deleteConfirmId !== null) {
+                        await onDeleteConversation(deleteConfirmId);
+                        setDeleteConfirmId(null);
+                      }
+                    }}
+                    className="flex-1 py-3 text-sm font-semibold bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors shadow-sm shadow-red-500/20"
+                  >
+                    Xóa
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

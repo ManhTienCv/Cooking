@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { apiJson } from '../../../lib/api';
 import toast from 'react-hot-toast';
+import AdminConfirmModal from '../components/AdminConfirmModal';
 
 interface Category {
   id: number;
@@ -16,6 +17,22 @@ export default function CategoriesTab() {
   const [editing, setEditing] = useState<Category | null>(null);
   const [newName, setNewName] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    type: 'approve' | 'danger' | 'warning' | 'info';
+    confirmText: string;
+    onConfirm: () => Promise<void> | void;
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    type: 'info',
+    confirmText: '',
+    onConfirm: () => {}
+  });
 
   const loadCategories = useCallback(async () => {
     setLoading(true);
@@ -72,15 +89,27 @@ export default function CategoriesTab() {
     }
   };
 
-  const onDelete = async (id: number) => {
-    if (!window.confirm('Xóa danh mục này?')) return;
-    try {
-      await apiJson(`/api/admin/categories/${type}/${id}`, { method: 'DELETE' });
-      toast.success('Đã xóa');
-      void loadCategories();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Lỗi khi xóa');
-    }
+  const triggerDelete = (id: number, name: string) => {
+    setConfirmModal({
+      open: true,
+      title: 'Xóa danh mục',
+      type: 'danger',
+      confirmText: 'Đồng ý xóa',
+      description: (
+        <span>
+          Bạn có chắc chắn muốn xóa danh mục <strong>{name}</strong> không? Hành động này có thể ảnh hưởng đến các nội dung thuộc danh mục này.
+        </span>
+      ),
+      onConfirm: async () => {
+        try {
+          await apiJson(`/api/admin/categories/${type}/${id}`, { method: 'DELETE' });
+          toast.success('Đã xóa');
+          void loadCategories();
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : 'Lỗi khi xóa');
+        }
+      }
+    });
   };
 
   const startEdit = (cat: Category) => {
@@ -178,7 +207,7 @@ export default function CategoriesTab() {
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => void onDelete(cat.id)}
+                    onClick={() => triggerDelete(cat.id, cat.name)}
                     className="p-2 text-slate-400 hover:text-red-500 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -189,6 +218,16 @@ export default function CategoriesTab() {
           </div>
         )}
       </div>
+
+      <AdminConfirmModal
+        open={confirmModal.open}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        onClose={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }

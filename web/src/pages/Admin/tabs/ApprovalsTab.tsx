@@ -1,11 +1,28 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '../../../lib/api';
 import toast from 'react-hot-toast';
+import AdminConfirmModal from '../components/AdminConfirmModal';
 
 export default function ApprovalsTab() {
   const [recipes, setRecipes] = useState<Record<string, unknown>[]>([]);
   const [blogs, setBlogs] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    type: 'approve' | 'danger' | 'warning' | 'info';
+    confirmText: string;
+    onConfirm: () => Promise<void> | void;
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    type: 'info',
+    confirmText: '',
+    onConfirm: () => {}
+  });
 
   const loadApprovals = useCallback(async () => {
     setLoading(true);
@@ -27,17 +44,30 @@ export default function ApprovalsTab() {
     void loadApprovals();
   }, [loadApprovals]);
 
-  const onApproveReject = useCallback(async (type: 'recipes' | 'blogs', id: string, action: 'approve' | 'reject') => {
-    const label = action === 'approve' ? 'Duyệt' : 'Từ chối';
-    if (!window.confirm(`Bạn có chắc chắn muốn ${label} nội dung này?`)) return;
+  const triggerApproveReject = useCallback((type: 'recipes' | 'blogs', id: string, action: 'approve' | 'reject', title: string) => {
+    const isApprove = action === 'approve';
+    const contentLabel = type === 'recipes' ? 'công thức' : 'bài viết';
     
-    try {
-      await apiJson(`/api/admin/${type}/${id}/${action}`, { method: 'POST' });
-      toast.success(`Đã ${label.toLowerCase()} thành công!`);
-      void loadApprovals();
-    } catch {
-      toast.error('Có lỗi xảy ra, vui lòng thử lại.');
-    }
+    setConfirmModal({
+      open: true,
+      title: isApprove ? `Duyệt ${contentLabel}` : `Từ chối ${contentLabel}`,
+      type: isApprove ? 'approve' : 'danger',
+      confirmText: isApprove ? 'Đồng ý duyệt' : 'Đồng ý từ chối',
+      description: (
+        <span>
+          Bạn có chắc chắn muốn <strong>{isApprove ? 'duyệt' : 'từ chối'}</strong> {contentLabel} <strong>{title}</strong> này không?
+        </span>
+      ),
+      onConfirm: async () => {
+        try {
+          await apiJson(`/api/admin/${type}/${id}/${action}`, { method: 'POST' });
+          toast.success(`Đã ${isApprove ? 'duyệt' : 'từ chối'} thành công!`);
+          void loadApprovals();
+        } catch {
+          toast.error('Có lỗi xảy ra, vui lòng thử lại.');
+        }
+      }
+    });
   }, [loadApprovals]);
 
   if (loading) return <div className="p-12 text-center text-slate-500">Đang tải...</div>;
@@ -74,13 +104,13 @@ export default function ApprovalsTab() {
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <button
-                      onClick={() => void onApproveReject('recipes', String(r.id), 'approve')}
+                      onClick={() => triggerApproveReject('recipes', String(r.id), 'approve', String(r.title))}
                       className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors"
                     >
                       Duyệt
                     </button>
                     <button
-                      onClick={() => void onApproveReject('recipes', String(r.id), 'reject')}
+                      onClick={() => triggerApproveReject('recipes', String(r.id), 'reject', String(r.title))}
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
                     >
                       Từ chối
@@ -112,13 +142,13 @@ export default function ApprovalsTab() {
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <button
-                      onClick={() => void onApproveReject('blogs', String(b.id), 'approve')}
+                      onClick={() => triggerApproveReject('blogs', String(b.id), 'approve', String(b.title))}
                       className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors"
                     >
                       Duyệt
                     </button>
                     <button
-                      onClick={() => void onApproveReject('blogs', String(b.id), 'reject')}
+                      onClick={() => triggerApproveReject('blogs', String(b.id), 'reject', String(b.title))}
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
                     >
                       Từ chối
@@ -130,6 +160,16 @@ export default function ApprovalsTab() {
           </div>
         </div>
       </div>
+
+      <AdminConfirmModal
+        open={confirmModal.open}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        onClose={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }

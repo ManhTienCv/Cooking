@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Wallet, CheckCircle, XCircle, Ban } from 'lucide-react';
 import { apiJson } from '../../../lib/api';
 import toast from 'react-hot-toast';
+import AdminConfirmModal from '../components/AdminConfirmModal';
 
 interface WithdrawalRequest {
   id: string;
@@ -28,6 +29,22 @@ export default function AdminWithdrawals() {
   const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    type: 'approve' | 'danger' | 'warning' | 'info';
+    confirmText: string;
+    onConfirm: () => Promise<void> | void;
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    type: 'info',
+    confirmText: '',
+    onConfirm: () => {}
+  });
+
   const load = async () => {
     try {
       const res = await apiJson<{ withdrawals: WithdrawalRequest[] }>('/api/admin/withdrawals');
@@ -43,20 +60,41 @@ export default function AdminWithdrawals() {
     void load();
   }, []);
 
-  const handleAction = async (id: string, action: 'approve' | 'reject') => {
-    const label = action === 'approve' ? 'duyệt' : 'từ chối';
-    if (!window.confirm(`Xác nhận ${label} lệnh rút tiền này?`)) return;
-    try {
-      await apiJson(`/api/admin/withdrawals/${id}/${action}`, {
-        method: 'POST',
-        body: JSON.stringify({ adminNote: '' }),
-      });
-      toast.success(`Đã ${label} lệnh rút tiền.`);
-      void load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Lỗi thao tác');
-    }
-  };
+  const triggerAction = useCallback((id: string, action: 'approve' | 'reject', request: WithdrawalRequest) => {
+    const isApprove = action === 'approve';
+    const amountStr = Number(request.amount).toLocaleString('vi-VN') + ' đ';
+
+    setConfirmModal({
+      open: true,
+      title: isApprove ? 'Duyệt yêu cầu rút tiền' : 'Từ chối yêu cầu rút tiền',
+      type: isApprove ? 'approve' : 'danger',
+      confirmText: isApprove ? 'Đồng ý duyệt' : 'Đồng ý từ chối',
+      description: (
+        <div className="space-y-2">
+          <p>
+            Bạn có chắc chắn muốn <strong>{isApprove ? 'duyệt' : 'từ chối'}</strong> lệnh rút tiền này?
+          </p>
+          <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl text-xs space-y-1 font-medium text-slate-655 dark:text-slate-300">
+            <p>Khách hàng: <strong>{request.fullname}</strong></p>
+            <p>Số tiền: <strong className="text-red-500">{amountStr}</strong></p>
+            <p>Ngân hàng: <strong>{request.bank_name} ({request.account_number})</strong></p>
+          </div>
+        </div>
+      ),
+      onConfirm: async () => {
+        try {
+          await apiJson(`/api/admin/withdrawals/${id}/${action}`, {
+            method: 'POST',
+            body: JSON.stringify({ adminNote: '' }),
+          });
+          toast.success(`Đã ${isApprove ? 'duyệt' : 'từ chối'} lệnh rút tiền.`);
+          void load();
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : 'Lỗi thao tác');
+        }
+      }
+    });
+  }, []);
 
   if (loading) {
     return (
@@ -120,14 +158,14 @@ export default function AdminWithdrawals() {
                         {(r.status === 'pending' || r.status === 'processing') && (
                           <div className="flex gap-2">
                             <button
-                              onClick={() => handleAction(r.id, 'approve')}
+                              onClick={() => triggerAction(r.id, 'approve', r)}
                               className="p-2 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
                               title="Duyệt"
                             >
                               <CheckCircle className="w-5 h-5" />
                             </button>
                             <button
-                              onClick={() => handleAction(r.id, 'reject')}
+                              onClick={() => triggerAction(r.id, 'reject', r)}
                               className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                               title="Từ chối"
                             >
@@ -144,6 +182,16 @@ export default function AdminWithdrawals() {
           </div>
         </div>
       )}
+
+      <AdminConfirmModal
+        open={confirmModal.open}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        onClose={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }

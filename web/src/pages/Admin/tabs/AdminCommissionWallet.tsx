@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { apiJson } from '../../../lib/api';
+import AdminConfirmModal from '../components/AdminConfirmModal';
 
 interface WalletStats {
   balance: number;
@@ -44,6 +45,22 @@ export default function AdminCommissionWallet() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [bankLogos, setBankLogos] = useState<Record<string, string>>({});
+
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    type: 'approve' | 'danger' | 'warning' | 'info';
+    confirmText: string;
+    onConfirm: () => Promise<void> | void;
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    type: 'info',
+    confirmText: '',
+    onConfirm: () => {}
+  });
 
   useEffect(() => {
     fetch('https://api.vietqr.io/v2/banks')
@@ -88,15 +105,27 @@ export default function AdminCommissionWallet() {
     void loadData();
   }, [loadData]);
 
-  const handleDeleteBank = async (id: string) => {
-    if (!window.confirm('Xác nhận xóa tài khoản ngân hàng liên kết này?')) return;
-    try {
-      await apiJson(`/api/admin/ewallet/banks/${id}`, { method: 'DELETE' });
-      toast.success('Đã xóa tài khoản ngân hàng liên kết.');
-      void loadData();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Lỗi xóa tài khoản.');
-    }
+  const handleDeleteBank = (bank: BankAccount) => {
+    setConfirmModal({
+      open: true,
+      title: 'Xóa tài khoản ngân hàng',
+      type: 'danger',
+      confirmText: 'Đồng ý xóa',
+      description: (
+        <span>
+          Bạn có chắc chắn muốn xóa tài khoản ngân hàng <strong>{bank.bank_name} ({bank.account_number})</strong> liên kết này không?
+        </span>
+      ),
+      onConfirm: async () => {
+        try {
+          await apiJson(`/api/admin/ewallet/banks/${bank.id}`, { method: 'DELETE' });
+          toast.success('Đã xóa tài khoản ngân hàng liên kết.');
+          void loadData();
+        } catch (err: unknown) {
+          toast.error(err instanceof Error ? err.message : 'Lỗi xóa tài khoản.');
+        }
+      }
+    });
   };
 
   if (loading) {
@@ -215,7 +244,7 @@ export default function AdminCommissionWallet() {
                     </p>
                   </div>
                   <button
-                    onClick={() => handleDeleteBank(b.id)}
+                    onClick={() => handleDeleteBank(b)}
                     className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
                     title="Hủy liên kết"
                   >
@@ -282,6 +311,15 @@ export default function AdminCommissionWallet() {
       {/* Modals */}
       <AdminAddBankModal open={showAddBank} onClose={() => setShowAddBank(false)} onSuccess={loadData} />
       <AdminWithdrawModal open={showWithdraw} onClose={() => setShowWithdraw(false)} onSuccess={loadData} banks={banks} maxAmount={balance} bankLogos={bankLogos} />
+      <AdminConfirmModal
+        open={confirmModal.open}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        onClose={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }

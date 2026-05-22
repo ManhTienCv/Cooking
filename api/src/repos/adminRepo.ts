@@ -184,7 +184,7 @@ export const adminRepo = {
     );
 
     const countResult = await pool.query(
-      `SELECT COUNT(*) AS total FROM products p ${where}`,
+      `SELECT COUNT(*) AS total FROM products p ${status !== 'all' ? 'WHERE p.status = $1' : ''}`,
       status !== 'all' ? [status] : []
     );
 

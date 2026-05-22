@@ -110,32 +110,55 @@ export default function HealthDetail() {
       }
 
       try {
-        let keyword = '';
+        const allNames: string[] = [];
         if (mealsData.mealPlan) {
-          const allNames: string[] = [];
           Object.values(mealsData.mealPlan).forEach(day => {
             Object.values(day).forEach(meals => {
-              (meals as MealItem[]).forEach(m => allNames.push(m.name));
+              (meals as MealItem[]).forEach(m => {
+                const trimmed = m.name.trim();
+                if (trimmed && !allNames.includes(trimmed)) allNames.push(trimmed);
+              });
             });
           });
-          
-          if (allNames.length > 0) {
-            const firstDish = allNames[0];
-            const words = firstDish.split(' ').filter(w => w.length > 2);
-            if (words.length > 0) {
-              keyword = words[words.length - 1]; // Use the last meaningful word for better matching
-            } else {
-              keyword = firstDish.split(' ')[0] || '';
-            }
-          }
         }
 
-        const endpoint = keyword ? `/api/recipes/search?q=${encodeURIComponent(keyword)}&limit=6` : '/api/recipes/featured?limit=6';
-        const recipesRes = await apiFetch(endpoint);
-        const recipesJson = await recipesRes.json();
-        if (recipesJson.recipes) {
-          setSuggestions(recipesJson.recipes);
+        const collected: RecipeSuggestion[] = [];
+        const seenIds = new Set<number>();
+        const MAX = 6;
+
+        for (const dishName of allNames) {
+          if (collected.length >= MAX) break;
+          try {
+            const res = await apiFetch(`/api/recipes/search?q=${encodeURIComponent(dishName)}&limit=${MAX}`);
+            const json = await res.json();
+            if (Array.isArray(json.recipes)) {
+              for (const r of json.recipes as RecipeSuggestion[]) {
+                if (!seenIds.has(r.id) && collected.length < MAX) {
+                  seenIds.add(r.id);
+                  collected.push(r);
+                }
+              }
+            }
+          } catch { /* skip this keyword */ }
         }
+
+        // Fallback: if no results from dish names, try featured
+        if (collected.length === 0) {
+          try {
+            const res = await apiFetch('/api/recipes/featured?limit=6');
+            const json = await res.json();
+            if (Array.isArray(json.recipes)) {
+              for (const r of json.recipes as RecipeSuggestion[]) {
+                if (!seenIds.has(r.id) && collected.length < MAX) {
+                  seenIds.add(r.id);
+                  collected.push(r);
+                }
+              }
+            }
+          } catch { /* ignore */ }
+        }
+
+        setSuggestions(collected);
       } catch { /* ignore */ }
     } catch {
       setPlan(null);
@@ -377,23 +400,47 @@ export default function HealthDetail() {
 
     return (
       <div className="flex flex-col items-center">
-        <svg viewBox="0 0 42 42" className="w-48 h-48 donut transform -rotate-90">
-          <circle cx="21" cy="21" r={r} fill="transparent" stroke="currentColor" className="text-gray-100 dark:text-slate-700" strokeWidth="6"></circle>
-          {pPct > 0 && <circle cx="21" cy="21" r={r} fill="transparent" stroke="#3b82f6" strokeWidth="6" strokeDasharray={`${pPct} ${100-pPct}`} strokeDashoffset="0"></circle>}
-          {cPct > 0 && <circle cx="21" cy="21" r={r} fill="transparent" stroke="#eab308" strokeWidth="6" strokeDasharray={`${cPct} ${100-cPct}`} strokeDashoffset={`-${pPct}`}></circle>}
-          {fPct > 0 && <circle cx="21" cy="21" r={r} fill="transparent" stroke="#ef4444" strokeWidth="6" strokeDasharray={`${fPct} ${100-fPct}`} strokeDashoffset={`-${pPct + cPct}`}></circle>}
-        </svg>
-        <div className="flex space-x-4 mt-6 text-sm font-medium text-gray-700 dark:text-gray-300">
-          <div className="flex items-center"><span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>Protein</div>
-          <div className="flex items-center"><span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>Carbs</div>
-          <div className="flex items-center"><span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>Fat</div>
+        <div className="relative">
+          <svg viewBox="0 0 42 42" className="w-48 h-48 donut transform -rotate-90">
+            <circle cx="21" cy="21" r={r} fill="transparent" stroke="currentColor" className="text-gray-100 dark:text-slate-700" strokeWidth="6"></circle>
+            {pPct > 0 && <circle cx="21" cy="21" r={r} fill="transparent" stroke="#3b82f6" strokeWidth="6" strokeDasharray={`${pPct} ${100-pPct}`} strokeDashoffset="0"></circle>}
+            {cPct > 0 && <circle cx="21" cy="21" r={r} fill="transparent" stroke="#eab308" strokeWidth="6" strokeDasharray={`${cPct} ${100-cPct}`} strokeDashoffset={`-${pPct}`}></circle>}
+            {fPct > 0 && <circle cx="21" cy="21" r={r} fill="transparent" stroke="#ef4444" strokeWidth="6" strokeDasharray={`${fPct} ${100-fPct}`} strokeDashoffset={`-${pPct + cPct}`}></circle>}
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
+            <span className="text-2xl font-bold text-black dark:text-white">{nutritionTotals.calories}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">kcal</span>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 mt-6 w-full max-w-[240px]">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center">
+              <span className="w-3 h-3 bg-blue-500 rounded-full mr-2 shrink-0"></span>
+              <span className="font-medium text-gray-700 dark:text-gray-300">Protein</span>
+            </div>
+            <span className="font-bold text-gray-900 dark:text-white">{protein}g <span className="text-gray-400 dark:text-gray-500 font-normal">({Math.round(pPct)}%)</span></span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center">
+              <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2 shrink-0"></span>
+              <span className="font-medium text-gray-700 dark:text-gray-300">Carbs</span>
+            </div>
+            <span className="font-bold text-gray-900 dark:text-white">{carbs}g <span className="text-gray-400 dark:text-gray-500 font-normal">({Math.round(cPct)}%)</span></span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center">
+              <span className="w-3 h-3 bg-red-500 rounded-full mr-2 shrink-0"></span>
+              <span className="font-medium text-gray-700 dark:text-gray-300">Fat</span>
+            </div>
+            <span className="font-bold text-gray-900 dark:text-white">{fat}g <span className="text-gray-400 dark:text-gray-500 font-normal">({Math.round(fPct)}%)</span></span>
+          </div>
         </div>
       </div>
     );
   };
 
   return (
-    <main className="min-h-screen pt-16 bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
+    <main className="min-h-screen pt-4 bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Reveal className="mb-6" y={12}>
           <Link to="/health" className="inline-flex items-center text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors">

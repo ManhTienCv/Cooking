@@ -31,6 +31,8 @@ export default function Checkout() {
     note: '',
   });
 
+  const isCheckoutPhoneInvalid = form.shipping_phone.trim() !== '' && !/^[0-9]{10}$/.test(form.shipping_phone.trim());
+
   const set = useCallback((key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value })), []);
 
@@ -232,15 +234,19 @@ export default function Checkout() {
                       type="tel"
                       required
                       value={form.shipping_phone}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/[^0-9]/g, '');
-                        if (val.length <= 10) {
-                          setForm((f) => ({ ...f, shipping_phone: val }));
-                        }
-                      }}
+                      onChange={(e) => setForm((f) => ({ ...f, shipping_phone: e.target.value }))}
                       placeholder="0912345678"
-                      className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 bg-white dark:bg-slate-800 text-black dark:text-white transition-all"
+                      className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all ${
+                        isCheckoutPhoneInvalid
+                          ? 'border-red-500 dark:border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 bg-white dark:bg-slate-800 text-black dark:text-white'
+                          : 'border-gray-200 dark:border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 bg-white dark:bg-slate-800 text-black dark:text-white'
+                      }`}
                     />
+                    {isCheckoutPhoneInvalid && (
+                      <p className="mt-1 text-xs text-red-500 font-semibold">
+                        Số điện thoại phải có đúng 10 số và không chứa ký tự.
+                      </p>
+                    )}
                   </div>
 
                   {/* Address */}

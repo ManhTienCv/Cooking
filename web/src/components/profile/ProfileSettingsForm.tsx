@@ -597,28 +597,38 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
             )}
           </div>
 
-          <form onSubmit={handleAddressSubmit} className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
-            <h3 className="mb-4 flex items-center gap-2 font-bold text-gray-950 dark:text-white"><Plus className="h-4 w-4" /> {editingAddressId ? 'Cập nhật địa chỉ' : 'Thêm địa chỉ mới'}</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <input value={addressForm.name} onChange={(e) => setAddressForm((f) => ({ ...f, name: e.target.value }))} placeholder="Họ tên người nhận" className={inputClass} />
-              <input
-                value={addressForm.phone}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  if (val.length <= 10) {
-                    setAddressForm((f) => ({ ...f, phone: val }));
-                  }
-                }}
-                placeholder="Số điện thoại"
-                className={inputClass}
-              />
-              <textarea value={addressForm.address} onChange={(e) => setAddressForm((f) => ({ ...f, address: e.target.value }))} rows={3} placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố" className={`${inputClass} resize-none md:col-span-2`} />
-            </div>
-            <div className="mt-4 flex gap-3">
-              <button type="submit" className="rounded-lg bg-black px-5 py-2 font-semibold text-white dark:bg-white dark:text-slate-950">{editingAddressId ? 'Lưu địa chỉ' : 'Thêm địa chỉ'}</button>
-              {editingAddressId && <button type="button" onClick={() => { setEditingAddressId(null); setAddressForm(blankAddress); }} className="rounded-lg border border-gray-200 px-5 py-2 font-semibold text-gray-600 dark:border-slate-700 dark:text-slate-300">Hủy</button>}
-            </div>
-          </form>
+          {(() => {
+            const isAddressPhoneInvalid = addressForm.phone.trim() !== '' && !/^[0-9]{10}$/.test(addressForm.phone.trim());
+            const addressPhoneInputClass = isAddressPhoneInvalid
+              ? 'w-full rounded-lg border border-red-500 bg-white px-4 py-2 font-medium text-gray-900 transition-all placeholder:text-gray-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-red-500 dark:bg-slate-950/40 dark:text-white dark:placeholder:text-slate-500'
+              : inputClass;
+            return (
+              <form onSubmit={handleAddressSubmit} className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
+                <h3 className="mb-4 flex items-center gap-2 font-bold text-gray-950 dark:text-white"><Plus className="h-4 w-4" /> {editingAddressId ? 'Cập nhật địa chỉ' : 'Thêm địa chỉ mới'}</h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <input value={addressForm.name} onChange={(e) => setAddressForm((f) => ({ ...f, name: e.target.value }))} placeholder="Họ tên người nhận" className={inputClass} />
+                  <div>
+                    <input
+                      value={addressForm.phone}
+                      onChange={(e) => setAddressForm((f) => ({ ...f, phone: e.target.value }))}
+                      placeholder="Số điện thoại"
+                      className={addressPhoneInputClass}
+                    />
+                    {isAddressPhoneInvalid && (
+                      <p className="mt-1 text-xs text-red-500 font-semibold">
+                        Số điện thoại phải có đúng 10 số và không chứa ký tự.
+                      </p>
+                    )}
+                  </div>
+                  <textarea value={addressForm.address} onChange={(e) => setAddressForm((f) => ({ ...f, address: e.target.value }))} rows={3} placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố" className={`${inputClass} resize-none md:col-span-2`} />
+                </div>
+                <div className="mt-4 flex gap-3">
+                  <button type="submit" className="rounded-lg bg-black px-5 py-2 font-semibold text-white dark:bg-white dark:text-slate-950">{editingAddressId ? 'Lưu địa chỉ' : 'Thêm địa chỉ'}</button>
+                  {editingAddressId && <button type="button" onClick={() => { setEditingAddressId(null); setAddressForm(blankAddress); }} className="rounded-lg border border-gray-200 px-5 py-2 font-semibold text-gray-600 dark:border-slate-700 dark:text-slate-300">Hủy</button>}
+                </div>
+              </form>
+            );
+          })()}
         </div>
       )}
 

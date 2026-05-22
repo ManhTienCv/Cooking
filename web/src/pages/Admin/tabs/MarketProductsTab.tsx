@@ -31,6 +31,8 @@ function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
 }
 
+import AdminConfirmModal from '../components/AdminConfirmModal';
+
 export default function MarketProductsTab() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [total, setTotal] = useState(0);
@@ -39,6 +41,22 @@ export default function MarketProductsTab() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [sortBy, setSortBy] = useState('newest');
+
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    type: 'approve' | 'danger' | 'warning' | 'info';
+    confirmText: string;
+    onConfirm: () => Promise<void> | void;
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    type: 'info',
+    confirmText: '',
+    onConfirm: () => {}
+  });
 
   const loadProducts = useCallback(async () => {
     setLoading(true);
@@ -59,16 +77,28 @@ export default function MarketProductsTab() {
     void loadProducts();
   }, [loadProducts]);
 
-  const onMarketProductAction = useCallback(async (id: number, action: 'approve' | 'reject') => {
-    const label = action === 'approve' ? 'Duyệt' : 'Từ chối';
-    if (!window.confirm(`Bạn có chắc chắn muốn ${label} sản phẩm này?`)) return;
-    try {
-      await apiJson(`/api/admin/marketplace/products/${id}/${action}`, { method: 'POST' });
-      toast.success(`Đã ${label.toLowerCase()} thành công!`);
-      void loadProducts();
-    } catch {
-      toast.error('Có lỗi xảy ra, vui lòng thử lại.');
-    }
+  const triggerMarketProductAction = useCallback((id: number, action: 'approve' | 'reject', name: string) => {
+    const isApprove = action === 'approve';
+    setConfirmModal({
+      open: true,
+      title: isApprove ? 'Duyệt sản phẩm' : 'Từ chối sản phẩm',
+      type: isApprove ? 'approve' : 'danger',
+      confirmText: isApprove ? 'Đồng ý duyệt' : 'Đồng ý từ chối',
+      description: (
+        <span>
+          Bạn có chắc chắn muốn <strong>{isApprove ? 'duyệt' : 'từ chối'}</strong> sản phẩm <strong>{name}</strong> này không?
+        </span>
+      ),
+      onConfirm: async () => {
+        try {
+          await apiJson(`/api/admin/marketplace/products/${id}/${action}`, { method: 'POST' });
+          toast.success(`Đã ${isApprove ? 'duyệt' : 'từ chối' } thành công!`);
+          void loadProducts();
+        } catch {
+          toast.error('Có lỗi xảy ra, vui lòng thử lại.');
+        }
+      }
+    });
   }, [loadProducts]);
 
   const filteredProducts = useMemo(() => {
@@ -217,13 +247,13 @@ export default function MarketProductsTab() {
                         {p.status === 'pending' && (
                           <>
                             <button
-                              onClick={() => void onMarketProductAction(p.id, 'approve')}
+                              onClick={() => triggerMarketProductAction(p.id, 'approve', p.name)}
                               className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-colors"
                             >
                               Duyệt
                             </button>
                             <button
-                              onClick={() => void onMarketProductAction(p.id, 'reject')}
+                              onClick={() => triggerMarketProductAction(p.id, 'reject', p.name)}
                               className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors"
                             >
                               Từ chối
@@ -247,6 +277,16 @@ export default function MarketProductsTab() {
           </div>
         )}
       </div>
+
+      <AdminConfirmModal
+        open={confirmModal.open}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        onClose={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+      />
     </div>
   );
 }

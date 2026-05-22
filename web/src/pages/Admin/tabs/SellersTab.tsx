@@ -3,6 +3,7 @@ import { apiJson } from '../../../lib/api';
 import toast from 'react-hot-toast';
 import DataTableTab from './DataTableTab';
 import { CheckCircle2, XCircle } from 'lucide-react';
+import AdminConfirmModal from '../components/AdminConfirmModal';
 
 interface AdminSeller {
   user_id: number;
@@ -19,6 +20,22 @@ export default function SellersTab() {
   const [sellers, setSellers] = useState<AdminSeller[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    type: 'approve' | 'danger' | 'warning' | 'info';
+    confirmText: string;
+    onConfirm: () => Promise<void> | void;
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    type: 'info',
+    confirmText: '',
+    onConfirm: () => {}
+  });
 
   const loadSellers = useCallback(async () => {
     setLoading(true);
@@ -37,19 +54,31 @@ export default function SellersTab() {
     void loadSellers();
   }, [loadSellers]);
 
-  const onVerifySeller = useCallback(async (id: number, verify: boolean) => {
+  const triggerVerifySeller = useCallback((id: number, verify: boolean, storeName: string) => {
     const label = verify ? 'Duyệt' : 'Bỏ duyệt';
-    if (!window.confirm(`Bạn có chắc chắn muốn ${label} người bán này?`)) return;
-    try {
-      await apiJson(`/api/admin/marketplace/sellers/${id}/verify`, {
-        method: 'POST',
-        body: JSON.stringify({ is_verified: verify }),
-      });
-      toast.success(`Đã ${label.toLowerCase()} thành công!`);
-      void loadSellers();
-    } catch {
-      toast.error('Có lỗi xảy ra, vui lòng thử lại.');
-    }
+    setConfirmModal({
+      open: true,
+      title: verify ? 'Phê duyệt người bán' : 'Hủy duyệt người bán',
+      type: verify ? 'approve' : 'warning',
+      confirmText: verify ? 'Đồng ý duyệt' : 'Đồng ý hủy duyệt',
+      description: (
+        <span>
+          Bạn có chắc chắn muốn <strong>{label.toLowerCase()}</strong> cửa hàng <strong>{storeName}</strong> của người bán này?
+        </span>
+      ),
+      onConfirm: async () => {
+        try {
+          await apiJson(`/api/admin/marketplace/sellers/${id}/verify`, {
+            method: 'POST',
+            body: JSON.stringify({ is_verified: verify }),
+          });
+          toast.success(`Đã ${label.toLowerCase()} thành công!`);
+          void loadSellers();
+        } catch {
+          toast.error('Có lỗi xảy ra, vui lòng thử lại.');
+        }
+      }
+    });
   }, [loadSellers]);
 
   if (loading) return <div className="p-12 text-center text-slate-500">Đang tải...</div>;
@@ -101,14 +130,14 @@ export default function SellersTab() {
           <div className="flex justify-end gap-2">
             {!row.is_verified ? (
               <button
-                onClick={() => void onVerifySeller(Number(row.user_id), true)}
+                onClick={() => triggerVerifySeller(Number(row.user_id), true, String(row.store_name))}
                 className="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-colors"
               >
                 Duyệt hồ sơ
               </button>
             ) : (
               <button
-                onClick={() => void onVerifySeller(Number(row.user_id), false)}
+                onClick={() => triggerVerifySeller(Number(row.user_id), false, String(row.store_name))}
                 className="px-4 py-1.5 border border-slate-200 dark:border-slate-700 text-slate-500 text-xs font-bold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
                 Hủy duyệt
@@ -116,6 +145,16 @@ export default function SellersTab() {
             )}
           </div>
         )}
+      />
+
+      <AdminConfirmModal
+        open={confirmModal.open}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        onClose={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
       />
     </div>
   );

@@ -7,7 +7,7 @@ import { useCart } from '../../contexts/CartContext';
 import { apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
 import { scrollWindowToTop } from '../../lib/scroll';
-import { loadProfilePreferences, type LinkedBankAccount, type SavedAddress } from '../../lib/profilePreferences';
+import { loadProfilePreferences, saveProfilePreferences, type LinkedBankAccount, type SavedAddress } from '../../lib/profilePreferences';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../../lib/authEvents';
 
 function formatPrice(n: number) {
@@ -39,7 +39,46 @@ export default function Checkout() {
   const loadMe = useCallback(async () => {
     try {
       const me = await apiJson<{ authenticated: boolean; user?: { email: string; full_name?: string } }>('/api/auth/me');
-      const prefs = loadProfilePreferences(me.user?.email);
+      let prefs = loadProfilePreferences(me.user?.email);
+
+      // Đồng bộ ví Cook
+      try {
+        const walletBanks = await apiJson<{ accounts?: { id: string; bank_name: string; account_number: string; account_name: string; is_default: boolean }[] }>('/api/ewallet/banks');
+        if (walletBanks && Array.isArray(walletBanks.accounts)) {
+          let updated = false;
+          walletBanks.accounts.forEach((acc) => {
+            const match = prefs.banks.find(
+              (b) =>
+                b.bankName.toLowerCase() === acc.bank_name.toLowerCase() &&
+                (b.accountNumber.replace(/\s+/g, '') === acc.account_number.replace(/\s+/g, '') ||
+                 b.accountNumber.replace(/\s+/g, '').endsWith(acc.account_number.replace(/\s+/g, '').slice(-4)) ||
+                 acc.account_number.replace(/\s+/g, '').endsWith(b.accountNumber.replace(/\s+/g, '').slice(-4)))
+            );
+            if (!match) {
+              prefs.banks.push({
+                id: String(acc.id),
+                bankName: acc.bank_name,
+                accountName: acc.account_name,
+                accountNumber: acc.account_number,
+                isDefault: acc.is_default,
+              });
+              updated = true;
+            } else {
+              if (match.isDefault !== acc.is_default) {
+                match.isDefault = acc.is_default;
+                updated = true;
+              }
+            }
+          });
+          if (updated) {
+            saveProfilePreferences(me.user?.email, prefs);
+            prefs = loadProfilePreferences(me.user?.email);
+          }
+        }
+      } catch {
+        // ignore
+      }
+
       setSavedAddresses(prefs.addresses);
       setLinkedBanks(prefs.banks);
 

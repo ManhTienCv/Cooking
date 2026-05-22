@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Bell,
   ChevronRight,
+  ChevronDown,
   CreditCard,
   MapPin,
   MessageCircle,
@@ -55,6 +56,15 @@ interface VietQrBank {
   shortName: string;
   name: string;
   logo: string;
+}
+
+interface EWalletBankAccount {
+  id: string;
+  bank_bin: string;
+  bank_name: string;
+  account_number: string;
+  account_name: string;
+  is_default: boolean;
 }
 
 interface PayoutAccountSync {
@@ -153,6 +163,8 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
 
   useEffect(() => {
     if (!user?.email) return;
+    
+    // 1. Sync seller payout accounts
     apiJson<{ payout_accounts?: PayoutAccountSync[] }>('/api/marketplace/seller/settings')
       .then((data) => {
         if (data && Array.isArray(data.payout_accounts)) {
@@ -189,6 +201,44 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
       .catch(() => {
         // Not a seller, ignore
       });
+
+    // 2. Sync Cook Wallet bank accounts
+    apiJson<{ accounts?: EWalletBankAccount[] }>('/api/ewallet/banks')
+      .then((data) => {
+        if (data && Array.isArray(data.accounts)) {
+          const prefs = loadProfilePreferences(user.email);
+          let updated = false;
+          data.accounts.forEach((acc) => {
+            const match = prefs.banks.find(
+              (b) =>
+                b.bankName.toLowerCase() === acc.bank_name.toLowerCase() &&
+                (b.accountNumber.replace(/\s+/g, '') === acc.account_number.replace(/\s+/g, '') ||
+                 b.accountNumber.replace(/\s+/g, '').endsWith(acc.account_number.replace(/\s+/g, '').slice(-4)) ||
+                 acc.account_number.replace(/\s+/g, '').endsWith(b.accountNumber.replace(/\s+/g, '').slice(-4)))
+            );
+            if (!match) {
+              prefs.banks.push({
+                id: String(acc.id),
+                bankName: acc.bank_name,
+                accountName: acc.account_name,
+                accountNumber: acc.account_number,
+                isDefault: acc.is_default,
+              });
+              updated = true;
+            } else {
+              if (match.isDefault !== acc.is_default) {
+                match.isDefault = acc.is_default;
+                updated = true;
+              }
+            }
+          });
+          if (updated) {
+            setBanks(prefs.banks);
+            saveProfilePreferences(user.email, prefs);
+          }
+        }
+      })
+      .catch(() => {});
   }, [user?.email]);
 
   useEffect(() => {
@@ -662,7 +712,7 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="relative">
                 <input
-                  className={inputClass}
+                  className={`${inputClass} pr-10`}
                   placeholder="Tên ngân hàng"
                   value={bankQuery}
                   onChange={(e) => {
@@ -672,6 +722,13 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
                   }}
                   onFocus={() => setShowBankList(true)}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowBankList(!showBankList)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
                 {showBankList && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowBankList(false)} />

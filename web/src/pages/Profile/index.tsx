@@ -21,10 +21,12 @@ import ConfirmModal from '../../components/ui/ConfirmModal';
 const PROFILE_PAGE_SIZE = 6;
 type PagedTab = 'recipes' | 'posts' | 'saved' | 'wishlist';
 
+// Định dạng giá tiền sản phẩm (VND)
 function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
 }
 
+// Component trang cá nhân chính của người dùng
 export default function Profile() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -74,6 +76,7 @@ export default function Profile() {
   const [editingRecipeId, setEditingRecipeId] = useState<number | null>(null);
   const [recipeCategories, setRecipeCategories] = useState<RecipeCategory[]>([]);
 
+  // Tải dữ liệu tương ứng với tab đang chọn (Công thức, Bài viết, Đã lưu, Wishlist, Kế hoạch, Cửa hàng)
   const loadTabData = useCallback(async (tab: string) => {
     const getPageQuery = (pagedTab: string) => {
       const q = new URLSearchParams();
@@ -147,6 +150,7 @@ export default function Profile() {
     }
   }, [activeTab, user, loadTabData]);
 
+  // Tải thông tin tài khoản người dùng hiện tại và số liệu thống kê (Followers, Following, v.v.)
   const loadMe = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -220,6 +224,7 @@ export default function Profile() {
     }
   }, [isLoading, user, navigate]);
 
+  // Xử lý đăng xuất tài khoản, xóa phiên làm việc và điều hướng về trang chủ
   const handleLogout = async () => {
     try {
       await apiFetch('/api/auth/logout', { method: 'POST' });
@@ -233,6 +238,7 @@ export default function Profile() {
     navigate('/', { replace: true });
   };
 
+  // Xử lý xóa công thức nấu ăn của chính người dùng sau khi xác nhận
   const handleDeleteRecipe = (id: number) => {
     setConfirmModal({
       isOpen: true,
@@ -251,6 +257,7 @@ export default function Profile() {
     });
   };
 
+  // Xử lý xóa bài viết diễn đàn của chính người dùng sau khi xác nhận
   const handleDeletePost = (id: number) => {
     setConfirmModal({
       isOpen: true,
@@ -269,11 +276,13 @@ export default function Profile() {
     });
   };
 
+  // Cập nhật trang hiện tại của tab đang được hiển thị phân trang
   const handleProfilePageChange = (tab: PagedTab | 'shop', page: number) => {
     setPageByTab((prev) => ({ ...prev, [tab]: page }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Xử lý xóa sản phẩm ra khỏi danh sách yêu thích
   const handleRemoveWishlist = async (productId: number) => {
     try {
       await apiFetch(`/api/marketplace/wishlist/${productId}`, { method: 'POST' });

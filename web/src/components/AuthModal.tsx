@@ -29,6 +29,56 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
 
   const sanitizeOtp = (value: string) => value.replace(/\D/g, '').slice(0, 6);
 
+  const handleOtpKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (
+      e.key === 'Backspace' ||
+      e.key === 'Delete' ||
+      e.key === 'ArrowLeft' ||
+      e.key === 'ArrowRight' ||
+      e.key === 'Tab' ||
+      e.key === 'Enter' ||
+      e.key === 'Escape' ||
+      e.key === 'Home' ||
+      e.key === 'End' ||
+      e.ctrlKey ||
+      e.metaKey ||
+      e.altKey
+    ) {
+      return;
+    }
+    // Ngăn chặn các phím không phải là số
+    if (!/^\d$/.test(e.key)) {
+      e.preventDefault();
+      return;
+    }
+    // Ngăn chặn nhập tiếp khi đã đủ 6 số (trừ trường hợp đang bôi đen để ghi đè)
+    const target = e.currentTarget;
+    const start = target.selectionStart;
+    const end = target.selectionEnd;
+    const hasSelection = start !== null && end !== null && start !== end;
+    if (target.value.length >= 6 && !hasSelection) {
+      e.preventDefault();
+    }
+  };
+
+  const handleRegisterOtpChange = (e: React.FormEvent<HTMLInputElement>) => {
+    const target = e.currentTarget;
+    const sanitized = sanitizeOtp(target.value);
+    if (target.value !== sanitized) {
+      target.value = sanitized;
+    }
+    setRegisterOtp(sanitized);
+  };
+
+  const handleResetOtpChange = (e: React.FormEvent<HTMLInputElement>) => {
+    const target = e.currentTarget;
+    const sanitized = sanitizeOtp(target.value);
+    if (target.value !== sanitized) {
+      target.value = sanitized;
+    }
+    setResetOtp(sanitized);
+  };
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -322,8 +372,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                 autoCorrect="off"
                 spellCheck={false}
                 value={registerOtp}
-                onChange={(e) => setRegisterOtp(sanitizeOtp(e.target.value))}
-                onInput={(e) => setRegisterOtp(sanitizeOtp((e.target as HTMLInputElement).value))}
+                onChange={handleRegisterOtpChange}
+                onInput={handleRegisterOtpChange}
+                onKeyDown={handleOtpKeyDown}
                 className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-4 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm tracking-widest text-center font-bold text-black dark:text-white"
               />
               <button
@@ -490,8 +541,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                   autoCorrect="off"
                   spellCheck={false}
                   value={resetOtp}
-                  onChange={(e) => setResetOtp(sanitizeOtp(e.target.value))}
-                  onInput={(e) => setResetOtp(sanitizeOtp((e.target as HTMLInputElement).value))}
+                  onChange={handleResetOtpChange}
+                  onInput={handleResetOtpChange}
+                  onKeyDown={handleOtpKeyDown}
                   className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
                 />
                 <input

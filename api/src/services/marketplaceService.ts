@@ -246,6 +246,11 @@ export async function createOrder(userId: number, body: Record<string, unknown>)
     throw { status: 422, message: 'Vui lòng nhập đầy đủ thông tin giao hàng.' };
   }
 
+  const phoneRegex = /^[0-9]{10}$/;
+  if (!phoneRegex.test(shippingPhone)) {
+    throw { status: 422, message: 'Số điện thoại nhận hàng phải bao gồm đúng 10 chữ số và không chứa ký tự khác.' };
+  }
+
   // Lấy giỏ hàng
   const cartItems = await marketplaceRepo.getCartItems(userId);
   if (cartItems.length === 0) {

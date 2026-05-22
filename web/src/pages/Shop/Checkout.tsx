@@ -106,6 +106,11 @@ export default function Checkout() {
       toast.error('Vui lòng nhập đầy đủ thông tin giao hàng');
       return;
     }
+    const phoneVal = form.shipping_phone.trim();
+    if (!/^[0-9]{10}$/.test(phoneVal)) {
+      toast.error('Số điện thoại phải bao gồm đúng 10 chữ số và không chứa ký tự khác.');
+      return;
+    }
     if (form.payment_method === 'bank_transfer' && linkedBanks.length > 0 && !selectedBankId) {
       toast.error('Vui lòng chọn tài khoản ngân hàng liên kết');
       return;
@@ -227,8 +232,13 @@ export default function Checkout() {
                       type="tel"
                       required
                       value={form.shipping_phone}
-                      onChange={set('shipping_phone')}
-                      placeholder="0912 345 678"
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        if (val.length <= 10) {
+                          setForm((f) => ({ ...f, shipping_phone: val }));
+                        }
+                      }}
+                      placeholder="0912345678"
                       className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 bg-white dark:bg-slate-800 text-black dark:text-white transition-all"
                     />
                   </div>

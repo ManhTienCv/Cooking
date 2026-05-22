@@ -18,6 +18,7 @@ import type { ProfileUser } from './types';
 import { apiFetch, apiJson } from '../../lib/api';
 import { notifyAuthChanged } from '../../lib/authEvents';
 import { useTheme } from '../../hooks/useTheme';
+import toast from 'react-hot-toast';
 import {
   loadProfilePreferences,
   saveProfilePreferences,
@@ -340,10 +341,16 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
     e.preventDefault();
     if (!addressForm.name.trim() || !addressForm.phone.trim() || !addressForm.address.trim()) return;
 
+    const phoneVal = addressForm.phone.trim();
+    if (!/^[0-9]{10}$/.test(phoneVal)) {
+      toast.error('Số điện thoại phải bao gồm đúng 10 chữ số và không chứa ký tự khác.');
+      return;
+    }
+
     const nextAddress: SavedAddress = {
       id: editingAddressId ?? makeId(),
       name: addressForm.name.trim(),
-      phone: addressForm.phone.trim(),
+      phone: phoneVal,
       address: addressForm.address.trim(),
       isDefault: editingAddressId
         ? addresses.find((item) => item.id === editingAddressId)?.isDefault ?? addresses.length === 0
@@ -594,7 +601,17 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
             <h3 className="mb-4 flex items-center gap-2 font-bold text-gray-950 dark:text-white"><Plus className="h-4 w-4" /> {editingAddressId ? 'Cập nhật địa chỉ' : 'Thêm địa chỉ mới'}</h3>
             <div className="grid gap-4 md:grid-cols-2">
               <input value={addressForm.name} onChange={(e) => setAddressForm((f) => ({ ...f, name: e.target.value }))} placeholder="Họ tên người nhận" className={inputClass} />
-              <input value={addressForm.phone} onChange={(e) => setAddressForm((f) => ({ ...f, phone: e.target.value }))} placeholder="Số điện thoại" className={inputClass} />
+              <input
+                value={addressForm.phone}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  if (val.length <= 10) {
+                    setAddressForm((f) => ({ ...f, phone: val }));
+                  }
+                }}
+                placeholder="Số điện thoại"
+                className={inputClass}
+              />
               <textarea value={addressForm.address} onChange={(e) => setAddressForm((f) => ({ ...f, address: e.target.value }))} rows={3} placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố" className={`${inputClass} resize-none md:col-span-2`} />
             </div>
             <div className="mt-4 flex gap-3">

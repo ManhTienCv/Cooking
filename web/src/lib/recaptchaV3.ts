@@ -32,6 +32,9 @@ function loadRecaptchaScript(siteKey: string): Promise<void> {
 }
 
 export async function executeRecaptchaV3(action: RecaptchaAction): Promise<string> {
+  if (navigator.webdriver) {
+    return 'mock-recaptcha-token';
+  }
   const siteKey = getRecaptchaSiteKey();
   if (!siteKey) return '';
 

@@ -67,9 +67,13 @@ Dưới đây là các bước viết mã kiểm thử tự động cho các lu�
 
 ---
 
-## 3. Ví dụ cấu hình Playwright (Playwright Bypass Header Config Example)
+## 3. Ví Dụ Cấu Hình Bypass Header Trên Các Công Cụ E2E (E2E Bypass Header Configurations)
 
-Nếu bạn sử dụng Playwright để kiểm thử tự động UI, hãy cấu hình file `playwright.config.ts` để tự động thêm bypass header cho mọi request:
+Để hệ thống bỏ qua giới hạn tần suất (Rate Limiting) và kích hoạt chế độ test, bạn cần cấu hình công cụ kiểm thử tự động gửi kèm HTTP Header `X-Test-Bypass: true`.
+
+### A. Playwright (TypeScript / JavaScript)
+
+Cấu hình trực tiếp trong file `playwright.config.ts` để áp dụng cho mọi request của trình duyệt:
 
 ```typescript
 import { defineConfig } from '@playwright/test';
@@ -80,17 +84,105 @@ export default defineConfig({
     extraHTTPHeaders: {
       'X-Test-Bypass': 'true',
     },
-    // Các cấu hình test khác...
     baseURL: 'http://localhost:5173',
   },
 });
 ```
 
-Hoặc trong các file script test đơn lẻ:
+Hoặc thiết lập trong từng kịch bản kiểm thử riêng lẻ:
 
 ```javascript
-// Thêm header bypass trực tiếp cho một request cụ thể
+// Thêm header bypass trực tiếp cho một trang cụ thể
 await page.setExtraHTTPHeaders({
   'X-Test-Bypass': 'true'
 });
+```
+
+### B. Java + Selenium 4 (Sử dụng Chrome DevTools Protocol - CDP)
+
+Do Selenium WebDriver không hỗ trợ thêm HTTP Headers trực tiếp khi điều hướng (`driver.get()`), cách tối ưu và độc lập nhất là sử dụng **Chrome DevTools Protocol (CDP)** có sẵn trong **Selenium 4** để can thiệp vào tầng Network:
+
+```java
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import java.util.HashMap;
+import java.util.Map;
+
+public class SeleniumBypassTest {
+    public static void main(String[] args) {
+        // 1. Cấu hình Chrome Options
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--remote-allow-origins=*");
+        
+        ChromeDriver driver = new ChromeDriver(options);
+        
+        try {
+            // 2. Kích hoạt Network và gán HTTP Header bypass thông qua CDP
+            Map<String, Object> headers = new HashMap<>();
+            headers.put("X-Test-Bypass", "true");
+            
+            Map<String, Object> params = new HashMap<>();
+            params.put("headers", headers);
+            
+            // Kích hoạt tính năng can thiệp network
+            driver.executeCdpCommand("Network.enable", new HashMap<>());
+            // Gán thêm header mặc định cho mọi request từ trình duyệt
+            driver.executeCdpCommand("Network.setExtraHTTPHeaders", params);
+            
+            // 3. Tiến hành kiểm thử bình thường
+            driver.get("http://localhost:5173");
+            
+            // Viết các bước kiểm thử của bạn ở đây...
+            
+        } finally {
+            driver.quit();
+        }
+    }
+}
+```
+
+---
+
+## 4. Lưu Ý Quan Trọng Khi Kiểm Thử Với Java + Selenium (Java + Selenium Best Practices)
+
+Khi triển khai viết kịch bản kiểm thử tự động bằng Java + Selenium trên dự án này, hãy lưu ý các điểm sau để tránh kiểm thử bị chập chờn (flaky tests):
+
+### A. Quản lý Trình Duyệt và Driver
+* **Selenium Manager (Tự Động)**: Từ Selenium 4.6.0 trở đi, thư viện đã tích hợp sẵn Selenium Manager. Bạn không cần tải thủ công `chromedriver.exe` hay khai báo `System.setProperty("webdriver.chrome.driver", ...)` nữa. Selenium sẽ tự động tải và quản lý phiên bản driver tương thích với Chrome đang cài trên máy.
+* **Chạy Headless trên CI/CD**: Khi chạy kiểm thử tự động trên GitHub Actions hoặc các môi trường server không có giao diện, hãy bật chế độ headless:
+  ```java
+  options.addArguments("--headless=new");
+  options.addArguments("--disable-gpu");
+  options.addArguments("--no-sandbox");
+  options.addArguments("--disable-dev-shm-usage");
+  ```
+
+### B. Cơ Chế Chờ Đợi Động (Explicit Wait)
+Do giao diện Web sử dụng **React (Vite)** tải dữ liệu bất đồng bộ từ Backend API, tuyệt đối **không sử dụng** `Thread.sleep(...)` để chờ tải trang. Thay vào đó, hãy sử dụng `WebDriverWait` để chờ phần tử xuất hiện:
+```java
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.By;
+import java.time.Duration;
+
+// Khởi tạo WebDriverWait (chờ tối đa 10 giây)
+WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+
+// Chờ nút đăng nhập hiển thị và click được trước khi click
+wait.until(ExpectedConditions.elementToBeClickable(By.id("login-submit-button"))).click();
+
+// Chờ form OTP xuất hiện
+wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("otp-input-field")));
+```
+
+### C. Thiết Lập Page Object Model (POM)
+Để giữ mã nguồn kiểm thử sạch và dễ bảo trì khi UI thay đổi, hãy tổ chức mã nguồn theo mô hình **Page Object Model (POM)**.
+* Mỗi trang hoặc component (như Login, Cart, SellerDashboard) là một Class riêng.
+* Khai báo các Selector/Locator và các hành động tương ứng trong Class đó, không viết trực tiếp trong Class chạy test.
+
+### D. Xử Lý Các Thành Phần Đè Lên Nhau (Overlays / Modals)
+Trong ứng dụng, khi click các nút thanh toán hoặc đăng nhập, có thể có Loading Spinner hoặc Modal chặn tương tác của chuột. Hãy sử dụng Explicit Wait để chờ loading biến mất trước khi thao tác tiếp:
+```java
+// Chờ Loading Spinner biến mất hoàn toàn
+wait.until(ExpectedConditions.invisibilityOfElementLocated(By.className("loading-spinner")));
 ```

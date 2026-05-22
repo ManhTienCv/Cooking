@@ -464,7 +464,8 @@ export async function createOrder(
   buyerId: number,
   totalAmount: number,
   shipping: { name: string; phone: string; address: string; payment_method: string; note: string | null },
-  items: { product_id: number; seller_id: number; product_name: string; product_image: string | null; quantity: number; unit_price: number; subtotal: number }[]
+  items: { product_id: number; seller_id: number; product_name: string; product_image: string | null; quantity: number; unit_price: number; subtotal: number }[],
+  cartItemIds?: number[] | null
 ): Promise<number> {
   const client = await pool.connect();
   try {
@@ -500,7 +501,14 @@ export async function createOrder(
     }
 
     // Xóa cart
-    await client.query('DELETE FROM cart_items WHERE user_id = $1', [buyerId]);
+    if (cartItemIds && cartItemIds.length > 0) {
+      await client.query(
+        'DELETE FROM cart_items WHERE user_id = $1 AND id = ANY($2::int[])',
+        [buyerId, cartItemIds]
+      );
+    } else {
+      await client.query('DELETE FROM cart_items WHERE user_id = $1', [buyerId]);
+    }
 
     await client.query('COMMIT');
     return orderId;
@@ -609,7 +617,7 @@ export async function getOrdersBySeller(
   sellerId: number,
   limit: number,
   offset: number
-): Promise<{ rows: Order[]; total: number }> {
+): Promise<{ rows: OrderWithItems[]; total: number }> {
   const dataSql = `SELECT DISTINCT o.*, NOT EXISTS (
       SELECT 1 FROM order_items oi2 
       JOIN products p ON oi2.product_id = p.id 
@@ -631,8 +639,25 @@ export async function getOrdersBySeller(
     pool.query(countSql, [sellerId]),
   ]);
 
+  const orders = dataResult.rows as OrderWithItems[];
+  if (orders.length > 0) {
+    const orderIds = orders.map(o => o.id);
+    const { rows: itemRows } = await pool.query(
+      `SELECT oi.*, p.slug AS product_slug
+       FROM order_items oi
+       LEFT JOIN products p ON p.id = oi.product_id
+       WHERE oi.order_id = ANY($1) AND oi.seller_id = $2
+       ORDER BY oi.id`,
+      [orderIds, sellerId]
+    );
+
+    for (const order of orders) {
+      order.items = itemRows.filter(item => item.order_id === order.id);
+    }
+  }
+
   return {
-    rows: dataResult.rows as Order[],
+    rows: orders,
     total: parseTotal(countResult.rows[0]?.total),
   };
 }

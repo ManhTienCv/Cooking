@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { apiJson } from '../lib/api';
 
 interface CancelOrderModalProps {
   open: boolean;
@@ -50,18 +52,12 @@ export default function CancelOrderModal({ open, orderId, onClose, onSuccess, ro
         ? JSON.stringify({ status: 'cancelled', reason: finalReason })
         : JSON.stringify({ reason: finalReason });
 
-      const response = await fetch(url, {
+      const data = await apiJson<{ success?: boolean; message?: string }>(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': document.cookie.match(/csrfToken=([^;]+)/)?.[1] || '',
-        },
         body,
       });
 
-      const data = await response.json().catch(() => ({})) as { success?: boolean; message?: string };
-
-      if (!response.ok || data.success === false) {
+      if (data.success === false) {
         throw new Error(data.message || 'Không thể hủy đơn hàng');
       }
 
@@ -75,7 +71,7 @@ export default function CancelOrderModal({ open, orderId, onClose, onSuccess, ro
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
@@ -172,6 +168,7 @@ export default function CancelOrderModal({ open, orderId, onClose, onSuccess, ro
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

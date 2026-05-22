@@ -24,11 +24,6 @@ function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
 }
 
-function formatOrderCode(order: Order) {
-  const year = new Date(order.created_at).getFullYear();
-  return `DH-${year}-${String(order.id).padStart(6, '0')}`;
-}
-
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
@@ -158,9 +153,6 @@ export default function Orders() {
 
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-full bg-gray-100 dark:bg-slate-700 px-3 py-0.5 text-xs font-extrabold tracking-wide text-gray-700 dark:text-slate-200">
-                              {formatOrderCode(order)}
-                            </span>
                             <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${st.color}`}>{st.label}</span>
                           </div>
 

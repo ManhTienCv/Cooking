@@ -82,7 +82,7 @@ export function SellerShippingModal({ open, orderId, onClose, onSuccess }: Selle
           >
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-700 pb-3">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Truck className="w-5 h-5 text-amber-500" /> Bắt đầu giao đơn #{orderId}
+                <Truck className="w-5 h-5 text-amber-500" /> Bắt đầu giao đơn hàng
               </h3>
               <button
                 onClick={onClose}
@@ -250,7 +250,7 @@ export function SellerTransitLogModal({ open, orderId, onClose, onSuccess }: Sel
           >
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-700 pb-3">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Navigation className="w-5 h-5 text-amber-500 animate-pulse" /> Lộ trình bưu cục đơn #{orderId}
+                <Navigation className="w-5 h-5 text-amber-500 animate-pulse" /> Lộ trình bưu cục đơn hàng
               </h3>
               <button
                 onClick={onClose}

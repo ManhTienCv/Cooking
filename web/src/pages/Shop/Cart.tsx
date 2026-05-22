@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, Minus, Plus, ShoppingBag, ArrowRight, Store } from 'lucide-react';
@@ -13,8 +13,24 @@ function formatPrice(n: number) {
 }
 
 export default function Cart() {
-  const { items, total, loading, updateItem, removeItem, clearAll } = useCart();
+  const { items, loading, updateItem, removeItem, clearAll } = useCart();
   const [removing, setRemoving] = useState<number | null>(null);
+
+  // Keep track of selected items
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  // Automatically sync selection with cart items
+  useEffect(() => {
+    setSelectedIds(prev => {
+      const itemIds = items.map(i => i.id);
+      const newIds = itemIds.filter(id => !prev.includes(id));
+      const existingIds = prev.filter(id => itemIds.includes(id));
+      if (newIds.length > 0 || existingIds.length !== prev.length) {
+        return [...existingIds, ...newIds];
+      }
+      return prev;
+    });
+  }, [items]);
 
   const handleQuantity = useCallback(async (itemId: number, newQty: number) => {
     if (newQty < 1) return;
@@ -55,6 +71,17 @@ export default function Cart() {
     return acc;
   }, {}), [items]);
 
+  const selectedItems = useMemo(() => {
+    return items.filter(item => selectedIds.includes(item.id));
+  }, [items, selectedIds]);
+
+  const selectedTotal = useMemo(() => {
+    return selectedItems.reduce((sum, item) => {
+      const price = item.product_sale_price ?? item.product_price;
+      return sum + price * item.quantity;
+    }, 0);
+  }, [selectedItems]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50/60 to-orange-50/40 dark:from-slate-900 dark:to-slate-800 transition-colors">
       <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border-b border-white/20 dark:border-slate-800/20">
@@ -87,8 +114,23 @@ export default function Cart() {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Clear button */}
-              <div className="flex justify-end">
+              {/* Select All & Clear */}
+              <div className="flex items-center justify-between bg-white dark:bg-slate-800/80 px-5 py-3 rounded-2xl border border-gray-100 dark:border-slate-700/50">
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={items.length > 0 && selectedIds.length === items.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(items.map(i => i.id));
+                      } else {
+                        setSelectedIds([]);
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                  />
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Chọn tất cả ({items.length} sản phẩm)</span>
+                </label>
                 <button onClick={handleClear} className="text-sm text-red-500 hover:text-red-600 font-medium transition-colors">
                   Xóa tất cả
                 </button>
@@ -99,9 +141,24 @@ export default function Cart() {
                 <Reveal key={storeName} y={12}>
                   <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-gray-100 dark:border-slate-700/50 overflow-hidden">
                     {/* Store header */}
-                    <div className="px-5 py-3 bg-gray-50 dark:bg-slate-700/40 border-b border-gray-100 dark:border-slate-700/50 flex items-center gap-2">
-                      <Store className="w-4 h-4 text-amber-500" />
-                      <span className="font-semibold text-sm text-gray-900 dark:text-white">{storeName}</span>
+                    <div className="px-5 py-3 bg-gray-50 dark:bg-slate-700/40 border-b border-gray-100 dark:border-slate-700/50 flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={storeItems.every(item => selectedIds.includes(item.id))}
+                        onChange={(e) => {
+                          const storeItemIds = storeItems.map(i => i.id);
+                          if (e.target.checked) {
+                            setSelectedIds(prev => Array.from(new Set([...prev, ...storeItemIds])));
+                          } else {
+                            setSelectedIds(prev => prev.filter(id => !storeItemIds.includes(id)));
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Store className="w-4 h-4 text-amber-500" />
+                        <span className="font-semibold text-sm text-gray-900 dark:text-white">{storeName}</span>
+                      </div>
                     </div>
 
                     {/* Items */}
@@ -114,8 +171,22 @@ export default function Cart() {
                             layout
                             exit={{ opacity: 0, x: -40 }}
                             transition={{ duration: 0.25 }}
-                            className="flex gap-4 p-5 border-b last:border-b-0 border-gray-50 dark:border-slate-700/30"
+                            className="flex items-center gap-4 p-5 border-b last:border-b-0 border-gray-50 dark:border-slate-700/30"
                           >
+                            {/* Checkbox */}
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(item.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedIds(prev => [...prev, item.id]);
+                                } else {
+                                  setSelectedIds(prev => prev.filter(id => id !== item.id));
+                                }
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer shrink-0"
+                            />
+
                             {/* Image */}
                             <Link to={`/shop/${item.product_id}`} onClick={scrollWindowToTop} className="shrink-0">
                               <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-700">
@@ -184,8 +255,8 @@ export default function Cart() {
 
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Tạm tính ({items.length} sp)</span>
-                    <span className="font-medium text-gray-900 dark:text-white">{formatPrice(total)}</span>
+                    <span className="text-gray-500 dark:text-gray-400">Tạm tính ({selectedItems.length} sp)</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{formatPrice(selectedTotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500 dark:text-gray-400">Phí vận chuyển</span>
@@ -193,14 +264,24 @@ export default function Cart() {
                   </div>
                   <div className="border-t border-gray-100 dark:border-slate-700 pt-3 flex justify-between">
                     <span className="font-bold text-gray-900 dark:text-white">Tổng cộng</span>
-                    <span className="text-xl font-extrabold text-red-600 dark:text-red-400">{formatPrice(total)}</span>
+                    <span className="text-xl font-extrabold text-red-600 dark:text-red-400">{formatPrice(selectedTotal)}</span>
                   </div>
                 </div>
 
                 <Link
                   to="/checkout"
-                  onClick={scrollWindowToTop}
-                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold hover:bg-gray-800 dark:hover:bg-gray-100 transition-all shadow-lg"
+                  state={{ cartItemIds: selectedIds }}
+                  onClick={(e) => {
+                    if (selectedIds.length === 0) {
+                      e.preventDefault();
+                      toast.error('Vui lòng chọn ít nhất một sản phẩm để thanh toán');
+                      return;
+                    }
+                    scrollWindowToTop();
+                  }}
+                  className={`w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold hover:bg-gray-800 dark:hover:bg-gray-100 transition-all shadow-lg ${
+                    selectedIds.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   Thanh toán <ArrowRight className="w-4 h-4" />
                 </Link>

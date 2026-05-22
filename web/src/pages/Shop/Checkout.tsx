@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Building2, CreditCard, MapPin, Phone, User, FileText, ArrowLeft, CheckCircle, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -15,8 +15,27 @@ function formatPrice(n: number) {
 }
 
 export default function Checkout() {
-  const { items, total, refresh } = useCart();
+  const { items: allCartItems, refresh } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const state = location.state as { cartItemIds?: number[] } | null;
+  const cartItemIds = useMemo(() => state?.cartItemIds || [], [state]);
+
+  const items = useMemo(() => {
+    if (cartItemIds.length > 0) {
+      return allCartItems.filter((item) => cartItemIds.includes(item.id));
+    }
+    return allCartItems;
+  }, [allCartItems, cartItemIds]);
+
+  const total = useMemo(() => {
+    return items.reduce((sum, item) => {
+      const price = item.product_sale_price ?? item.product_price;
+      return sum + price * item.quantity;
+    }, 0);
+  }, [items]);
+
   const [submitting, setSubmitting] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [linkedBanks, setLinkedBanks] = useState<LinkedBankAccount[]>([]);
@@ -161,7 +180,13 @@ export default function Checkout() {
     try {
       const result = await apiJson<{ success: boolean; order_id: number; total_amount: number }>(
         '/api/marketplace/orders',
-        { method: 'POST', body: JSON.stringify(form) }
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            ...form,
+            cart_item_ids: cartItemIds.length > 0 ? cartItemIds : undefined,
+          }),
+        }
       );
 
       // If paying with CookPay, call pay-order API

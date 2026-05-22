@@ -88,7 +88,7 @@ export function NotificationProvider({ children, role }: { children: ReactNode; 
             addNotification({
               type: 'new_order',
               title: 'Đơn hàng mới!',
-              message: `Đơn #${order.id} — ${Number(order.total_amount).toLocaleString('vi-VN')}đ`,
+              message: `Đơn hàng mới trị giá ${Number(order.total_amount).toLocaleString('vi-VN')}đ`,
               orderId: order.id,
             });
           }

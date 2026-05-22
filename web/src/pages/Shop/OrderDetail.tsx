@@ -30,11 +30,6 @@ function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
 }
 
-function formatOrderCode(order: Order) {
-  const year = new Date(order.created_at).getFullYear();
-  return `DH-${year}-${String(order.id).padStart(6, '0')}`;
-}
-
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<(Order & { items: OrderItem[] }) | null>(null);
@@ -246,12 +241,10 @@ export default function OrderDetail() {
                 {order.items.length > 1 && ` và ${order.items.length - 1} sản phẩm khác`}
               </>
             ) : (
-              `Đơn hàng ${formatOrderCode(order)}`
+              'Đơn hàng'
             )}
           </h1>
           <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-2 font-medium">
-            <span className="font-semibold text-gray-700 dark:text-gray-300">Mã đơn: {formatOrderCode(order)}</span>
-            <span>•</span>
             <span>{new Date(order.created_at).toLocaleString('vi-VN')}</span>
           </div>
         </div>
@@ -512,7 +505,7 @@ export default function OrderDetail() {
                 <MessageCircle className="w-4 h-4 text-amber-500" /> Trao đổi với cửa hàng
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Có vấn đề với đơn hàng? Nhắn tin trực tiếp — cuộc trò chuyện sẽ gắn với đơn #{order.id}.
+                Có vấn đề với đơn hàng? Nhắn tin trực tiếp.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 {orderSellers.map(({ sellerId, productNames }) => (

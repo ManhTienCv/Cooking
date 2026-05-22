@@ -107,10 +107,13 @@ export async function createConversation(
 
 export async function listConversationsForUser(userId: number): Promise<ChatConversationSummary[]> {
   const { rows } = await pool.query(
-    `SELECT c.*,
-        p.name AS product_name,
-        p.slug AS product_slug,
-        o.status AS order_status,
+    `SELECT c.id, c.buyer_id, c.seller_id, c.created_at, c.updated_at,
+        c.buyer_last_read_at, c.seller_last_read_at,
+        lo.latest_order_id AS order_id,
+        lo.latest_order_status AS order_status,
+        lo.latest_order_products AS product_name,
+        NULL::varchar AS product_slug,
+        NULL::int AS product_id,
         ub.full_name AS buyer_name,
         ub.avatar_url AS buyer_avatar_url,
         us.full_name AS seller_name,
@@ -133,11 +136,26 @@ export async function listConversationsForUser(userId: number): Promise<ChatConv
             )
         ) AS unread_count
      FROM chat_conversations c
-     LEFT JOIN products p ON p.id = c.product_id
-     LEFT JOIN orders o ON o.id = c.order_id
      JOIN users ub ON ub.id = c.buyer_id
      JOIN users us ON us.id = c.seller_id
      LEFT JOIN seller_profiles sp ON sp.user_id = c.seller_id
+     LEFT JOIN LATERAL (
+       SELECT 
+         o.id AS latest_order_id, 
+         o.status AS latest_order_status,
+         (
+           SELECT string_agg(product_name, ', ') 
+           FROM order_items 
+           WHERE order_id = o.id
+         ) AS latest_order_products
+       FROM orders o
+       WHERE o.buyer_id = c.buyer_id
+         AND EXISTS (
+           SELECT 1 FROM order_items oi WHERE oi.order_id = o.id AND oi.seller_id = c.seller_id
+         )
+       ORDER BY o.created_at DESC, o.id DESC
+       LIMIT 1
+     ) lo ON TRUE
      LEFT JOIN LATERAL (
        SELECT message, sender_id, created_at
        FROM chat_messages
@@ -157,10 +175,13 @@ export async function getConversationSummaryById(
   userId: number
 ): Promise<ChatConversationSummary | null> {
   const { rows } = await pool.query(
-    `SELECT c.*,
-        p.name AS product_name,
-        p.slug AS product_slug,
-        o.status AS order_status,
+    `SELECT c.id, c.buyer_id, c.seller_id, c.created_at, c.updated_at,
+        c.buyer_last_read_at, c.seller_last_read_at,
+        lo.latest_order_id AS order_id,
+        lo.latest_order_status AS order_status,
+        lo.latest_order_products AS product_name,
+        NULL::varchar AS product_slug,
+        NULL::int AS product_id,
         ub.full_name AS buyer_name,
         ub.avatar_url AS buyer_avatar_url,
         us.full_name AS seller_name,
@@ -183,11 +204,26 @@ export async function getConversationSummaryById(
             )
         ) AS unread_count
      FROM chat_conversations c
-     LEFT JOIN products p ON p.id = c.product_id
-     LEFT JOIN orders o ON o.id = c.order_id
      JOIN users ub ON ub.id = c.buyer_id
      JOIN users us ON us.id = c.seller_id
      LEFT JOIN seller_profiles sp ON sp.user_id = c.seller_id
+     LEFT JOIN LATERAL (
+       SELECT 
+         o.id AS latest_order_id, 
+         o.status AS latest_order_status,
+         (
+           SELECT string_agg(product_name, ', ') 
+           FROM order_items 
+           WHERE order_id = o.id
+         ) AS latest_order_products
+       FROM orders o
+       WHERE o.buyer_id = c.buyer_id
+         AND EXISTS (
+           SELECT 1 FROM order_items oi WHERE oi.order_id = o.id AND oi.seller_id = c.seller_id
+         )
+       ORDER BY o.created_at DESC, o.id DESC
+       LIMIT 1
+     ) lo ON TRUE
      LEFT JOIN LATERAL (
        SELECT message, sender_id, created_at
        FROM chat_messages

@@ -40,7 +40,8 @@ export default function Navbar() {
   const [authInitialSignUp, setAuthInitialSignUp] = useState(false);
   const [me, setMe] = useState<MeState | null>(null);
   const [messageUnreadCount, setMessageUnreadCount] = useState(0);
-  const [pendingCount, setPendingCount] = useState(0);
+  const [buyerPendingCount, setBuyerPendingCount] = useState(0);
+  const [sellerPendingCount, setSellerPendingCount] = useState(0);
   const { count: cartCount } = useCart();
   const location = useLocation();
   const navigate = useNavigate();
@@ -75,14 +76,17 @@ export default function Navbar() {
 
   const loadPendingOrdersCount = useCallback(async () => {
     if (!me?.authenticated) {
-      setPendingCount(0);
+      setBuyerPendingCount(0);
+      setSellerPendingCount(0);
       return;
     }
     try {
-      const data = await apiJson<{ pendingCount: number }>('/api/marketplace/orders/pending-count');
-      setPendingCount(data.pendingCount ?? 0);
+      const data = await apiJson<{ pendingCount: number; buyerPending?: number; sellerPending?: number }>('/api/marketplace/orders/pending-count');
+      setBuyerPendingCount(data.buyerPending ?? 0);
+      setSellerPendingCount(data.sellerPending ?? 0);
     } catch {
-      setPendingCount(0);
+      setBuyerPendingCount(0);
+      setSellerPendingCount(0);
     }
   }, [me?.authenticated]);
 
@@ -97,7 +101,8 @@ export default function Navbar() {
       return;
     }
     setMessageUnreadCount(0);
-    setPendingCount(0);
+    setBuyerPendingCount(0);
+    setSellerPendingCount(0);
   }, [me, loadMessageUnread, loadPendingOrdersCount]);
 
   useEffect(() => {
@@ -114,7 +119,8 @@ export default function Navbar() {
       if (detail.authenticated === false) {
         setMe({ authenticated: false });
         setMessageUnreadCount(0);
-        setPendingCount(0);
+        setBuyerPendingCount(0);
+        setSellerPendingCount(0);
         return;
       }
       void refreshMe();
@@ -168,7 +174,8 @@ export default function Navbar() {
     resetCsrfCache();
     setMe({ authenticated: false });
     setMessageUnreadCount(0);
-    setPendingCount(0);
+    setBuyerPendingCount(0);
+    setSellerPendingCount(0);
     notifyAuthChanged({ authenticated: false });
     setIsMenuOpen(false);
     if (location.pathname !== '/') {
@@ -242,9 +249,9 @@ export default function Navbar() {
                     />
                   )}
                   <Store className="w-5 h-5 relative z-10" />
-                  {pendingCount > 0 && (
+                  {sellerPendingCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm z-20 animate-pulse">
-                      {pendingCount}
+                      {sellerPendingCount}
                     </span>
                   )}
                 </Link>
@@ -271,9 +278,9 @@ export default function Navbar() {
                   />
                 )}
                 <ShoppingCart className="w-5 h-5 relative z-10" />
-                {(pendingCount > 0 || cartCount > 0) && (
+                {cartCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm z-20">
-                    {pendingCount > 0 ? pendingCount : (cartCount > 99 ? '99+' : cartCount)}
+                    {cartCount > 99 ? '99+' : cartCount}
                   </span>
                 )}
               </Link>
@@ -301,9 +308,9 @@ export default function Navbar() {
                       />
                     )}
                     <MessageCircle className="w-5 h-5 relative z-10" />
-                    {(pendingCount > 0 || messageUnreadCount > 0) && (
+                    {messageUnreadCount > 0 && (
                       <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm z-20">
-                        {pendingCount > 0 ? pendingCount : (messageUnreadCount > 99 ? '99+' : messageUnreadCount)}
+                        {messageUnreadCount > 99 ? '99+' : messageUnreadCount}
                       </span>
                     )}
                   </Link>
@@ -327,9 +334,9 @@ export default function Navbar() {
                       />
                     )}
                     <ClipboardList className="w-5 h-5 relative z-10" />
-                    {pendingCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm z-20 animate-pulse">
-                        {pendingCount}
+                    {buyerPendingCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1 shadow-sm z-20">
+                        {buyerPendingCount}
                       </span>
                     )}
                   </Link>

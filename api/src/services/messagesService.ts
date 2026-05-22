@@ -15,12 +15,13 @@ export async function startConversation(userId: number, body: Record<string, unk
   const orderId = orderIdRaw ? Number(orderIdRaw) : null;
   const productId = productIdRaw ? Number(productIdRaw) : null;
   let sellerId = sellerIdRaw ? Number(sellerIdRaw) : 0;
+  let buyerId = userId;
 
   if (orderId) {
     const access = await marketplaceRepo.userHasOrderAccess(orderId, userId);
     if (!access) throw { status: 403, message: 'Không có quyền trao đổi về đơn hàng này.' };
 
-    const buyerId = access.buyerId;
+    buyerId = access.buyerId;
     if (userId === buyerId) {
       if (!sellerId) {
         if (access.sellerIds.length === 1) {
@@ -37,37 +38,24 @@ export async function startConversation(userId: number, body: Record<string, unk
     } else {
       throw { status: 403, message: 'Không có quyền trao đổi về đơn hàng này.' };
     }
-
-    if (sellerId === buyerId) throw { status: 400, message: 'Không thể nhắn tin cho chính mình.' };
-
-    let conversation = await messagesRepo.getConversationForOrder(buyerId, sellerId, orderId);
-    if (!conversation) {
-      const chatEnabled = await messagesRepo.isSellerChatEnabled(sellerId);
-      if (!chatEnabled) throw { status: 403, message: 'Cửa hàng hiện chưa mở chat với khách hàng.' };
-      conversation = await messagesRepo.createConversation(buyerId, sellerId, productId, orderId);
-    }
-
-    const summary = await messagesRepo.getConversationSummaryById(conversation.id, userId);
-    return { conversation: summary ?? conversation };
-  }
-
-  if (productId) {
+  } else if (productId) {
     const product = await marketplaceRepo.getProductById(productId);
     if (!product) throw { status: 404, message: 'Sản phẩm không tồn tại.' };
     sellerId = product.seller_id;
   }
 
   if (!sellerId) throw { status: 400, message: 'Thiếu thông tin cửa hàng.' };
-  if (sellerId === userId) throw { status: 400, message: 'Không thể nhắn tin cho chính mình.' };
+  if (sellerId === buyerId) throw { status: 400, message: 'Không thể nhắn tin cho chính mình.' };
 
   const seller = await messagesRepo.getUserById(sellerId);
   if (!seller) throw { status: 404, message: 'Cửa hàng không tồn tại.' };
 
-  let conversation = await messagesRepo.getConversationForBuyerSeller(userId, sellerId, productId);
+  // Always use/create general conversation (Shopee-style)
+  let conversation = await messagesRepo.getConversationForBuyerSeller(buyerId, sellerId, null);
   if (!conversation) {
     const chatEnabled = await messagesRepo.isSellerChatEnabled(sellerId);
     if (!chatEnabled) throw { status: 403, message: 'Cửa hàng hiện chưa mở chat với khách hàng.' };
-    conversation = await messagesRepo.createConversation(userId, sellerId, productId, null);
+    conversation = await messagesRepo.createConversation(buyerId, sellerId, null, null);
   }
 
   const summary = await messagesRepo.getConversationSummaryById(conversation.id, userId);

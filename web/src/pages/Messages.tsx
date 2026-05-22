@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { MessageCircle, Send, Store, User, ShoppingBag } from 'lucide-react';
+import { MessageCircle, Send, Store, User, ShoppingBag, ArrowRight, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { apiJson } from '../lib/api';
@@ -70,6 +70,12 @@ export default function Messages() {
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [referencedOrderId, setReferencedOrderId] = useState<number | null>(() => {
+    const id = Number(searchParams.get('orderId') || 0);
+    return id > 0 ? id : null;
+  });
+  const [referencedOrder, setReferencedOrder] = useState<any>(null);
+  const initialConvIdRef = useRef<number | null>(null);
 
   const activeIdRef = useRef<number | null>(null);
   const loadConversationsRef = useRef<() => void>(() => {});
@@ -175,6 +181,30 @@ export default function Messages() {
   }, [me, searchParams, loadConversations]);
 
   useEffect(() => {
+    if (!referencedOrderId) {
+      setReferencedOrder(null);
+      return;
+    }
+    apiJson<{ success: boolean; order: any }>(`/api/marketplace/orders/${referencedOrderId}`)
+      .then((d) => {
+        if (d.success && d.order) {
+          setReferencedOrder(d.order);
+        }
+      })
+      .catch(() => {
+        setReferencedOrder(null);
+      });
+  }, [referencedOrderId]);
+
+  useEffect(() => {
+    if (activeId && initialConvIdRef.current === null) {
+      initialConvIdRef.current = activeId;
+    } else if (activeId && initialConvIdRef.current !== activeId) {
+      setReferencedOrderId(null);
+    }
+  }, [activeId]);
+
+  useEffect(() => {
     if (!me?.authenticated) return;
 
     const es = new EventSource('/api/messages/stream', { withCredentials: true });
@@ -255,15 +285,7 @@ export default function Messages() {
     return conversation.seller_store_name || conversation.seller_name;
   }, [meUser]);
 
-  const getConversationSubtitle = useCallback((conversation: ConversationSummary) => {
-    if (conversation.order_id) {
-      const status = conversation.order_status
-        ? ORDER_STATUS_LABEL[conversation.order_status] ?? conversation.order_status
-        : '';
-      return `Đơn #${conversation.order_id}${status ? ` · ${status}` : ''}`;
-    }
-    return conversation.product_name || 'Trao đổi chung';
-  }, []);
+
 
   const onSendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -364,7 +386,7 @@ export default function Messages() {
                     {getConversationName(conversation)}
                   </span>
                   <span className="block truncate text-xs text-gray-500 dark:text-slate-400">
-                    {getConversationSubtitle(conversation)}
+                    {conversation.last_message || 'Chưa có tin nhắn.'}
                   </span>
                 </span>
                 {conversation.unread_count > 0 && (
@@ -387,10 +409,6 @@ export default function Messages() {
                   </span>
                   <div>
                     <h2 className="font-bold text-gray-950 dark:text-white">{getConversationName(activeConversation)}</h2>
-                    <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-slate-400">
-                      <ShoppingBag className="h-3.5 w-3.5" />
-                      {getConversationSubtitle(activeConversation)}
-                    </p>
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
@@ -442,6 +460,74 @@ export default function Messages() {
                   })
                 )}
               </div>
+
+              {/* FLOATING ORDER CARD */}
+              {referencedOrder && (
+                <div className="mx-4 mb-2 p-3 bg-amber-50/70 dark:bg-slate-800/80 border border-amber-100 dark:border-slate-700 rounded-2xl flex items-center justify-between gap-4 backdrop-blur-sm shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-100 dark:bg-amber-950/40 rounded-xl text-amber-700 dark:text-amber-300">
+                      <ShoppingBag className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-slate-400">Đơn hàng liên quan</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                        Đơn hàng ({ORDER_STATUS_LABEL[referencedOrder.status] ?? referencedOrder.status}) — {Number(referencedOrder.total_amount).toLocaleString('vi-VN')}đ
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-slate-300 truncate">
+                        Sản phẩm: {referencedOrder.items?.map((i: any) => i.product_name).join(', ')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const messageText = `Tôi muốn hỏi về đơn hàng (${referencedOrder.items?.map((i: any) => i.product_name).join(', ')}) với tổng giá trị ${Number(referencedOrder.total_amount).toLocaleString('vi-VN')}đ.`;
+                        try {
+                          setSending(true);
+                          const data = await apiJson<{ message: ChatMessage }>(
+                            `/api/messages/conversations/${activeConversation.id}/messages`,
+                            {
+                              method: 'POST',
+                              body: JSON.stringify({ message: messageText }),
+                            }
+                          );
+                          const msg = data.message;
+                          setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
+                          setConversations((prev) => {
+                            const idx = prev.findIndex((c) => c.id === msg.conversation_id);
+                            if (idx === -1) return prev;
+                            const updated = {
+                              ...prev[idx],
+                              last_message: msg.message,
+                              last_message_at: msg.created_at,
+                              last_message_sender_id: msg.sender_id,
+                              unread_count: 0,
+                            };
+                            return [updated, ...prev.filter((_, i) => i !== idx)];
+                          });
+                          setReferencedOrderId(null);
+                        } catch (err) {
+                          const msg = err instanceof Error ? err.message : 'Không thể gửi tin nhắn';
+                          toast.error(msg);
+                        } finally {
+                          setSending(false);
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-black hover:bg-gray-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1 shrink-0"
+                    >
+                      Gửi mã đơn <ArrowRight className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReferencedOrderId(null)}
+                      className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <form onSubmit={onSendMessage} className="flex gap-3 border-t border-gray-100 p-4 dark:border-slate-800">
                 <input

@@ -1,8 +1,8 @@
-﻿-- Migration for E-Wallet and Automated Payments
+-- Migration for E-Wallet and Automated Payments
 
 -- Create Enums
 DO $$ BEGIN
-    CREATE TYPE transaction_type AS ENUM ('deposit', 'withdrawal', 'fee', 'refund');
+    CREATE TYPE transaction_type AS ENUM ('deposit', 'withdrawal', 'fee', 'refund', 'payment');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;

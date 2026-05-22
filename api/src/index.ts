@@ -7,6 +7,57 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { env } from './env.js';
 import { pool } from './db/pool.js';
+
+// Ensure database enums and chat structure are fully updated
+void (async () => {
+  try {
+    const res = await pool.query(
+      `SELECT 1 FROM pg_type t
+       JOIN pg_enum e ON t.oid = e.enumtypid
+       WHERE t.typname = 'transaction_type' AND e.enumlabel = 'payment'`
+    );
+    if ((res.rowCount ?? 0) === 0) {
+      console.log("[db] Adding 'payment' value to transaction_type enum...");
+      await pool.query("ALTER TYPE transaction_type ADD VALUE 'payment'");
+      console.log("[db] transaction_type enum updated successfully!");
+    }
+  } catch (err) {
+    console.error("[db] Failed to ensure 'payment' in transaction_type enum:", err);
+  }
+
+  try {
+    console.log("[db] Running chat migration to unify Shopee-style chats...");
+    // 1. Ensure general conversations exist for all active conversations
+    await pool.query(
+      `INSERT INTO chat_conversations (buyer_id, seller_id, product_id, order_id)
+       SELECT DISTINCT buyer_id, seller_id, NULL::integer, NULL::integer
+       FROM chat_conversations
+       ON CONFLICT (buyer_id, seller_id) WHERE product_id IS NULL AND order_id IS NULL DO NOTHING`
+    );
+
+    // 2. Update chat messages to point to the general conversations
+    await pool.query(
+      `UPDATE chat_messages cm
+       SET conversation_id = gen.id
+       FROM chat_conversations old_c
+       JOIN chat_conversations gen ON gen.buyer_id = old_c.buyer_id 
+                                  AND gen.seller_id = old_c.seller_id 
+                                  AND gen.product_id IS NULL 
+                                  AND gen.order_id IS NULL
+       WHERE cm.conversation_id = old_c.id AND old_c.id <> gen.id`
+    );
+
+    // 3. Delete non-general duplicate conversations
+    await pool.query(
+      `DELETE FROM chat_conversations
+       WHERE product_id IS NOT NULL OR order_id IS NOT NULL`
+    );
+    console.log("[db] Chat migration completed successfully!");
+  } catch (err) {
+    console.error("[db] Chat migration failed:", err);
+  }
+})();
+
 import { ensureCsrfToken } from './middleware/csrf.js';
 import { authRouter } from './routes/auth.js';
 import { recipesRouter } from './routes/recipes.js';

@@ -435,7 +435,17 @@ export default function SellerDashboard() {
                   <div key={o.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-5">
                     <div className="flex items-center justify-between mb-3">
                       <div>
-                        <span className="font-bold text-gray-900 dark:text-white">Đơn #{o.id}</span>
+                        <span className="font-bold text-gray-900 dark:text-white">
+                          {o.items && o.items.length > 0 ? (
+                            <>
+                              {o.items[0].product_name}
+                              {o.items[0].quantity > 1 && ` (x${o.items[0].quantity})`}
+                              {o.items.length > 1 && ` và ${o.items.length - 1} sản phẩm khác`}
+                            </>
+                          ) : (
+                            'Đơn hàng'
+                          )}
+                        </span>
                         <span className="text-xs text-gray-400 ml-2">{new Date(o.created_at).toLocaleDateString('vi-VN')}</span>
                       </div>
                       <div className="flex items-center gap-3">
@@ -548,7 +558,7 @@ export default function SellerDashboard() {
                       className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-100 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-200"
                     >
                       <MessageCircle className="h-4 w-4" />
-                      Chat với khách (đơn #{o.id})
+                      Chat với khách
                     </Link>
                   </div>
                 ))

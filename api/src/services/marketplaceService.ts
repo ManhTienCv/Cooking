@@ -252,9 +252,21 @@ export async function createOrder(userId: number, body: Record<string, unknown>)
   }
 
   // Lấy giỏ hàng
-  const cartItems = await marketplaceRepo.getCartItems(userId);
+  let cartItems = await marketplaceRepo.getCartItems(userId);
   if (cartItems.length === 0) {
     throw { status: 400, message: 'Giỏ hàng trống.' };
+  }
+
+  // Filter selected cart items if provided
+  const cartItemIds = Array.isArray(body?.cart_item_ids)
+    ? (body.cart_item_ids as unknown[]).map(Number).filter(Boolean)
+    : null;
+
+  if (cartItemIds && cartItemIds.length > 0) {
+    cartItems = cartItems.filter(item => cartItemIds.includes(item.id));
+    if (cartItems.length === 0) {
+      throw { status: 400, message: 'Danh sách sản phẩm thanh toán không hợp lệ.' };
+    }
   }
   
   if (cartItems.some(item => item.seller_id === userId)) {
@@ -282,7 +294,8 @@ export async function createOrder(userId: number, body: Record<string, unknown>)
     userId,
     totalAmount,
     { name: shippingName, phone: shippingPhone, address: shippingAddress, payment_method: paymentMethod, note },
-    items
+    items,
+    cartItemIds
   );
 
   return { order_id: orderId, total_amount: totalAmount };

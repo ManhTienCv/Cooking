@@ -296,3 +296,9 @@ export async function markConversationRead(
   );
   return (rowCount ?? 0) > 0;
 }
+
+export async function deleteConversation(id: number): Promise<boolean> {
+  const { rowCount } = await pool.query('DELETE FROM chat_conversations WHERE id = $1', [id]);
+  return (rowCount ?? 0) > 0;
+}
+

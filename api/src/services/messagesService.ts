@@ -128,3 +128,17 @@ export async function markConversationRead(userId: number, conversationIdRaw: un
   await messagesRepo.markConversationRead(conversationId, userId);
   return { success: true };
 }
+
+export async function deleteConversation(userId: number, conversationIdRaw: unknown) {
+  const conversationId = Number(conversationIdRaw);
+  if (!conversationId) throw { status: 400, message: 'Mã cuộc trò chuyện không hợp lệ.' };
+
+  const conversation = await messagesRepo.getConversationById(conversationId);
+  if (!conversation) throw { status: 404, message: 'Cuộc trò chuyện không tồn tại.' };
+  if (conversation.buyer_id !== userId && conversation.seller_id !== userId) {
+    throw { status: 403, message: 'Không có quyền xóa cuộc trò chuyện này.' };
+  }
+
+  await messagesRepo.deleteConversation(conversationId);
+  return { success: true };
+}

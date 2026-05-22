@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { MessageCircle, Send, Store, User, ShoppingBag, ArrowRight, X } from 'lucide-react';
+import { MessageCircle, Send, Store, User, ShoppingBag, ArrowRight, X, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { motion, useAnimation } from 'framer-motion';
 
 import { apiJson } from '../lib/api';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../lib/authEvents';
@@ -59,6 +60,91 @@ type ChatMessage = {
 };
 
 const MESSAGE_LIMIT = 200;
+
+interface ConversationListItemProps {
+  conversation: ConversationSummary;
+  isActive: boolean;
+  onSelect: () => void;
+  getConversationName: (c: ConversationSummary) => string;
+  onDelete: (id: number) => Promise<void>;
+}
+
+function ConversationListItem({
+  conversation,
+  isActive,
+  onSelect,
+  getConversationName,
+  onDelete,
+}: ConversationListItemProps) {
+  const controls = useAnimation();
+
+  const handleDragEnd = async (_event: any, info: any) => {
+    if (info.offset.x < -40) {
+      await controls.start({ x: -80, transition: { type: 'spring', stiffness: 300, damping: 30 } });
+    } else {
+      await controls.start({ x: 0, transition: { type: 'spring', stiffness: 300, damping: 30 } });
+    }
+  };
+
+  return (
+    <div className="relative overflow-hidden w-full border-b border-gray-100 last:border-b-0 dark:border-slate-800">
+      {/* Background Delete Button */}
+      <div className="absolute inset-y-0 right-0 w-20 flex justify-end">
+        <button
+          type="button"
+          onClick={async (e) => {
+            e.stopPropagation();
+            if (confirm('Bạn có chắc chắn muốn xóa cuộc trò chuyện này?')) {
+              await onDelete(conversation.id);
+            } else {
+              void controls.start({ x: 0, transition: { type: 'spring', stiffness: 300, damping: 30 } });
+            }
+          }}
+          className="bg-red-500 text-white w-full h-full flex flex-col items-center justify-center gap-1 hover:bg-red-600 transition-colors"
+        >
+          <Trash2 className="w-5 h-5" />
+          <span className="text-[10px] font-bold">Xóa</span>
+        </button>
+      </div>
+
+      {/* Sliding Foreground Card */}
+      <motion.div
+        drag="x"
+        dragDirectionLock
+        dragConstraints={{ left: -80, right: 0 }}
+        dragElastic={{ left: 0.1, right: 0 }}
+        animate={controls}
+        onDragEnd={handleDragEnd}
+        className="relative z-10 w-full bg-white dark:bg-slate-900"
+      >
+        <button
+          type="button"
+          onClick={onSelect}
+          className={`flex w-full items-center gap-3 p-4 text-left ${
+            isActive ? 'bg-amber-50 dark:bg-amber-900/20' : 'hover:bg-gray-50 dark:hover:bg-slate-800/70'
+          }`}
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+            <Store className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-semibold text-gray-900 dark:text-white">
+              {getConversationName(conversation)}
+            </span>
+            <span className="block truncate text-xs text-gray-500 dark:text-slate-400">
+              {conversation.last_message || 'Chưa có tin nhắn.'}
+            </span>
+          </span>
+          {conversation.unread_count > 0 && (
+            <span className="ml-auto inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+              {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+            </span>
+          )}
+        </button>
+      </motion.div>
+    </div>
+  );
+}
 
 export default function Messages() {
   const [searchParams] = useSearchParams();
@@ -285,6 +371,21 @@ export default function Messages() {
     return conversation.seller_store_name || conversation.seller_name;
   }, [meUser]);
 
+  const onDeleteConversation = async (conversationId: number) => {
+    try {
+      await apiJson(`/api/messages/conversations/${conversationId}`, {
+        method: 'DELETE',
+      });
+      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+      if (activeId === conversationId) {
+        setActiveId(null);
+      }
+      toast.success('Đã xóa cuộc trò chuyện');
+    } catch {
+      toast.error('Không thể xóa cuộc trò chuyện');
+    }
+  };
+
 
 
   const onSendMessage = async (event: FormEvent<HTMLFormElement>) => {
@@ -365,36 +466,19 @@ export default function Messages() {
             <div className="p-6 text-sm text-gray-500 dark:text-slate-400">Chưa có cuộc trò chuyện.</div>
           ) : (
             conversations.map((conversation) => (
-              <button
+              <ConversationListItem
                 key={conversation.id}
-                type="button"
-                onClick={() => {
+                conversation={conversation}
+                isActive={conversation.id === activeId}
+                onSelect={() => {
                   setActiveId(conversation.id);
                   if (conversation.unread_count > 0) {
                     void markRead(conversation.id);
                   }
                 }}
-                className={`flex w-full items-center gap-3 border-b border-gray-100 p-4 text-left last:border-b-0 dark:border-slate-800 ${
-                  conversation.id === activeId ? 'bg-amber-50 dark:bg-amber-900/20' : 'hover:bg-gray-50 dark:hover:bg-slate-800/70'
-                }`}
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                  <Store className="h-5 w-5" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate font-semibold text-gray-900 dark:text-white">
-                    {getConversationName(conversation)}
-                  </span>
-                  <span className="block truncate text-xs text-gray-500 dark:text-slate-400">
-                    {conversation.last_message || 'Chưa có tin nhắn.'}
-                  </span>
-                </span>
-                {conversation.unread_count > 0 && (
-                  <span className="ml-auto inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                    {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                  </span>
-                )}
-              </button>
+                getConversationName={getConversationName}
+                onDelete={onDeleteConversation}
+              />
             ))
           )}
         </aside>

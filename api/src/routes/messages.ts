@@ -36,6 +36,11 @@ messagesRouter.post('/conversations/:id/read', requireAuth, asyncHandler(async (
   res.json(result);
 }));
 
+messagesRouter.delete('/conversations/:id', requireAuth, asyncHandler(async (req, res) => {
+  const result = await messagesService.deleteConversation(req.session.userId!, req.params.id);
+  res.json(result);
+}));
+
 messagesRouter.get('/stream', requireAuth, (req, res) => {
   const cleanup = openMessageStream(req.session.userId!, res);
   req.on('close', cleanup);

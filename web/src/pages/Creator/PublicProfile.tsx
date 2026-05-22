@@ -238,11 +238,7 @@ export default function PublicProfile() {
                 <motion.p className="mt-2 text-sm leading-relaxed text-gray-500 dark:text-slate-500">{profile.seller.store_description}</motion.p>
               )}
 
-              <div
-                className={`mt-5 grid gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-3 dark:border-white/5 dark:bg-slate-800/50 sm:inline-flex sm:gap-0 sm:p-0 sm:rounded-none sm:border-0 sm:bg-transparent ${
-                  profile.seller ? 'grid-cols-3' : 'grid-cols-2'
-                }`}
-              >
+              <div className="mt-5 flex items-center justify-center sm:justify-start gap-0">
                 {[
                   { value: profile.counts.followers, label: 'Theo dõi' },
                   { value: profile.counts.following, label: 'Đang theo dõi' },
@@ -250,14 +246,16 @@ export default function PublicProfile() {
                     ? [{ value: profile.seller.stats?.total_sold ?? 0, label: 'Đã bán' }]
                     : []),
                 ].map((stat, i, arr) => (
-                  <div
-                    key={stat.label}
-                    className={`text-center sm:px-5 ${i < arr.length - 1 ? 'sm:border-r sm:border-gray-200 dark:sm:border-slate-700' : ''}`}
-                  >
-                    <div className="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">{stat.value}</div>
-                    <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-500 sm:text-[11px]">
-                      {stat.label}
+                  <div key={stat.label} className="flex items-center gap-0">
+                    <div className="text-center px-4 sm:px-5">
+                      <div className="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">{stat.value}</div>
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400 sm:text-[11px] mt-0.5">
+                        {stat.label}
+                      </div>
                     </div>
+                    {i < arr.length - 1 && (
+                      <div className="h-8 w-px bg-gray-200 dark:bg-slate-700" />
+                    )}
                   </div>
                 ))}
               </div>

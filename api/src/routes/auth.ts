@@ -124,6 +124,12 @@ authRouter.post('/profile', requireAuth, requireCsrf, asyncHandler(async (req, r
   res.json(result);
 }));
 
+authRouter.post('/avatar', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
+  const result = await authService.updateAvatar(req.session.userId!, req.body);
+  res.json(result);
+}));
+
+
 authRouter.post('/email/request-otp', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
   const result = await authService.requestEmailChangeOtp(req.session.userId!, req.body);
   res.json(result);

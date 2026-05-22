@@ -1,8 +1,13 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, User, Mail } from 'lucide-react';
+import { Camera, User, Mail, Loader2 } from 'lucide-react';
 import { Skeleton } from '../ui/Skeleton';
 import { HeroEnter } from '../motion/ScrollReveal';
 import type { ProfileUser, ProfileStats } from './types';
+import { apiJson } from '../../lib/api';
+import { notifyAuthChanged } from '../../lib/authEvents';
+import toast from 'react-hot-toast';
+
 
 interface ProfileHeaderProps {
   isLoading: boolean;
@@ -28,6 +33,45 @@ export default function ProfileHeader({
   followers = 0,
   following = 0,
 }: ProfileHeaderProps) {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Kích thước ảnh tối đa là 5MB.');
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result as string;
+      try {
+        const response = await apiJson<{ success: boolean; message?: string }>('/api/auth/avatar', {
+          method: 'POST',
+          body: JSON.stringify({ avatar_data: base64String }),
+        });
+        if (response.success) {
+          toast.success('Cập nhật ảnh đại diện thành công!');
+          notifyAuthChanged({ authenticated: true });
+        } else {
+          toast.error(response.message || 'Lỗi cập nhật ảnh đại diện.');
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Lỗi kết nối máy chủ.');
+      } finally {
+        setIsUploading(false);
+      }
+    };
+    reader.onerror = () => {
+      toast.error('Không thể đọc file ảnh.');
+      setIsUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="relative pt-20 pb-6">
       <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
@@ -37,7 +81,7 @@ export default function ProfileHeader({
               <div className="px-6 py-6">
                 <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4">
                   <div className="group relative flex-shrink-0">
-                    <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-white bg-white shadow-lg dark:border-slate-900 dark:bg-slate-800">
+                    <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-white bg-white shadow-lg dark:border-slate-900 dark:bg-slate-800 relative">
                       {user.avatar ? (
                         <img src={user.avatar} alt={user.full_name} className="h-full w-full object-cover" />
                       ) : (
@@ -45,10 +89,15 @@ export default function ProfileHeader({
                           <User className="h-10 w-10 text-gray-400 dark:text-slate-400" />
                         </div>
                       )}
+                      {isUploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/55 backdrop-blur-sm">
+                          <Loader2 className="h-6 w-6 animate-spin text-white" />
+                        </div>
+                      )}
                     </div>
-                    <label className="absolute -bottom-1 -right-1 cursor-pointer rounded-full bg-black p-1.5 text-white shadow-md transition-transform hover:scale-110 dark:bg-white dark:text-slate-950">
+                    <label className={`absolute -bottom-1 -right-1 cursor-pointer rounded-full bg-black p-1.5 text-white shadow-md transition-transform hover:scale-110 dark:bg-white dark:text-slate-950 ${isUploading ? 'pointer-events-none opacity-50' : ''}`}>
                       <Camera className="h-3.5 w-3.5" />
-                      <input type="file" className="hidden" accept="image/*" />
+                      <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} disabled={isUploading} />
                     </label>
                   </div>
 

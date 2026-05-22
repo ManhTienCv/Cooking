@@ -10,6 +10,7 @@ import { captchaRequiredAfterFailures, recordLoginFailure, clearLoginFailure } f
 import { verifyRecaptchaV3 } from '../lib/recaptchaVerify.js';
 import { logAuthLogin } from '../lib/auditLog.js';
 import { httpError } from '../lib/httpError.js';
+import { processImageBase64 } from '../lib/processImage.js';
 
 const OTP_EXPIRY_MS = 5 * 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
@@ -498,3 +499,24 @@ export async function changePassword(userId: number, body: unknown) {
 
   return { success: true, message: 'Đổi mật khẩu thành công.' };
 }
+
+export async function updateAvatar(userId: number, body: unknown) {
+  const payload = parsePayload(
+    z.object({
+      avatar_data: z.string().trim(),
+    }),
+    body
+  );
+
+  const avatarUrl = processImageBase64(payload.avatar_data);
+  if (!avatarUrl) throw httpError(400, 'Không thể xử lý ảnh đại diện.');
+
+  const r = await pool.query<Pick<User, 'id' | 'full_name' | 'email' | 'avatar_url' | 'bio'>>(
+    'UPDATE users SET avatar_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, full_name, email, avatar_url, bio',
+    [avatarUrl, userId]
+  );
+  if (r.rows.length === 0) throw httpError(404, 'Không tìm thấy người dùng.');
+
+  return { success: true, message: 'Cập nhật ảnh đại diện thành công.', user: r.rows[0] };
+}
+

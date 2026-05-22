@@ -50,6 +50,7 @@ type TabId = 'shop' | 'recipes' | 'posts';
 
 const PAGE_SIZE = 12;
 
+// Định dạng hiển thị giá tiền sản phẩm (VND) dạng: "100.000đ"
 function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
 }
@@ -90,6 +91,7 @@ export default function PublicProfile() {
       .finally(() => setLoading(false));
   }, [userId]);
 
+  // Tải dữ liệu tương ứng với tab hiện tại (Cửa hàng, Công thức, hoặc Bài viết) kèm phân trang
   const loadTab = useCallback(async () => {
     if (!userId) return;
     setTabLoading(true);

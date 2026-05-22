@@ -18,6 +18,7 @@ interface ProfileHeaderProps {
   following?: number;
 }
 
+// Định dạng số đếm thống kê thành chuỗi hiển thị rút gọn như: 1.2k, 1M, v.v.
 function formatStatNumber(n: number): string {
   if (!Number.isFinite(n) || n < 0) return '0';
   if (n >= 1_000_000) return `${Math.round(n / 100_000) / 10}M`.replace(/\.0M$/, 'M');
@@ -35,6 +36,7 @@ export default function ProfileHeader({
 }: ProfileHeaderProps) {
   const [isUploading, setIsUploading] = useState(false);
 
+  // Xử lý sự kiện tải ảnh đại diện lên máy chủ và cập nhật hồ sơ người dùng
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;

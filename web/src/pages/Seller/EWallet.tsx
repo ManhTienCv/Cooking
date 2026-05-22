@@ -56,11 +56,12 @@ const STATUS_LABEL: Record<string, string> = {
   invalid: 'Không hợp lệ',
 };
 
-/** Tiền vào ví (deposit, refund) vs tiền ra ví (withdrawal, fee, payment) */
+// Kiểm tra xem loại giao dịch có phải là tiền đi vào ví hay không (nạp tiền hoặc hoàn tiền)
 function isIncome(type: string): boolean {
   return type === 'deposit' || type === 'refund';
 }
 
+// Định dạng số tiền sang đơn vị tiền tệ Việt Nam Đồng (VND) dạng: "1.000.000 đ"
 function formatCurrency(amount: string | number) {
   return Number(amount).toLocaleString('vi-VN') + ' đ';
 }
@@ -109,6 +110,7 @@ export default function EWallet() {
     onConfirm: () => {},
   });
 
+  // Tải dữ liệu thông tin ví và danh sách ngân hàng liên kết từ API
   const loadData = useCallback(async () => {
     try {
       const [walletRes, banksRes] = await Promise.all([
@@ -130,6 +132,7 @@ export default function EWallet() {
     void loadData();
   }, [loadData]);
 
+  // Mở hộp thoại xác nhận và thực hiện gửi yêu cầu xóa tài khoản ngân hàng liên kết
   const triggerDeleteBank = (bank: BankAccount) => {
     setConfirmModal({
       isOpen: true,
@@ -158,7 +161,7 @@ export default function EWallet() {
   const balance = Number(wallet?.balance || 0);
   const frozen = Number(wallet?.frozen_balance || 0);
 
-  // Helper to determine status (checks for overdue pending transactions)
+  // Xác định trạng thái thực tế của giao dịch (đánh dấu không hợp lệ nếu giao dịch chờ xử lý quá 1 giờ)
   const getTxStatus = (tx: Transaction) => {
     if (tx.status === 'pending') {
       const createdTime = new Date(tx.created_at).getTime();

@@ -500,6 +500,7 @@ export async function changePassword(userId: number, body: unknown) {
   return { success: true, message: 'Đổi mật khẩu thành công.' };
 }
 
+// Cập nhật ảnh đại diện mới của người dùng (xử lý base64 ảnh và cập nhật đường dẫn vào cơ sở dữ liệu)
 export async function updateAvatar(userId: number, body: unknown) {
   const payload = parsePayload(
     z.object({

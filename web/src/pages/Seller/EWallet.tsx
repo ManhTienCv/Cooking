@@ -7,6 +7,7 @@ import EWalletAddBankModal from './components/EWalletAddBankModal';
 import EWalletWithdrawModal from './components/EWalletWithdrawModal';
 import EWalletTopupModal from './components/EWalletTopupModal';
 import EWalletTransactionDetailModal from './components/EWalletTransactionDetailModal';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 interface VietQrBank {
   bin: string;
@@ -96,6 +97,17 @@ export default function EWallet() {
   const [showTopup, setShowTopup] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [showTxDetail, setShowTxDetail] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const loadData = useCallback(async () => {
     try {
@@ -118,15 +130,21 @@ export default function EWallet() {
     void loadData();
   }, [loadData]);
 
-  const handleDeleteBank = async (id: string) => {
-    if (!window.confirm('Bạn có chắc muốn xoá tài khoản ngân hàng này?')) return;
-    try {
-      await apiFetch('/api/ewallet/banks/' + id, { method: 'DELETE' });
-      toast.success('Đã xoá tài khoản ngân hàng.');
-      void loadData();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Lỗi xoá tài khoản.');
-    }
+  const triggerDeleteBank = (bank: BankAccount) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa tài khoản ngân hàng',
+      message: `Bạn có chắc chắn muốn xóa tài khoản ngân hàng ${bank.bank_name} (${bank.account_number}) này không?`,
+      onConfirm: async () => {
+        try {
+          await apiFetch('/api/ewallet/banks/' + bank.id, { method: 'DELETE' });
+          toast.success('Đã xoá tài khoản ngân hàng.');
+          void loadData();
+        } catch (err: unknown) {
+          toast.error(err instanceof Error ? err.message : 'Lỗi xoá tài khoản.');
+        }
+      },
+    });
   };
 
   if (loading) {
@@ -291,7 +309,7 @@ export default function EWallet() {
                     <p className="text-xs text-gray-500 font-mono">{b.account_number} · {b.account_name}</p>
                   </div>
                   <button
-                    onClick={() => handleDeleteBank(b.id)}
+                    onClick={() => triggerDeleteBank(b)}
                     className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
                     title="Xoá tài khoản"
                   >
@@ -425,6 +443,14 @@ export default function EWallet() {
           setSelectedTx(null);
         }}
         transaction={selectedTx}
+      />
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -29,7 +30,7 @@ export default function DeleteProductModal({ open, product, onClose, onSuccess }
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && product && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
@@ -99,6 +100,7 @@ export default function DeleteProductModal({ open, product, onClose, onSuccess }
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

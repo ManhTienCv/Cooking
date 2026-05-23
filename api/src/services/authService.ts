@@ -51,7 +51,7 @@ const resetPasswordSchema = z.object({
 });
 
 const updateProfileSchema = z.object({
-  full_name: z.string().trim().min(3).max(120),
+  full_name: z.string().trim().min(3, { message: 'Họ tên phải tối thiểu 3 ký tự' }).max(120),
   bio: z.string().trim().max(2000).optional().default(''),
 });
 

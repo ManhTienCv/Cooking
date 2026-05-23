@@ -375,11 +375,15 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
     }
 
     try {
-      await apiFetch('/api/auth/password', {
+      const r = await apiFetch('/api/auth/password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ current_password, new_password }),
       });
+      const data = (await r.json().catch(() => ({}))) as { message?: string };
+      if (!r.ok) {
+        throw new Error(data.message ?? 'Lỗi đổi mật khẩu');
+      }
       setPassMsg({ text: 'Đổi mật khẩu thành công!', type: 'success' });
       form.reset();
     } catch (err: unknown) {

@@ -188,6 +188,50 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     const full_name = String(fd.get('full_name') ?? '').trim();
     const email = String(fd.get('email') ?? '').trim().toLowerCase();
     const password = String(fd.get('password') ?? '');
+
+    // Kiểm tra độ dài & độ phức tạp mật khẩu để đảm bảo đúng đặc tả kiểm thử
+    if (full_name.length < 3) {
+      setAuthError('Họ tên phải từ 3 ký tự trở lên.');
+      return;
+    }
+    if (full_name.length > 255) {
+      setAuthError('Họ tên không được vượt quá 255 ký tự.');
+      return;
+    }
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      setAuthError('Email không đúng định dạng.');
+      return;
+    }
+    if (email.length > 255) {
+      setAuthError('Email không được vượt quá 255 ký tự.');
+      return;
+    }
+    if (password.length > 128) {
+      setAuthError('Mật khẩu không được vượt quá 128 ký tự.');
+      return;
+    }
+    if (password.length < 8) {
+      setAuthError('Mật khẩu phải từ 8 ký tự trở lên.');
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setAuthError('Mật khẩu phải chứa ít nhất 1 chữ cái in hoa.');
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      setAuthError('Mật khẩu phải chứa ít nhất 1 chữ số.');
+      return;
+    }
+    if (!/[^a-zA-Z0-9\s]/.test(password)) {
+      setAuthError('Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt.');
+      return;
+    }
+    if (password.trim().length === 0) {
+      setAuthError('Mật khẩu không được chỉ chứa khoảng trắng.');
+      return;
+    }
+
     setAuthLoading(true);
     try {
       const recaptchaToken = hasRecaptchaSiteKey() ? await executeRecaptchaV3('register') : '';
@@ -242,6 +286,17 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     setAuthError(null);
     const fd = new FormData(e.currentTarget);
     const email = String(fd.get('email') ?? '').trim().toLowerCase();
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      setAuthError('Email không đúng định dạng.');
+      return;
+    }
+    if (email.length > 255) {
+      setAuthError('Email không được vượt quá 255 ký tự.');
+      return;
+    }
+
     setAuthLoading(true);
     try {
       const recaptchaToken = hasRecaptchaSiteKey() ? await executeRecaptchaV3('forgot_password') : '';

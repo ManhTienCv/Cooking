@@ -5,7 +5,8 @@ const skipTestRequests = (req: any) => {
   return (
     req.headers['x-test-bypass'] === 'true' ||
     (env.testOtpCode && req.headers['x-test-bypass'] === env.testOtpCode) ||
-    process.env.NODE_ENV === 'test'
+    process.env.NODE_ENV === 'test' ||
+    process.env.NODE_ENV === 'development'
   );
 };
 

@@ -19,6 +19,8 @@ export const MIGRATION_FILES = [
   'migration_cookpay.sql',
   'migration_admin_ewallet.sql',
   'migration_delivery_logistics.sql',
+  'migration_marketplace_hot_trigger.sql',
+  'migration_recipe_featured_trigger.sql',
 ] as const;
 
 export type MigrationName = (typeof MIGRATION_FILES)[number];

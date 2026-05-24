@@ -28,7 +28,7 @@ export default function RecipeHomeCard({ recipe }: { recipe: FeaturedRecipe }) {
           loading="lazy"
         />
 
-        <div className="absolute left-3 top-3 flex max-w-[calc(100%-5rem)] flex-wrap items-center gap-2 sm:left-4 sm:top-4">
+        <div className="absolute left-3 top-3 flex flex-col gap-1.5 sm:left-4 sm:top-4">
           {isPending && (
             <span className="inline-flex items-center rounded-full bg-slate-200 px-3 h-7 text-[10px] font-semibold uppercase tracking-wider text-slate-700 shadow-sm dark:bg-slate-700 dark:text-slate-200">
               Đang chờ duyệt
@@ -40,9 +40,6 @@ export default function RecipeHomeCard({ recipe }: { recipe: FeaturedRecipe }) {
               Nổi bật
             </span>
           )}
-          <span className="inline-flex items-center rounded-full bg-black/85 px-3 h-7 text-xs font-bold text-white backdrop-blur-sm shadow-md dark:bg-black/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
-            {recipe.category_name || 'Món chính'}
-          </span>
         </div>
 
         <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
@@ -53,7 +50,12 @@ export default function RecipeHomeCard({ recipe }: { recipe: FeaturedRecipe }) {
       </Link>
 
       <div className="flex flex-1 flex-col p-4 sm:p-5">
-        <h3 className="mb-2 line-clamp-2 min-h-[2.5rem] font-serif text-base font-bold text-black transition-colors duration-300 group-hover:text-gray-600 dark:text-white dark:group-hover:text-slate-200 sm:mb-3 sm:min-h-[3.5rem] sm:text-xl">
+        {/* Category tag */}
+        <div className="mb-1 text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+          {recipe.category_name || 'Món chính'}
+        </div>
+
+        <h3 className="mb-2 line-clamp-2 min-h-[2.5rem] font-serif text-base font-bold text-black transition-colors duration-300 group-hover:text-amber-600 dark:text-white dark:group-hover:text-amber-400 sm:mb-3 sm:min-h-[3.5rem] sm:text-xl">
           <Link to={`/recipes/detail/${recipe.id}`}>{recipe.title}</Link>
         </h3>
         <div className="mb-4 flex items-center justify-between text-sm text-gray-600 dark:text-slate-400">

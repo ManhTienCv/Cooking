@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Search, X, ChefHat, Info, Clock, Users, ArrowRight, Check, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiJson } from '../../lib/api';
+import Pagination from '../../components/ui/Pagination';
 
 interface RecipeRow {
   id: number;
@@ -21,6 +22,9 @@ export default function FridgeSearch() {
   const [recipes, setRecipes] = useState<RecipeRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const PAGE_SIZE = 12;
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -41,19 +45,36 @@ export default function FridgeSearch() {
     setIngredients(ingredients.filter(i => i !== ingredient));
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (page: number | React.MouseEvent<HTMLButtonElement> = 1) => {
+    const targetPage = typeof page === 'number' ? page : 1;
     if (ingredients.length === 0) return;
     setLoading(true);
     setSearched(true);
+    setCurrentPage(targetPage);
     try {
       const q = ingredients.map(i => encodeURIComponent(i)).join(',');
-      const data = await apiJson<{ recipes: RecipeRow[] }>(`/api/recipes/fridge-search?ingredients=${q}`);
+      const offset = (targetPage - 1) * PAGE_SIZE;
+      const data = await apiJson<{ recipes: RecipeRow[]; total: number }>(
+        `/api/recipes/fridge-search?ingredients=${q}&limit=${PAGE_SIZE}&offset=${offset}`
+      );
       setRecipes(data.recipes || []);
+      setTotalItems(data.total || 0);
     } catch (e) {
       console.error(e);
       setRecipes([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    handleSearch(page);
+    const element = document.getElementById('search-results-section');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 400, behavior: 'smooth' });
     }
   };
 
@@ -62,6 +83,8 @@ export default function FridgeSearch() {
     if (ingredients.length === 0) {
       setRecipes([]);
       setSearched(false);
+      setTotalItems(0);
+      setCurrentPage(1);
     }
   }, [ingredients]);
 
@@ -162,10 +185,10 @@ export default function FridgeSearch() {
 
         {/* Results Section */}
         {searched && (
-          <div className="space-y-6">
+          <div className="space-y-6" id="search-results-section">
             <div className="flex items-center gap-2 mb-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Kết quả phù hợp ({recipes.length})
+                Kết quả phù hợp ({totalItems})
               </h2>
               <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1 ml-4" />
             </div>
@@ -248,6 +271,15 @@ export default function FridgeSearch() {
                   </motion.div>
                 ))}
               </div>
+            )}
+
+            {recipes.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalItems}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+              />
             )}
           </div>
         )}

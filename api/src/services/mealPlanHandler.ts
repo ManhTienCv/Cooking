@@ -10,10 +10,12 @@ export class MealPlanHandler {
     private readonly planId: number
   ) {}
 
+  // Lấy danh sách thực đơn (bữa sáng, trưa, tối) của kế hoạch ăn uống hiện tại từ cơ sở dữ liệu
   async getMealPlan(): Promise<Record<string, { breakfast: unknown[]; lunch: unknown[]; dinner: unknown[] }>> {
     return healthRepo.getPlanMeals(this.pool, this.planId);
   }
 
+  // Thêm một món ăn vào thực đơn của một ngày và bữa ăn cụ thể, ước tính dinh dưỡng bằng AI và trả về danh sách thực đơn cùng tổng dinh dưỡng mới
   async addRecipe(date: string, mealType: string, recipe: PlanMealRecipeInput): Promise<{
     success: boolean;
     message: string;
@@ -41,6 +43,7 @@ export class MealPlanHandler {
     };
   }
 
+  // Xóa một món ăn khỏi thực đơn dựa trên ID món ăn, sau đó cập nhật lại thực đơn và tính lại tổng dinh dưỡng
   async removeRecipe(
     date: string,
     mealType: string,
@@ -64,10 +67,12 @@ export class MealPlanHandler {
     };
   }
 
+  // Lấy danh sách nguyên liệu cần mua (Shopping List) thuộc kế hoạch ăn uống này
   getShoppingList(): Promise<{ id: number; name: string; quantity: string; checked: boolean }[]> {
     return healthRepo.getShoppingList(this.pool, this.planId);
   }
 
+  // Thêm một mặt hàng/nguyên liệu mới vào danh sách mua sắm
   async addShoppingItem(name: string, quantity = ''): Promise<{
     success: boolean;
     message: string;
@@ -80,6 +85,7 @@ export class MealPlanHandler {
     return { success: true, message: `Đã thêm ${n}.`, shoppingList: await this.getShoppingList() };
   }
 
+  // Đánh dấu (tick/untick) một mặt hàng trong danh sách mua sắm là đã mua hoặc chưa mua
   async toggleShoppingItem(itemId: number): Promise<{
     success: boolean;
     message?: string;
@@ -90,6 +96,7 @@ export class MealPlanHandler {
     return { success: true, shoppingList: await this.getShoppingList() };
   }
 
+  // Xóa hoàn toàn một mặt hàng khỏi danh sách mua sắm
   async removeShoppingItem(itemId: number): Promise<{
     success: boolean;
     message: string;
@@ -141,6 +148,7 @@ Return ONLY a JSON array, no markdown:
     return { success: true, message: `Đã tạo ${saved} món ăn mẫu cho ${days} ngày (AI tạm thời không khả dụng).` };
   }
 
+  // Lưu danh sách món ăn được trả về từ kết quả AI vào cơ sở dữ liệu tương ứng với từng ngày
   private async saveMealsFromAiResult(result: unknown[], startDate: string, days: number): Promise<number> {
     const parts = startDate.split('-');
     const baseDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
@@ -169,6 +177,7 @@ Return ONLY a JSON array, no markdown:
     return addedCount;
   }
 
+  // Lưu thực đơn mẫu (dự phòng khi AI không khả dụng) vào cơ sở dữ liệu, tự động căn chỉnh calo theo tỷ lệ mục tiêu
   private async saveFallbackMeals(startDate: string, days: number, targetCalories: number, dietType: string): Promise<number> {
     const breakfastPool = [
       { name: 'Phở bò', cal: 450, p: 25, c: 55, f: 12 },
@@ -234,6 +243,9 @@ Return ONLY a JSON array, no markdown:
     return addedCount;
   }
 
+  // Ước lượng dinh dưỡng (calo, đạm, tinh bột, chất béo) của món ăn bằng Gemini AI. 
+  // Nếu AI từ chối (món ăn không có thật hoặc vô nghĩa), hàm sẽ báo lỗi. 
+  // Nếu AI lỗi hệ thống, hàm sẽ tự động dùng thuật toán ước tính dự phòng (fallback).
   private async estimateNutrition(recipeName: string): Promise<{ calories: number; protein: number; carbs: number; fat: number }> {
     const prompt = `You are a strict nutritionist evaluating food items.
 Evaluate if the string '${recipeName}' represents a real, valid, edible food, dish, or beverage.

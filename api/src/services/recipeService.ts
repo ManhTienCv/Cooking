@@ -2,12 +2,14 @@ import * as recipeRepo from '../repos/recipeRepo.js';
 import { processImageBase64 } from '../lib/processImage.js';
 import type { RecipeWithAuthor } from '../types/recipe.js';
 
+// Lấy danh sách các công thức nấu ăn nổi bật có lượt xem hoặc đánh giá cao nhất
 export async function getFeaturedRecipes(limitRaw: unknown) {
   const limit = Math.min(50, Math.max(1, Number(limitRaw) || 6));
   const recipes = await recipeRepo.getFeaturedRecipes(limit);
   return { recipes };
 }
 
+// Tìm kiếm công thức nấu ăn theo từ khóa tìm kiếm (q), danh mục (category) kèm theo phân trang và trạng thái lưu của người dùng hiện tại
 export async function searchRecipes(query: {
   q?: unknown;
   category?: unknown;
@@ -33,6 +35,7 @@ export async function searchRecipes(query: {
   return { recipes, total, limit, offset };
 }
 
+// Lấy danh sách các công thức nấu ăn do chính người dùng hiện tại đã tạo/đăng tải
 export async function getMyRecipes(userId: number, limitRaw: unknown, offsetRaw: unknown) {
   const limit = Math.min(100, Math.max(1, Number(limitRaw) || 20));
   const offset = Math.max(0, Number(offsetRaw) || 0);
@@ -43,6 +46,7 @@ export async function getMyRecipes(userId: number, limitRaw: unknown, offsetRaw:
   return { recipes, total, limit, offset };
 }
 
+// Lấy danh sách các công thức nấu ăn mà người dùng hiện tại đã đánh dấu lưu lại
 export async function getSavedRecipes(userId: number, limitRaw: unknown, offsetRaw: unknown) {
   const limit = Math.min(100, Math.max(1, Number(limitRaw) || 20));
   const offset = Math.max(0, Number(offsetRaw) || 0);
@@ -53,6 +57,7 @@ export async function getSavedRecipes(userId: number, limitRaw: unknown, offsetR
   return { recipes, total, limit, offset };
 }
 
+// Tạo mới một công thức nấu ăn (kiểm tra tính hợp lệ của dữ liệu, chuyển đổi ảnh base64 và lưu vào DB ở trạng thái chờ duyệt)
 export async function createRecipe(userId: number, body: Record<string, unknown>) {
   const title = String(body?.title ?? '').trim();
   const description = String(body?.description ?? '').trim() || null;
@@ -90,6 +95,7 @@ export async function createRecipe(userId: number, body: Record<string, unknown>
   return { id, status: 'pending' };
 }
 
+// Lưu hoặc hủy lưu một công thức nấu ăn (dành cho tính năng bookmark/yêu thích)
 export async function toggleSaveRecipe(userId: number, recipeIdRaw: unknown) {
   const recipeId = Number(recipeIdRaw);
   if (!recipeId) {
@@ -99,6 +105,7 @@ export async function toggleSaveRecipe(userId: number, recipeIdRaw: unknown) {
   return { saved };
 }
 
+// Tìm kiếm công thức nấu ăn thông minh bằng nguyên liệu trong tủ lạnh: gợi ý các món có thể nấu dựa trên nguyên liệu người dùng nhập vào
 export async function fridgeSearch(ingredientsRaw: unknown, limitRaw: unknown, offsetRaw: unknown): Promise<{ recipes: RecipeWithAuthor[]; total: number; limit: number; offset: number }> {
   const q = String(ingredientsRaw || '');
   const ingredients = q.split(',').map(i => i.trim()).filter(Boolean);
@@ -109,6 +116,7 @@ export async function fridgeSearch(ingredientsRaw: unknown, limitRaw: unknown, o
   return { recipes: rows, total, limit, offset };
 }
 
+// Lấy thông tin chi tiết của một công thức nấu ăn cụ thể dựa trên ID, bao gồm cả trạng thái đã lưu hay chưa của người xem
 export async function getRecipeDetail(idRaw: unknown, viewerId: number | null): Promise<{ recipe: RecipeWithAuthor; isSaved: boolean }> {
   const id = Number(idRaw);
   if (!id) {
@@ -125,6 +133,7 @@ export async function getRecipeDetail(idRaw: unknown, viewerId: number | null): 
   return { recipe, isSaved };
 }
 
+// Tăng số lượt xem của công thức nấu ăn lên 1 đơn vị khi có người dùng truy cập vào xem chi tiết
 export async function incrementRecipeViews(idRaw: unknown, userId: number | null) {
   const id = Number(idRaw);
   if (!id) {
@@ -134,6 +143,7 @@ export async function incrementRecipeViews(idRaw: unknown, userId: number | null
   return { incremented };
 }
 
+// Cập nhật thông tin chi tiết một công thức nấu ăn đã tồn tại (chỉ người tạo mới có quyền sửa đổi)
 export async function updateRecipe(idRaw: unknown, userId: number, body: Record<string, unknown>) {
   const id = Number(idRaw);
   if (!id) throw { status: 400, message: 'Mã không hợp lệ' };
@@ -175,6 +185,7 @@ export async function updateRecipe(idRaw: unknown, userId: number, body: Record<
   return { success: true };
 }
 
+// Xóa hoàn toàn một công thức nấu ăn khỏi hệ thống (chỉ người tạo mới có quyền xóa)
 export async function deleteRecipe(idRaw: unknown, userId: number) {
   const id = Number(idRaw);
   if (!id) throw { status: 400, message: 'Mã không hợp lệ' };

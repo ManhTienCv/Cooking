@@ -137,6 +137,7 @@ async function verifyRecaptchaIfConfigured(
   }
 }
 
+// Lấy thông tin người dùng hiện tại và các thống kê liên quan (số công thức nấu ăn, bài viết blog, tổng lượt xem công thức)
 export async function getCurrentUser(userId: number): Promise<{ authenticated: boolean; user?: User; stats?: UserStats }> {
   const r = await pool.query<User>(
     'SELECT id, full_name, email, avatar_url, bio, created_at, updated_at FROM users WHERE id = $1 LIMIT 1',
@@ -169,6 +170,7 @@ export async function getCurrentUser(userId: number): Promise<{ authenticated: b
   };
 }
 
+// Xác thực đăng nhập người dùng bằng Email và Mật khẩu (dùng bcrypt), hỗ trợ kiểm tra chống brute-force/spam bằng reCAPTCHA v3
 export async function login(req: Request) {
   const payload = parsePayload(loginSchema, req.body);
   const needCaptcha = Boolean(env.recaptchaSecretKey && captchaRequiredAfterFailures('user', req));
@@ -209,6 +211,7 @@ export async function login(req: Request) {
   return { userId, user: userJson };
 }
 
+// Gửi mã OTP đăng ký tài khoản mới về email và lưu tạm thông tin đăng ký của người dùng vào bảng pending_registrations
 export async function requestRegisterOtp(req: Request) {
   const payload = parsePayload(registerRequestSchema, req.body);
   await verifyRecaptchaIfConfigured(req, payload.recaptchaToken, 'register');
@@ -259,6 +262,7 @@ export async function requestRegisterOtp(req: Request) {
   return { success: true, message: 'Mã OTP đã được gửi tới email của bạn.' };
 }
 
+// Xác thực mã OTP đăng ký, nếu khớp sẽ chính thức tạo tài khoản mới trong bảng users và xóa bản ghi ở bảng chờ
 export async function verifyRegisterOtp(body: unknown) {
   const payload = parsePayload(otpVerifySchema, body);
   const client = await pool.connect();
@@ -324,6 +328,7 @@ export async function verifyRegisterOtp(body: unknown) {
   }
 }
 
+// Xử lý yêu cầu quên mật khẩu: Tạo mã OTP, lưu băm OTP vào bảng users và gửi email hướng dẫn đặt lại mật khẩu
 export async function forgotPassword(req: Request) {
   const payload = parsePayload(forgotPasswordSchema, req.body);
   await verifyRecaptchaIfConfigured(req, payload.recaptchaToken, 'forgot_password');
@@ -347,6 +352,7 @@ export async function forgotPassword(req: Request) {
   return { success: true, message: 'Nếu email tồn tại, mã OTP đã được gửi.' };
 }
 
+// Xác thực mã OTP reset mật khẩu và tiến hành cập nhật mật khẩu mới của người dùng
 export async function resetPassword(body: unknown) {
   const payload = parsePayload(resetPasswordSchema, body);
 
@@ -396,6 +402,7 @@ export async function resetPassword(body: unknown) {
   return { success: true, message: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập ngay.' };
 }
 
+// Cập nhật các thông tin cơ bản trong hồ sơ cá nhân (họ tên, tiểu sử bio) của người dùng
 export async function updateProfile(userId: number, body: unknown) {
   const payload = parsePayload(updateProfileSchema, body);
   const bio = payload.bio.trim() || null;
@@ -408,6 +415,7 @@ export async function updateProfile(userId: number, body: unknown) {
   return { success: true, message: 'Cập nhật hồ sơ thành công.', user: r.rows[0] };
 }
 
+// Yêu cầu thay đổi email: Gửi mã OTP xác thực tới địa chỉ email mới và cập nhật email chờ duyệt (pending_email)
 export async function requestEmailChangeOtp(userId: number, body: unknown) {
   const payload = parsePayload(emailChangeRequestSchema, body);
   const newEmail = payload.email.trim().toLowerCase();
@@ -441,6 +449,7 @@ export async function requestEmailChangeOtp(userId: number, body: unknown) {
   return { success: true, message: 'Mã OTP đã được gửi tới email mới.' };
 }
 
+// Xác thực mã OTP đổi email, nếu khớp sẽ cập nhật địa chỉ email chính thức mới của người dùng trong hệ thống
 export async function verifyEmailChangeOtp(userId: number, body: unknown) {
   const payload = parsePayload(emailChangeVerifySchema, body);
   const otp = payload.otp.trim();
@@ -485,6 +494,7 @@ export async function verifyEmailChangeOtp(userId: number, body: unknown) {
   return { success: true, message: 'Đổi email thành công.', user };
 }
 
+// Thay đổi mật khẩu khi người dùng đang đăng nhập (yêu cầu xác thực mật khẩu hiện tại trước khi đổi)
 export async function changePassword(userId: number, body: unknown) {
   const payload = parsePayload(changePasswordSchema, body);
 

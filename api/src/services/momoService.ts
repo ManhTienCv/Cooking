@@ -16,6 +16,7 @@ interface MoMoPaymentRequest {
   signature: string;
 }
 
+// Tạo yêu cầu thanh toán MoMo (Nạp tiền ví điện tử): Xây dựng chữ ký SHA256 bảo mật và gọi endpoint của MoMo để lấy link thanh toán
 export const createMoMoPayment = async (orderId: string, amount: number, orderInfo: string) => {
   const partnerCode = process.env.MOMO_PARTNER_CODE || 'MOMO';
   const accessKey = process.env.MOMO_ACCESS_KEY || 'MOCK_ACCESS_KEY';
@@ -70,6 +71,7 @@ export const createMoMoPayment = async (orderId: string, amount: number, orderIn
   }
 };
 
+// Xác thực chữ ký phản hồi (IPN/Callback) từ MoMo để kiểm tra xem dữ liệu giao dịch trả về có tin cậy và không bị chỉnh sửa
 export const verifyMoMoSignature = (query: any): boolean => {
   const secretKey = process.env.MOMO_SECRET_KEY || 'MOCK_SECRET_KEY';
   

@@ -217,8 +217,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
   };
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
       setView('main');
       setAuthError(null);
       setAuthSuccess(null);
@@ -232,8 +238,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     }
     return () => {
       document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, initialSignUp]);
+  }, [isOpen, initialSignUp, onClose]);
 
   if (!isOpen) return null;
 
@@ -464,18 +471,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
         data-testid="auth-modal-container"
         className={`blackwhite-container ${isActive ? 'active' : ''} bg-white dark:bg-slate-900 overflow-hidden relative`}
       >
-        {/* Nút đóng modal X ở góc trên bên phải */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-3.5 right-3.5 z-[1001] p-1.5 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-black/10 transition-colors cursor-pointer"
-          aria-label="Đóng"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
         {/* Registration Form */}
         <div
           className="blackwhite-form-container blackwhite-sign-up"

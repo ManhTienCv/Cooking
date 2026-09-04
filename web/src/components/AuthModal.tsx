@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../assets/css/BlackwhiteAuth.css';
 import { hasRecaptchaSiteKey } from '../lib/recaptchaSiteKey';
 import { apiFetch, resetCsrfCache } from '../lib/api';
@@ -55,8 +55,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
   const [googleNameInput, setGoogleNameInput] = useState('');
 
   const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
-  const googleSignInRef = useRef<HTMLDivElement>(null);
-  const googleSignUpRef = useRef<HTMLDivElement>(null);
 
   const sanitizeOtp = (value: string) => value.replace(/\D/g, '').slice(0, 6);
 
@@ -101,56 +99,78 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     setResetOtp(sanitized);
   };
 
-  const handleGoogleCredentialResponse = useCallback(
-    async (response: { credential?: string }) => {
-      if (!response?.credential) {
-        setAuthError('Không nhận được thông tin xác thực từ Google.');
-        return;
-      }
-      setAuthLoading(true);
-      setAuthError(null);
-      setAuthSuccess(null);
-      try {
-        const r = await apiFetch('/api/auth/google', {
-          method: 'POST',
-          body: JSON.stringify({ credential: response.credential }),
-        });
-        const data = (await r.json()) as {
-          success?: boolean;
-          message?: string;
-          user?: { id: number; full_name: string; email: string; avatar_url?: string | null };
-          isNewUser?: boolean;
-        };
-        if (!r.ok) {
-          setAuthError(data.message ?? 'Đăng nhập Google thất bại.');
-          return;
-        }
-        resetCsrfCache();
+  // Kích hoạt Google Sign-In chuẩn bằng OAuth2 (không bị hiển thị gợi ý email bên trong nút)
+  const handleGoogleLoginClick = () => {
+    if (!googleClientId) {
+      setAuthError('Vui lòng cấu hình VITE_GOOGLE_CLIENT_ID trong file .env để sử dụng Google Sign-In.');
+      return;
+    }
+    if (!window.google?.accounts?.oauth2) {
+      setAuthError('Đang tải thư viện Google, vui lòng thử lại sau 1-2 giây.');
+      return;
+    }
 
-        // Nếu là người dùng mới hoặc đăng ký qua Google: hiển thị form xác nhận/đặt tên hiển thị
-        if (data.isNewUser || isActive) {
-          setGoogleUserData({
-            id: data.user?.id ?? 0,
-            fullName: data.user?.full_name || '',
-            email: data.user?.email || '',
-            avatarUrl: data.user?.avatar_url || null,
-          });
-          setGoogleNameInput(data.user?.full_name || '');
-          setView('google-name');
-          return;
-        }
+    try {
+      const client = window.google.accounts.oauth2.initTokenClient({
+        client_id: googleClientId,
+        scope: 'email profile openid',
+        callback: async (tokenResponse) => {
+          if (tokenResponse.error) {
+            setAuthError('Đăng nhập Google bị hủy hoặc thất bại.');
+            return;
+          }
+          if (!tokenResponse.access_token) {
+            setAuthError('Không nhận được mã truy cập từ Google.');
+            return;
+          }
+          setAuthLoading(true);
+          setAuthError(null);
+          setAuthSuccess(null);
+          try {
+            const r = await apiFetch('/api/auth/google', {
+              method: 'POST',
+              body: JSON.stringify({ access_token: tokenResponse.access_token }),
+            });
+            const data = (await r.json()) as {
+              success?: boolean;
+              message?: string;
+              user?: { id: number; full_name: string; email: string; avatar_url?: string | null };
+              isNewUser?: boolean;
+            };
+            if (!r.ok) {
+              setAuthError(data.message ?? 'Đăng nhập Google thất bại.');
+              return;
+            }
+            resetCsrfCache();
 
-        notifyAuthChanged({ authenticated: true });
-        onSuccess?.();
-        onClose();
-      } catch (err) {
-        setAuthError(err instanceof Error ? err.message : 'Lỗi kết nối khi đăng nhập Google.');
-      } finally {
-        setAuthLoading(false);
-      }
-    },
-    [onClose, onSuccess, isActive]
-  );
+            // Nếu là người dùng mới hoặc đang ở tab đăng ký: hiển thị form hoàn tất thông tin tên
+            if (data.isNewUser || isActive) {
+              setGoogleUserData({
+                id: data.user?.id ?? 0,
+                fullName: data.user?.full_name || '',
+                email: data.user?.email || '',
+                avatarUrl: data.user?.avatar_url || null,
+              });
+              setGoogleNameInput(data.user?.full_name || '');
+              setView('google-name');
+              return;
+            }
+
+            notifyAuthChanged({ authenticated: true });
+            onSuccess?.();
+            onClose();
+          } catch (err) {
+            setAuthError(err instanceof Error ? err.message : 'Lỗi kết nối khi đăng nhập Google.');
+          } finally {
+            setAuthLoading(false);
+          }
+        },
+      });
+      client.requestAccessToken({ prompt: 'select_account' });
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Không thể khởi chạy Google Sign-In.');
+    }
+  };
 
   // Lưu tên người dùng sau khi đăng nhập bằng Google
   const handleSaveGoogleName = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -214,63 +234,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
       document.body.style.overflow = '';
     };
   }, [isOpen, initialSignUp]);
-
-  // Khởi tạo nút Google Sign-In / Sign-Up khi mở modal
-  useEffect(() => {
-    if (!isOpen || !googleClientId) return;
-
-    let isMounted = true;
-    const renderButtons = () => {
-      if (!window.google?.accounts?.id) return false;
-      try {
-        window.google.accounts.id.initialize({
-          client_id: googleClientId,
-          callback: handleGoogleCredentialResponse,
-        });
-
-        if (googleSignInRef.current) {
-          googleSignInRef.current.innerHTML = '';
-          window.google.accounts.id.renderButton(googleSignInRef.current, {
-            theme: 'outline',
-            size: 'large',
-            text: 'continue_with',
-            shape: 'rectangular',
-            width: 280,
-          });
-        }
-
-        if (googleSignUpRef.current) {
-          googleSignUpRef.current.innerHTML = '';
-          window.google.accounts.id.renderButton(googleSignUpRef.current, {
-            theme: 'outline',
-            size: 'large',
-            text: 'signup_with',
-            shape: 'rectangular',
-            width: 280,
-          });
-        }
-        return true;
-      } catch {
-        return false;
-      }
-    };
-
-    if (!renderButtons()) {
-      const interval = setInterval(() => {
-        if (!isMounted) {
-          clearInterval(interval);
-          return;
-        }
-        if (renderButtons()) {
-          clearInterval(interval);
-        }
-      }, 300);
-      return () => {
-        isMounted = false;
-        clearInterval(interval);
-      };
-    }
-  }, [isOpen, googleClientId, isActive, view, handleGoogleCredentialResponse]);
 
   if (!isOpen) return null;
 
@@ -510,22 +473,17 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
             <h1 className="text-2xl font-bold mb-1 text-black dark:text-white">Tạo Tài Khoản</h1>
             <span className="text-gray-500 dark:text-gray-400 text-xs mb-3">Đăng ký nhanh chóng để khám phá món ngon</span>
 
-            {/* Google Sign-Up */}
-            {googleClientId ? (
-              <div className="w-full flex justify-center mb-2 min-h-[40px]">
-                <div ref={googleSignUpRef} />
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setAuthError('Vui lòng thêm VITE_GOOGLE_CLIENT_ID vào file .env để bật Google Sign-In.')}
-                className="w-full max-w-[280px] flex items-center justify-center gap-2.5 py-2 px-4 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2 shadow-sm"
-                style={{ padding: '8px 16px', textTransform: 'none', letterSpacing: 'normal', marginTop: 0 }}
-              >
-                <GoogleIcon />
-                <span>Đăng ký nhanh với Google</span>
-              </button>
-            )}
+            {/* Clean Custom Google Sign-Up Button */}
+            <button
+              type="button"
+              disabled={authLoading}
+              onClick={handleGoogleLoginClick}
+              className="w-full max-w-[280px] flex items-center justify-center gap-2.5 py-2 px-4 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2 shadow-sm"
+              style={{ padding: '9px 16px', textTransform: 'none', letterSpacing: 'normal', marginTop: 0 }}
+            >
+              <GoogleIcon />
+              <span>Đăng ký nhanh bằng Google</span>
+            </button>
 
             <div className="w-full max-w-[280px] flex items-center gap-2 my-1">
               <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1" />
@@ -588,22 +546,17 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
             <h1 className="text-2xl font-bold mb-1 text-black dark:text-white">Đăng Nhập</h1>
             <span className="text-gray-500 dark:text-gray-400 text-xs mb-3">Chào mừng bạn quay trở lại</span>
 
-            {/* Google Sign-In */}
-            {googleClientId ? (
-              <div className="w-full flex justify-center mb-2 min-h-[40px]">
-                <div ref={googleSignInRef} />
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setAuthError('Vui lòng thêm VITE_GOOGLE_CLIENT_ID vào file .env để bật Google Sign-In.')}
-                className="w-full max-w-[280px] flex items-center justify-center gap-2.5 py-2 px-4 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2 shadow-sm"
-                style={{ padding: '8px 16px', textTransform: 'none', letterSpacing: 'normal', marginTop: 0 }}
-              >
-                <GoogleIcon />
-                <span>Tiếp tục với Google</span>
-              </button>
-            )}
+            {/* Clean Custom Google Sign-In Button */}
+            <button
+              type="button"
+              disabled={authLoading}
+              onClick={handleGoogleLoginClick}
+              className="w-full max-w-[280px] flex items-center justify-center gap-2.5 py-2 px-4 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2 shadow-sm"
+              style={{ padding: '9px 16px', textTransform: 'none', letterSpacing: 'normal', marginTop: 0 }}
+            >
+              <GoogleIcon />
+              <span>Tiếp tục với Google</span>
+            </button>
 
             <div className="w-full max-w-[280px] flex items-center gap-2 my-1">
               <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1" />

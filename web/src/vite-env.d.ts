@@ -34,6 +34,16 @@ interface Window {
         ) => void;
         prompt: (momentListener?: (notification: unknown) => void) => void;
       };
+      oauth2?: {
+        initTokenClient: (config: {
+          client_id: string;
+          scope: string;
+          callback: (response: { access_token?: string; error?: string }) => void;
+          prompt?: string;
+        }) => {
+          requestAccessToken: (overrideConfig?: { prompt?: string }) => void;
+        };
+      };
     };
   };
 }

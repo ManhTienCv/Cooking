@@ -235,48 +235,85 @@ export async function loginWithGoogle(
     console.warn('[GoogleAuth] Lỗi kiểm tra cột google_id:', dbErr);
   }
 
+  const accessToken = String(req.body?.access_token || '').trim();
   const credential = String(req.body?.credential || req.body?.id_token || '').trim();
-  if (!credential) {
-    throw httpError(400, 'Thiếu mã xác thực (credential) từ Google.');
+
+  if (!accessToken && !credential) {
+    throw httpError(400, 'Thiếu thông tin xác thực từ Google.');
   }
 
-  // Gọi Google API tokeninfo để giải mã và xác thực token JWT an toàn
-  const tokenInfoUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`;
-  let info: GoogleTokenInfo;
-  try {
-    const resp = await fetch(tokenInfoUrl, { method: 'GET' });
-    if (!resp.ok) {
-      const errText = await resp.text();
-      console.warn('[GoogleAuth] Xác thực token thất bại từ Google:', errText);
-      throw httpError(401, 'Mã xác thực Google không hợp lệ hoặc đã hết hạn.');
+  let email: string;
+  let fullName: string;
+  let avatarUrl: string | null = null;
+  let googleId: string | null = null;
+
+  if (accessToken) {
+    // Xác thực access token và lấy thông tin user từ Google Userinfo endpoint
+    const userinfoUrl = 'https://www.googleapis.com/oauth2/v3/userinfo';
+    let info: {
+      sub?: string;
+      name?: string;
+      picture?: string;
+      email?: string;
+      email_verified?: boolean | string;
+    };
+    try {
+      const resp = await fetch(userinfoUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!resp.ok) {
+        throw httpError(401, 'Mã truy cập Google không hợp lệ hoặc đã hết hạn.');
+      }
+      info = (await resp.json()) as typeof info;
+    } catch (err: any) {
+      if (err.status) throw err;
+      throw httpError(503, 'Không thể kết nối đến máy chủ xác thực của Google.');
     }
-    info = (await resp.json()) as GoogleTokenInfo;
-  } catch (err: any) {
-    if (err.status) throw err;
-    console.error('[GoogleAuth] Lỗi kết nối tới máy chủ Google:', err);
-    throw httpError(503, 'Không thể kết nối đến máy chủ xác thực của Google.');
-  }
 
-  const email = info.email?.trim().toLowerCase();
-  if (!email) {
-    throw httpError(400, 'Không tìm thấy thông tin email từ tài khoản Google.');
-  }
-
-  const isVerified = info.email_verified === true || String(info.email_verified).toLowerCase() === 'true';
-  if (!isVerified) {
-    throw httpError(400, 'Email Google chưa được xác thực.');
-  }
-
-  if (env.googleClientId && info.aud && info.aud !== env.googleClientId) {
-    console.warn(`[GoogleAuth] Audience không khớp. Mong đợi: ${env.googleClientId}, Nhận được: ${info.aud}`);
-    if (env.nodeEnv === 'production') {
-      throw httpError(401, 'Mã xác thực Google không thuộc về ứng dụng này.');
+    email = String(info.email || '').trim().toLowerCase();
+    const isVerified = info.email_verified === true || String(info.email_verified).toLowerCase() === 'true';
+    if (!email || !isVerified) {
+      throw httpError(400, 'Tài khoản Google chưa được xác thực email.');
     }
+    googleId = info.sub || null;
+    fullName = info.name?.trim() || email.split('@')[0] || 'Người dùng Google';
+    avatarUrl = info.picture || null;
+  } else {
+    // Gọi Google API tokeninfo để giải mã và xác thực token JWT an toàn
+    const tokenInfoUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`;
+    let info: GoogleTokenInfo;
+    try {
+      const resp = await fetch(tokenInfoUrl, { method: 'GET' });
+      if (!resp.ok) {
+        const errText = await resp.text();
+        console.warn('[GoogleAuth] Xác thực token thất bại từ Google:', errText);
+        throw httpError(401, 'Mã xác thực Google không hợp lệ hoặc đã hết hạn.');
+      }
+      info = (await resp.json()) as GoogleTokenInfo;
+    } catch (err: any) {
+      if (err.status) throw err;
+      console.error('[GoogleAuth] Lỗi kết nối tới máy chủ Google:', err);
+      throw httpError(503, 'Không thể kết nối đến máy chủ xác thực của Google.');
+    }
+
+    email = String(info.email || '').trim().toLowerCase();
+    const isVerified = info.email_verified === true || String(info.email_verified).toLowerCase() === 'true';
+    if (!email || !isVerified) {
+      throw httpError(400, 'Email Google chưa được xác thực.');
+    }
+
+    if (env.googleClientId && info.aud && info.aud !== env.googleClientId) {
+      console.warn(`[GoogleAuth] Audience không khớp. Mong đợi: ${env.googleClientId}, Nhận được: ${info.aud}`);
+      if (env.nodeEnv === 'production') {
+        throw httpError(401, 'Mã xác thực Google không thuộc về ứng dụng này.');
+      }
+    }
+
+    googleId = info.sub || null;
+    fullName = info.name?.trim() || email.split('@')[0] || 'Người dùng Google';
+    avatarUrl = info.picture || null;
   }
 
-  const googleId = info.sub || null;
-  const fullName = info.name?.trim() || email.split('@')[0] || 'Người dùng Google';
-  const avatarUrl = info.picture || null;
 
   // Kiểm tra xem email đã tồn tại trong bảng users chưa
   const existingRes = await pool.query<User & { google_id?: string }>(

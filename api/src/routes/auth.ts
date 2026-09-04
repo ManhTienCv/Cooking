@@ -76,7 +76,7 @@ authRouter.post('/login', authLoginRateLimit, requireCsrf, asyncHandler(async (r
 
 // Đăng nhập / Đăng ký 1 chạm bằng Google Identity Services
 authRouter.post('/google', authLoginRateLimit, requireCsrf, asyncHandler(async (req, res) => {
-  const { userId, user } = await authService.loginWithGoogle(req);
+  const { userId, user, isNewUser } = await authService.loginWithGoogle(req);
 
   const oldCsrfToken = req.session.csrfToken;
   req.session.regenerate((regenErr) => {
@@ -90,9 +90,18 @@ authRouter.post('/google', authLoginRateLimit, requireCsrf, asyncHandler(async (
       success: true,
       message: 'Đăng nhập Google thành công.',
       user,
+      isNewUser,
     });
   });
 }));
+
+// Cập nhật tên hiển thị sau khi đăng nhập bằng Google
+authRouter.post('/google/set-name', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
+  const fullName = String(req.body?.full_name || '').trim();
+  const result = await authService.setGoogleUserName(req.session.userId!, fullName);
+  res.json(result);
+}));
+
 
 // Đăng ký tài khoản trực tiếp 1 bước (không cần chờ email OTP)
 authRouter.post('/register', authRegisterRateLimit, requireCsrf, asyncHandler(async (req, res) => {

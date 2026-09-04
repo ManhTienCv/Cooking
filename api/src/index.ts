@@ -26,6 +26,16 @@ void (async () => {
   }
 
   try {
+    console.log("[db] Ensuring google_id and nullable password_hash on users table...");
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(100) UNIQUE`);
+    await pool.query(`ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`);
+    console.log("[db] Ensured google_id column and nullable password_hash successfully!");
+  } catch (err) {
+    console.error("[db] Failed to ensure google_id on users table:", err);
+  }
+
+
+  try {
     console.log("[db] Running chat migration to unify Shopee-style chats...");
     // 1. Ensure general conversations exist for all active conversations
     await pool.query(

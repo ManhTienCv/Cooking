@@ -224,7 +224,17 @@ interface GoogleTokenInfo {
 }
 
 // Đăng nhập / Đăng ký 1 chạm bằng Google Identity Services (OAuth ID Token)
-export async function loginWithGoogle(req: Request): Promise<{ userId: number; user: Omit<User, 'password_hash'> }> {
+export async function loginWithGoogle(
+  req: Request
+): Promise<{ userId: number; user: Omit<User, 'password_hash'>; isNewUser: boolean }> {
+  // Tự động đảm bảo cột google_id và password_hash nullable trên database (phòng trường hợp DB remote chưa chạy migration)
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(100) UNIQUE`);
+    await pool.query(`ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`);
+  } catch (dbErr) {
+    console.warn('[GoogleAuth] Lỗi kiểm tra cột google_id:', dbErr);
+  }
+
   const credential = String(req.body?.credential || req.body?.id_token || '').trim();
   if (!credential) {
     throw httpError(400, 'Thiếu mã xác thực (credential) từ Google.');
@@ -276,10 +286,16 @@ export async function loginWithGoogle(req: Request): Promise<{ userId: number; u
 
   let userId: number;
   let user: Omit<User, 'password_hash'>;
+  let isNewUser = false;
 
   if (existingRes.rows.length > 0) {
     const existing = existingRes.rows[0];
     userId = existing.id;
+
+    // Nếu tài khoản cũ chưa từng có google_id thì đây là lần đầu liên kết Google
+    if (!existing.google_id) {
+      isNewUser = true;
+    }
 
     // Cập nhật google_id hoặc avatar_url nếu chưa có
     const updates: string[] = [];
@@ -314,6 +330,7 @@ export async function loginWithGoogle(req: Request): Promise<{ userId: number; u
     };
   } else {
     // Người dùng mới: Tạo trực tiếp không cần OTP vì Google đã chứng thực email
+    isNewUser = true;
     const randomPassword = randomBytes(24).toString('hex');
     const passHash = await bcrypt.hash(randomPassword, BCRYPT_COST);
 
@@ -337,8 +354,28 @@ export async function loginWithGoogle(req: Request): Promise<{ userId: number; u
   }
 
   logAuthLogin('user', { success: true, email, req, subjectId: userId });
-  return { userId, user };
+  return { userId, user, isNewUser };
 }
+
+// Cập nhật tên hiển thị người dùng (dùng sau khi đăng nhập Google)
+export async function setGoogleUserName(userId: number, fullName: string) {
+  const trimmed = fullName.trim();
+  if (!trimmed || trimmed.length < 2) {
+    throw httpError(400, 'Tên người dùng phải từ 2 ký tự trở lên.');
+  }
+  if (trimmed.length > 255) {
+    throw httpError(400, 'Tên người dùng không được vượt quá 255 ký tự.');
+  }
+  const result = await pool.query<Pick<User, 'id' | 'full_name' | 'email' | 'avatar_url' | 'bio'>>(
+    'UPDATE users SET full_name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, full_name, email, avatar_url, bio',
+    [trimmed, userId]
+  );
+  if (result.rows.length === 0) {
+    throw httpError(404, 'Không tìm thấy người dùng.');
+  }
+  return { success: true, message: 'Cập nhật tên thành công.', user: result.rows[0] };
+}
+
 
 // Đăng ký trực tiếp 1 bước không cần chờ email OTP
 export async function registerDirect(req: Request): Promise<{ userId: number; user: Omit<User, 'password_hash'> }> {

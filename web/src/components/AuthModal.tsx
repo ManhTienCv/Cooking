@@ -6,7 +6,6 @@ import { notifyAuthChanged } from '../lib/authEvents';
 import { createPortal } from 'react-dom';
 import { executeRecaptchaV3 } from '../lib/recaptchaV3';
 
-
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -39,12 +38,21 @@ const GoogleIcon = () => (
 
 export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = false }: AuthModalProps) {
   const [isActive, setIsActive] = useState(false); // false = sign in, true = sign up
-  const [view, setView] = useState<'main' | 'forgot' | 'reset'>('main');
+  const [view, setView] = useState<'main' | 'forgot' | 'reset' | 'google-name'>('main');
   const [forgotEmail, setForgotEmail] = useState('');
   const [resetOtp, setResetOtp] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
+
+  // Thông tin người dùng sau khi Google xác thực để điền/xác nhận tên
+  const [googleUserData, setGoogleUserData] = useState<{
+    id: number;
+    fullName: string;
+    email: string;
+    avatarUrl?: string | null;
+  } | null>(null);
+  const [googleNameInput, setGoogleNameInput] = useState('');
 
   const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
   const googleSignInRef = useRef<HTMLDivElement>(null);
@@ -107,12 +115,31 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
           method: 'POST',
           body: JSON.stringify({ credential: response.credential }),
         });
-        const data = (await r.json()) as { success?: boolean; message?: string };
+        const data = (await r.json()) as {
+          success?: boolean;
+          message?: string;
+          user?: { id: number; full_name: string; email: string; avatar_url?: string | null };
+          isNewUser?: boolean;
+        };
         if (!r.ok) {
           setAuthError(data.message ?? 'Đăng nhập Google thất bại.');
           return;
         }
         resetCsrfCache();
+
+        // Nếu là người dùng mới hoặc đăng ký qua Google: hiển thị form xác nhận/đặt tên hiển thị
+        if (data.isNewUser || isActive) {
+          setGoogleUserData({
+            id: data.user?.id ?? 0,
+            fullName: data.user?.full_name || '',
+            email: data.user?.email || '',
+            avatarUrl: data.user?.avatar_url || null,
+          });
+          setGoogleNameInput(data.user?.full_name || '');
+          setView('google-name');
+          return;
+        }
+
         notifyAuthChanged({ authenticated: true });
         onSuccess?.();
         onClose();
@@ -122,8 +149,52 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
         setAuthLoading(false);
       }
     },
-    [onClose, onSuccess]
+    [onClose, onSuccess, isActive]
   );
+
+  // Lưu tên người dùng sau khi đăng nhập bằng Google
+  const handleSaveGoogleName = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const trimmed = googleNameInput.trim();
+    if (trimmed.length < 2) {
+      setAuthError('Tên người dùng phải từ 2 ký tự trở lên.');
+      return;
+    }
+    if (trimmed.length > 255) {
+      setAuthError('Tên người dùng không được vượt quá 255 ký tự.');
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const r = await apiFetch('/api/auth/google/set-name', {
+        method: 'POST',
+        body: JSON.stringify({ full_name: trimmed }),
+      });
+      const data = (await r.json()) as { success?: boolean; message?: string };
+      if (!r.ok) {
+        setAuthError(data.message ?? 'Không thể cập nhật tên.');
+        return;
+      }
+      resetCsrfCache();
+      notifyAuthChanged({ authenticated: true });
+      onSuccess?.();
+      onClose();
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Lỗi mạng.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Bỏ qua bước đổi tên sau khi đăng nhập Google
+  const handleSkipGoogleName = () => {
+    resetCsrfCache();
+    notifyAuthChanged({ authenticated: true });
+    onSuccess?.();
+    onClose();
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -134,6 +205,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
       setIsActive(initialSignUp);
       setForgotEmail('');
       setResetOtp('');
+      setGoogleUserData(null);
+      setGoogleNameInput('');
     } else {
       document.body.style.overflow = '';
     }
@@ -154,8 +227,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
           client_id: googleClientId,
           callback: handleGoogleCredentialResponse,
         });
-
-
 
         if (googleSignInRef.current) {
           googleSignInRef.current.innerHTML = '';
@@ -200,7 +271,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
       };
     }
   }, [isOpen, googleClientId, isActive, view, handleGoogleCredentialResponse]);
-
 
   if (!isOpen) return null;
 
@@ -715,6 +785,99 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                 <h2 className="text-2xl font-bold mb-2">Bảo mật tài khoản</h2>
                 <p className="text-sm text-white/80">
                   Tạo mật khẩu mới mạnh hơn để bảo vệ tài khoản của bạn.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Form điền / xác nhận tên người dùng sau khi login bằng Google */}
+        <div
+          className="blackwhite-form-container blackwhite-google-name"
+          style={{
+            display: view === 'google-name' ? 'block' : 'none',
+            left: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: 15,
+          }}
+        >
+          <div className="grid h-full w-full grid-cols-1 md:grid-cols-[1.1fr_0.9fr]">
+            <div className="flex items-center justify-center bg-white dark:bg-slate-900 p-8">
+              <form className="w-full max-w-sm flex flex-col items-center justify-center" onSubmit={handleSaveGoogleName}>
+                {googleUserData?.avatarUrl ? (
+                  <img
+                    src={googleUserData.avatarUrl}
+                    alt="Google Avatar"
+                    className="w-16 h-16 rounded-full mx-auto mb-2 border-2 border-yellow-400 object-cover shadow"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-950/50 text-yellow-600 font-bold text-xl flex items-center justify-center mx-auto mb-2 border-2 border-yellow-400">
+                    {googleUserData?.fullName?.charAt(0).toUpperCase() || 'C'}
+                  </div>
+                )}
+
+                <h1 className="text-2xl font-bold mb-1 text-black dark:text-white text-center">Hoàn Tất Thông Tin</h1>
+                <span className="text-gray-500 dark:text-gray-400 text-xs mb-1 text-center">
+                  Chào mừng bạn đến với <strong>CookingBoy</strong>!
+                </span>
+                {googleUserData?.email && (
+                  <span className="inline-block bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 text-[11px] px-2.5 py-0.5 rounded-full mb-3">
+                    {googleUserData.email}
+                  </span>
+                )}
+
+                {authError && view === 'google-name' && (
+                  <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
+                )}
+
+                <div className="w-full text-left mb-1">
+                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1 block">
+                    Tên người dùng hiển thị
+                  </label>
+                  <input
+                    name="full_name"
+                    type="text"
+                    placeholder="Ví dụ: Bếp Trưởng Nam, CookingMaster..."
+                    required
+                    minLength={2}
+                    maxLength={50}
+                    value={googleNameInput}
+                    onChange={(e) => setGoogleNameInput(e.target.value)}
+                    className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
+                  />
+                  <span className="text-[11px] text-gray-400 block mt-1">
+                    Tên này sẽ hiển thị khi bạn chia sẻ công thức, viết bài và bình luận.
+                  </span>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="bg-black text-white rounded-lg py-3 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors mt-3 w-full disabled:opacity-60"
+                >
+                  {authLoading ? 'Đang lưu…' : 'Xác Nhận & Bắt Đầu'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSkipGoogleName}
+                  className="mt-3 text-xs text-gray-500 hover:text-black dark:hover:text-white underline transition-colors"
+                >
+                  Bỏ qua và dùng tên này sau
+                </button>
+              </form>
+            </div>
+
+            <div
+              className="hidden md:flex relative items-center justify-center text-white"
+              style={{ backgroundImage: "url('/assets/images/avatar1.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
+            >
+              <div className="absolute inset-0 bg-black/55" />
+              <div className="relative z-10 px-8 text-center">
+                <h2 className="text-2xl font-bold mb-2">Gia nhập cộng đồng</h2>
+                <p className="text-sm text-white/80">
+                  Hãy chọn một cái tên thật ấn tượng để kết nối cùng hàng ngàn tín đồ ẩm thực.
                 </p>
               </div>
             </div>

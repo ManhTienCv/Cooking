@@ -463,7 +463,18 @@ export async function getCartCount(userId: number): Promise<number> {
 export async function createOrder(
   buyerId: number,
   totalAmount: number,
-  shipping: { name: string; phone: string; address: string; payment_method: string; note: string | null },
+  shipping: {
+    name: string;
+    phone: string;
+    address: string;
+    payment_method: string;
+    note: string | null;
+    shipping_fee?: number;
+    to_district_id?: number;
+    to_ward_code?: string;
+    delivery_type?: string;
+    ref_recipe_id?: number | null;
+  },
   items: { product_id: number; seller_id: number; product_name: string; product_image: string | null; quantity: number; unit_price: number; subtotal: number }[],
   cartItemIds?: number[] | null
 ): Promise<number> {
@@ -482,14 +493,45 @@ export async function createOrder(
       }
     }
 
+    const isInstant = shipping.delivery_type === 'instant_1h';
+    const estimatedDelivery = isInstant ? new Date(Date.now() + 90 * 60 * 1000) : null;
+    const carrierName = isInstant ? 'Hỏa Tốc 1-2H (Shipper nội thành)' : null;
+
     // Tạo order
     const orderResult = await client.query(
-      `INSERT INTO orders (buyer_id, total_amount, shipping_name, shipping_phone, shipping_address, payment_method, note)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO orders (
+         buyer_id, total_amount, shipping_name, shipping_phone, shipping_address,
+         payment_method, note, shipping_fee, to_district_id, to_ward_code,
+         delivery_type, carrier_name, estimated_delivery_at, ref_recipe_id
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING id`,
-      [buyerId, totalAmount, shipping.name, shipping.phone, shipping.address, shipping.payment_method, shipping.note]
+      [
+        buyerId,
+        totalAmount,
+        shipping.name,
+        shipping.phone,
+        shipping.address,
+        shipping.payment_method,
+        shipping.note,
+        shipping.shipping_fee || 0,
+        shipping.to_district_id || null,
+        shipping.to_ward_code || null,
+        shipping.delivery_type || 'standard',
+        carrierName,
+        estimatedDelivery,
+        shipping.ref_recipe_id || null,
+      ]
     );
     const orderId = Number(orderResult.rows[0]?.id);
+
+    if (isInstant) {
+      await client.query(
+        `INSERT INTO order_transit_logs (order_id, status, current_location, description)
+         VALUES ($1, 'picked_up', 'Cửa hàng', 'Đơn hỏa tốc đã tiếp nhận thành công. Đang điều phối shipper giao hàng trong 1-2 giờ.')`,
+        [orderId]
+      );
+    }
 
     // Tạo order items
     for (const item of items) {
@@ -714,19 +756,26 @@ export async function createReview(
   productId: number,
   orderId: number,
   rating: number,
-  comment: string | null
+  comment: string | null,
+  images: string[] = [],
+  videoUrl: string | null = null
 ): Promise<number> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
     const { rows } = await client.query(
-      `INSERT INTO product_reviews (product_id, user_id, order_id, rating, comment)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO product_reviews (product_id, user_id, order_id, rating, comment, images, video_url)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
        ON CONFLICT (user_id, product_id, order_id)
-       DO UPDATE SET rating = EXCLUDED.rating, comment = EXCLUDED.comment, created_at = NOW()
+       DO UPDATE SET
+         rating = EXCLUDED.rating,
+         comment = EXCLUDED.comment,
+         images = EXCLUDED.images,
+         video_url = EXCLUDED.video_url,
+         created_at = NOW()
        RETURNING id`,
-      [productId, userId, orderId, rating, comment]
+      [productId, userId, orderId, rating, comment, JSON.stringify(images), videoUrl]
     );
 
     // Cập nhật rating trung bình

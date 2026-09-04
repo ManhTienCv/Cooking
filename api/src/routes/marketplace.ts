@@ -14,6 +14,10 @@ import * as marketplaceService from '../services/marketplaceService.js';
 import * as sellerSettingsService from '../services/sellerSettingsService.js';
 import * as sellerSecurityService from '../services/sellerSecurityService.js';
 import * as logisticsService from '../services/logisticsService.js';
+import * as ghnService from '../services/ghnService.js';
+import * as momoService from '../services/momoService.js';
+import { pool } from '../db/pool.js';
+import { httpError } from '../lib/httpError.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 
 export const marketplaceRouter = Router();
@@ -321,3 +325,187 @@ marketplaceRouter.post('/seller/orders/:id/transit-logs', requireAuth, requireSe
   const result = await logisticsService.addTransitLog(Number(req.params.id), req.session.userId!, req.body);
   res.json(result);
 }));
+
+/* ================================================================
+ * MoMo Sandbox Payment Gateway
+ * ================================================================ */
+
+// POST /api/marketplace/orders/:id/momo — Tạo liên kết thanh toán MoMo
+marketplaceRouter.post('/orders/:id/momo', requireAuth, asyncHandler(async (req, res) => {
+  const orderId = Number(req.params.id);
+  const userId = req.session.userId!;
+
+  const { rows } = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
+  const order = rows[0];
+  if (!order) {
+    throw httpError(404, 'Đơn hàng không tồn tại.');
+  }
+  if (order.buyer_id !== userId) {
+    throw httpError(403, 'Bạn không có quyền thanh toán đơn hàng này.');
+  }
+  if (order.payment_status === 'paid') {
+    return res.json({ success: true, message: 'Đơn hàng đã được thanh toán.', paid: true });
+  }
+
+  const result = await momoService.createPaymentUrl({
+    orderId: order.id,
+    amount: Number(order.total_amount),
+    orderInfo: `Thanh toan don hang #${order.id} tai Cooking Web`,
+  });
+
+  await pool.query('UPDATE orders SET momo_request_id = $1 WHERE id = $2', [result.requestId, order.id]);
+
+  res.json({
+    success: true,
+    payUrl: result.payUrl,
+    qrCodeUrl: result.qrCodeUrl,
+    deeplink: result.deeplink,
+    orderId: order.id,
+  });
+}));
+
+// POST /api/marketplace/payment/momo/ipn — Webhook IPN xử lý kết quả MoMo
+export async function handleMoMoIpnHandler(req: any, res: any) {
+  try {
+    const isValid = momoService.verifyIpnSignature(req.body);
+    if (!isValid) {
+      console.warn('[MoMo IPN] Chữ ký không hợp lệ:', req.body);
+      return res.status(400).json({ message: 'Invalid signature' });
+    }
+
+    const { orderId, resultCode, amount, transId, requestId } = req.body;
+    console.info(`[MoMo IPN] Đơn hàng ${orderId}, ResultCode: ${resultCode}, TransId: ${transId}`);
+
+    if (String(resultCode) === '0') {
+      await pool.query(
+        `UPDATE orders 
+         SET payment_status = 'paid',
+             paid_amount = $1,
+             paid_via = 'momo',
+             status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END,
+             momo_trans_id = $2,
+             momo_request_id = $3,
+             updated_at = NOW()
+         WHERE id = $4`,
+        [Number(amount) || 0, String(transId), String(requestId), Number(orderId)]
+      );
+    }
+    return res.status(204).send();
+  } catch (err) {
+    console.error('[MoMo IPN] Lỗi xử lý webhook:', err);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
+
+marketplaceRouter.post('/payment/momo/ipn', handleMoMoIpnHandler);
+
+/* ================================================================
+ * GHN Express Logistics API
+ * ================================================================ */
+
+// GET /api/marketplace/shipping/ghn/provinces — Danh sách tỉnh thành
+marketplaceRouter.get('/shipping/ghn/provinces', asyncHandler(async (_req, res) => {
+  const provinces = await ghnService.getProvinces();
+  res.json({ success: true, data: provinces });
+}));
+
+// GET /api/marketplace/shipping/ghn/districts/:provinceId — Danh sách quận huyện
+marketplaceRouter.get('/shipping/ghn/districts/:provinceId', asyncHandler(async (req, res) => {
+  const districts = await ghnService.getDistricts(Number(req.params.provinceId));
+  res.json({ success: true, data: districts });
+}));
+
+// GET /api/marketplace/shipping/ghn/wards/:districtId — Danh sách phường xã
+marketplaceRouter.get('/shipping/ghn/wards/:districtId', asyncHandler(async (req, res) => {
+  const wards = await ghnService.getWards(Number(req.params.districtId));
+  res.json({ success: true, data: wards });
+}));
+
+// POST /api/marketplace/shipping/ghn/fee — Tính phí vận chuyển GHN
+marketplaceRouter.post('/shipping/ghn/fee', asyncHandler(async (req, res) => {
+  const { to_district_id, to_ward_code, weight, insurance_value } = req.body;
+  if (!to_district_id || !to_ward_code) {
+    throw httpError(400, 'Thiếu thông tin quận/huyện hoặc phường/xã để tính cước GHN.');
+  }
+  const fee = await ghnService.calculateShippingFee({
+    toDistrictId: Number(to_district_id),
+    toWardCode: String(to_ward_code),
+    weight: Number(weight) || 500,
+    insuranceValue: Number(insurance_value) || 0,
+  });
+  res.json({ success: true, data: fee });
+}));
+
+// POST /api/marketplace/seller/orders/:id/ghn-create — Tạo vận đơn GHN tự động
+marketplaceRouter.post('/seller/orders/:id/ghn-create', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
+  const orderId = Number(req.params.id);
+  const userId = req.session.userId!;
+
+  const { rows: orderRows } = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
+  const order = orderRows[0];
+  if (!order) {
+    throw httpError(404, 'Đơn hàng không tồn tại.');
+  }
+
+  const { rows: itemRows } = await pool.query('SELECT * FROM order_items WHERE order_id = $1', [orderId]);
+  const sellerIds = itemRows.map((r: any) => Number(r.seller_id));
+  if (!sellerIds.includes(userId)) {
+    throw httpError(403, 'Bạn không có quyền tạo đơn vận chuyển cho đơn hàng này.');
+  }
+
+  if (order.ghn_order_code) {
+    return res.json({
+      success: true,
+      message: 'Đơn hàng đã có mã vận đơn GHN.',
+      order_code: order.ghn_order_code,
+    });
+  }
+
+  const toDistrictId = order.to_district_id || req.body.to_district_id || 1442;
+  const toWardCode = order.to_ward_code || req.body.to_ward_code || '20101';
+
+  const ghnResult = await ghnService.createShippingOrder({
+    orderId: order.id,
+    toName: order.shipping_name,
+    toPhone: order.shipping_phone,
+    toAddress: order.shipping_address,
+    toDistrictId: Number(toDistrictId),
+    toWardCode: String(toWardCode),
+    codAmount: order.payment_method === 'cod' ? Number(order.total_amount) : 0,
+    items: itemRows.map((item: any) => ({
+      name: item.product_name,
+      quantity: item.quantity,
+      price: Number(item.unit_price),
+    })),
+  });
+
+  const estimatedDelivery = ghnResult.expected_delivery_time
+    ? new Date(ghnResult.expected_delivery_time)
+    : new Date(Date.now() + 3 * 86400000);
+
+  await pool.query(
+    `UPDATE orders
+     SET status = 'shipping',
+         carrier_name = 'Giao Hàng Nhanh (GHN)',
+         tracking_number = $1,
+         ghn_order_code = $1,
+         estimated_delivery_at = $2,
+         updated_at = NOW()
+     WHERE id = $3`,
+    [ghnResult.order_code, estimatedDelivery, order.id]
+  );
+
+  await pool.query(
+    `INSERT INTO order_transit_logs (order_id, status, current_location, description)
+     VALUES ($1, 'picked_up', 'Bưu cục GHN Tiếp nhận', $2)`,
+    [order.id, `Đơn hàng đã được tạo thành công trên hệ thống GHN Express. Mã vận đơn: ${ghnResult.order_code}.`]
+  );
+
+  res.json({
+    success: true,
+    message: 'Tạo vận đơn GHN thành công!',
+    order_code: ghnResult.order_code,
+    expected_delivery_time: ghnResult.expected_delivery_time,
+  });
+}));
+

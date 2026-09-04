@@ -166,6 +166,10 @@ app.use('/api/messages', messagesRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/ewallet', ewalletRouter);
 
+// MoMo IPN Webhook URL directly matching MOMO_IPN_URL config
+import { handleMoMoIpnHandler } from './routes/marketplace.js';
+app.post('/api/v1/payment/momo/ipn', handleMoMoIpnHandler);
+
 app.use(errorHandler);
 
 console.info(

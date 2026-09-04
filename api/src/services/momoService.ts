@@ -1,101 +1,140 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
+import https from 'node:https';
+import { env } from '../env.js';
 
-interface MoMoPaymentRequest {
+export interface MoMoCreatePaymentResponse {
   partnerCode: string;
-  partnerName: string;
-  storeId: string;
+  orderId: string;
   requestId: string;
   amount: number;
+  responseTime: number;
+  message: string;
+  resultCode: number;
+  payUrl?: string;
+  shortLink?: string;
+  deeplink?: string;
+  qrCodeUrl?: string;
+}
+
+export interface MoMoIpnBody {
+  partnerCode: string;
   orderId: string;
+  requestId: string;
+  amount: number | string;
   orderInfo: string;
-  redirectUrl: string;
-  ipnUrl: string;
-  requestType: string;
+  orderType: string;
+  transId: number | string;
+  resultCode: number | string;
+  message: string;
+  payType: string;
+  responseTime: number | string;
   extraData: string;
-  lang: string;
   signature: string;
 }
 
-// Tạo yêu cầu thanh toán MoMo (Nạp tiền ví điện tử): Xây dựng chữ ký SHA256 bảo mật và gọi endpoint của MoMo để lấy link thanh toán
-export const createMoMoPayment = async (orderId: string, amount: number, orderInfo: string) => {
-  const partnerCode = process.env.MOMO_PARTNER_CODE || 'MOMO';
-  const accessKey = process.env.MOMO_ACCESS_KEY || 'MOCK_ACCESS_KEY';
-  const secretKey = process.env.MOMO_SECRET_KEY || 'MOCK_SECRET_KEY';
-  const endpoint = process.env.MOMO_ENDPOINT || 'https://test-payment.momo.vn/v2/gateway/api/create';
-
-  const apiBaseUrl = (process.env.API_URL || 'https://abc123.ngrok-free.app').replace(/\/+$/, '');
-  const feBaseUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
-  const redirectUrl = `${feBaseUrl}/wallet`;
-  const ipnUrl = `${apiBaseUrl}/api/ewallet/topup/momo-ipn`;
-  const requestType = 'payWithMethod';
+/**
+ * Tạo URL thanh toán MoMo Sandbox qua cổng gateway captureWallet
+ */
+export async function createPaymentUrl(params: {
+  orderId: number | string;
+  amount: number;
+  orderInfo?: string;
+  redirectUrl?: string;
+  ipnUrl?: string;
+}): Promise<MoMoCreatePaymentResponse> {
+  const partnerCode = env.momo.partnerCode;
+  const accessKey = env.momo.accessKey;
+  const secretKey = env.momo.secretKey;
+  const orderId = String(params.orderId);
+  const requestId = `${orderId}_${Date.now()}`;
+  const amount = Math.round(params.amount);
+  const orderInfo = params.orderInfo || `Thanh toan don hang #${orderId} tai Cooking`;
+  const redirectUrl = params.redirectUrl || env.momo.redirectUrl;
+  const ipnUrl = params.ipnUrl || env.momo.ipnUrl;
+  const requestType = 'captureWallet';
   const extraData = '';
-  const requestId = partnerCode + new Date().getTime();
-  
-  const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
-  
-  const signature = crypto.createHmac('sha256', secretKey)
-    .update(rawSignature)
-    .digest('hex');
 
-  const requestBody = {
+  const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
+  const signature = crypto.createHmac('sha256', secretKey).update(rawSignature).digest('hex');
+
+  const requestBody = JSON.stringify({
     partnerCode,
-    partnerName: 'Cook',
-    storeId: partnerCode,
+    accessKey,
     requestId,
     amount,
     orderId,
     orderInfo,
     redirectUrl,
     ipnUrl,
-    lang: 'vi',
+    extraData,
     requestType,
-    autoCapture: true,
-    extraData,
-    signature
-  };
+    signature,
+    lang: 'vi',
+  });
 
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+  const url = new URL(env.momo.endpoint);
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      url,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(requestBody),
+        },
       },
-      body: JSON.stringify(requestBody)
-    });
-    
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('MoMo API Error:', error);
-    throw new Error('Could not create MoMo payment request');
-  }
-};
+      (res) => {
+        let raw = '';
+        res.on('data', (chunk) => (raw += chunk));
+        res.on('end', () => {
+          try {
+            const data = JSON.parse(raw) as MoMoCreatePaymentResponse;
+            if (data.resultCode === 0 && data.payUrl) {
+              resolve(data);
+            } else {
+              reject(new Error(data.message || `MoMo Error code ${data.resultCode}: ${raw}`));
+            }
+          } catch (e) {
+            reject(new Error(`Failed to parse MoMo response: ${raw}`));
+          }
+        });
+      }
+    );
 
-// Xác thực chữ ký phản hồi (IPN/Callback) từ MoMo để kiểm tra xem dữ liệu giao dịch trả về có tin cậy và không bị chỉnh sửa
-export const verifyMoMoSignature = (query: any): boolean => {
-  const secretKey = process.env.MOMO_SECRET_KEY || 'MOCK_SECRET_KEY';
-  
-  const {
-    partnerCode,
-    orderId,
-    requestId,
-    amount,
-    orderInfo,
-    orderType,
-    transId,
-    resultCode,
-    message,
-    payType,
-    responseTime,
-    extraData,
-    signature
-  } = query;
+    req.on('error', (err) => reject(err));
+    req.write(requestBody);
+    req.end();
+  });
+}
 
-  const rawSignature = `accessKey=${process.env.MOMO_ACCESS_KEY || 'MOCK_ACCESS_KEY'}&amount=${amount}&extraData=${extraData}&message=${message}&orderId=${orderId}&orderInfo=${orderInfo}&orderType=${orderType}&partnerCode=${partnerCode}&payType=${payType}&requestId=${requestId}&responseTime=${responseTime}&resultCode=${resultCode}&transId=${transId}`;
-  
-  const expectedSignature = crypto.createHmac('sha256', secretKey)
+/**
+ * Xác thực chữ ký HMAC-SHA256 của Webhook IPN gửi từ MoMo
+ */
+export function verifyIpnSignature(body: MoMoIpnBody): boolean {
+  if (!body || !body.signature) return false;
+
+  const accessKey = env.momo.accessKey;
+  const secretKey = env.momo.secretKey;
+
+  const rawSignature = `accessKey=${accessKey}&amount=${body.amount}&extraData=${body.extraData || ''}&message=${body.message}&orderId=${body.orderId}&orderInfo=${body.orderInfo}&orderType=${body.orderType}&partnerCode=${body.partnerCode}&payType=${body.payType}&requestId=${body.requestId}&responseTime=${body.responseTime}&resultCode=${body.resultCode}&transId=${body.transId}`;
+
+  const calculatedSignature = crypto
+    .createHmac('sha256', secretKey)
     .update(rawSignature)
     .digest('hex');
 
-  return signature === expectedSignature;
-};
+  return calculatedSignature === body.signature;
+}
+
+/**
+ * Hàm tương thích ngược cho ewalletService
+ */
+export async function createMoMoPayment(orderId: number | string, amount: number, orderInfo?: string) {
+  return createPaymentUrl({ orderId, amount, orderInfo });
+}
+
+export function verifyMoMoSignature(body: any): boolean {
+  return verifyIpnSignature(body);
+}
+

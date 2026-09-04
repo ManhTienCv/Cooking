@@ -14,11 +14,37 @@ interface SellerShippingModalProps {
 
 export function SellerShippingModal({ open, orderId, onClose, onSuccess }: SellerShippingModalProps) {
   const [loading, setLoading] = useState(false);
+  const [ghnCreating, setGhnCreating] = useState(false);
   const [form, setForm] = useState({
     carrier_name: 'Giao Hàng Nhanh (GHN)',
     tracking_number: '',
     estimated_days: 3,
   });
+
+  const handleAutoGhnCreate = async () => {
+    if (!orderId) return;
+    setGhnCreating(true);
+    try {
+      const res = await apiJson<{ success: boolean; order_code: string; message: string }>(
+        `/api/marketplace/seller/orders/${orderId}/ghn-create`,
+        { method: 'POST' }
+      );
+      if (res.order_code) {
+        toast.success(`Tạo vận đơn GHN thành công: ${res.order_code}`);
+        setForm((f) => ({
+          ...f,
+          carrier_name: 'Giao Hàng Nhanh (GHN)',
+          tracking_number: res.order_code,
+        }));
+        onSuccess();
+        onClose();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi tạo vận đơn tự động qua GHN');
+    } finally {
+      setGhnCreating(false);
+    }
+  };
 
   useEffect(() => {
     if (open) {
@@ -105,6 +131,16 @@ export function SellerShippingModal({ open, orderId, onClose, onSuccess }: Selle
                   <option value="Viettel Post">Viettel Post</option>
                   <option value="Self Shipping / Xe tải Shop">Self Shipping / Xe tải Shop</option>
                 </select>
+                {form.carrier_name === 'Giao Hàng Nhanh (GHN)' && (
+                  <button
+                    type="button"
+                    disabled={ghnCreating || loading}
+                    onClick={handleAutoGhnCreate}
+                    className="mt-2 w-full py-2 px-3 rounded-lg border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-emerald-100 transition shadow-sm"
+                  >
+                    {ghnCreating ? 'Đang gửi thông tin sang GHN Express...' : '⚡ Tạo mã vận đơn tự động qua GHN Express API'}
+                  </button>
+                )}
               </div>
 
               <div>

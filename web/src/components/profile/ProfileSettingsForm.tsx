@@ -20,6 +20,7 @@ import { apiFetch, apiJson } from '../../lib/api';
 import { notifyAuthChanged } from '../../lib/authEvents';
 import { useTheme } from '../../hooks/useTheme';
 import toast from 'react-hot-toast';
+import { MapAddressModal } from '../common/MapAddressModal';
 import {
   loadProfilePreferences,
   saveProfilePreferences,
@@ -131,6 +132,7 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
   const [bankForm, setBankForm] = useState(blankBank);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [editingBankId, setEditingBankId] = useState<string | null>(null);
+  const [mapModalOpen, setMapModalOpen] = useState(false);
 
   const [banksList, setBanksList] = useState<VietQrBank[]>([]);
   const [bankQuery, setBankQuery] = useState('');
@@ -674,12 +676,43 @@ export default function ProfileSettingsForm({ isLoading, user, onSuccessSubmit, 
                       </p>
                     )}
                   </div>
-                  <textarea value={addressForm.address} onChange={(e) => setAddressForm((f) => ({ ...f, address: e.target.value }))} rows={3} placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố" className={`${inputClass} resize-none md:col-span-2`} />
+                  <div className="md:col-span-2 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-gray-500 dark:text-slate-400">Địa chỉ cụ thể *</label>
+                      <button
+                        type="button"
+                        onClick={() => setMapModalOpen(true)}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition"
+                      >
+                        <MapPin className="w-3.5 h-3.5" />
+                        Chọn từ Bản đồ (Maps & GPS)
+                      </button>
+                    </div>
+                    <textarea
+                      value={addressForm.address}
+                      onChange={(e) => setAddressForm((f) => ({ ...f, address: e.target.value }))}
+                      rows={3}
+                      placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
+                      className={`${inputClass} resize-none w-full`}
+                    />
+                  </div>
                 </div>
                 <div className="mt-4 flex gap-3">
                   <button type="submit" className="rounded-lg bg-black px-5 py-2 font-semibold text-white dark:bg-white dark:text-slate-950">{editingAddressId ? 'Lưu địa chỉ' : 'Thêm địa chỉ'}</button>
                   {editingAddressId && <button type="button" onClick={() => { setEditingAddressId(null); setAddressForm(blankAddress); }} className="rounded-lg border border-gray-200 px-5 py-2 font-semibold text-gray-600 dark:border-slate-700 dark:text-slate-300">Hủy</button>}
                 </div>
+
+                <MapAddressModal
+                  open={mapModalOpen}
+                  onClose={() => setMapModalOpen(false)}
+                  initialAddress={addressForm.address}
+                  onSelectAddress={(data) => {
+                    setAddressForm((f) => ({
+                      ...f,
+                      address: data.fullAddress,
+                    }));
+                  }}
+                />
               </form>
             );
           })()}

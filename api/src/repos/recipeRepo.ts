@@ -378,3 +378,74 @@ export async function updateRecipe(id: number, authorId: number, data: {
 export async function deleteRecipe(id: number): Promise<void> {
   await pool.query('DELETE FROM recipes WHERE id = $1', [id]);
 }
+
+/* ================================================================
+ * Recipe Tagged Products (Đồ bếp & nguyên liệu gắn với công thức)
+ * ================================================================ */
+
+export interface RecipeTaggedProductItem {
+  id: number;
+  recipe_id: number;
+  product_id: number;
+  usage_note: string | null;
+  name: string;
+  slug: string;
+  price: number;
+  sale_price: number | null;
+  main_image: string | null;
+  rating: number;
+  total_reviews: number;
+  seller_id: number;
+  store_name: string;
+}
+
+export async function getRecipeTaggedProducts(recipeId: number): Promise<RecipeTaggedProductItem[]> {
+  const { rows } = await pool.query(
+    `SELECT
+       rtp.id,
+       rtp.recipe_id,
+       rtp.product_id,
+       rtp.usage_note,
+       p.name,
+       p.slug,
+       p.price,
+       p.sale_price,
+       p.image_url AS main_image,
+       p.rating,
+       p.total_reviews,
+       p.seller_id,
+       COALESCE(sp.store_name, u.full_name) AS store_name
+     FROM recipe_tagged_products rtp
+     JOIN products p ON p.id = rtp.product_id
+     JOIN users u ON u.id = p.seller_id
+     LEFT JOIN seller_profiles sp ON sp.user_id = p.seller_id
+     WHERE rtp.recipe_id = $1 AND p.is_available = true
+     ORDER BY rtp.created_at ASC`,
+    [recipeId]
+  );
+  return rows as RecipeTaggedProductItem[];
+}
+
+export async function addRecipeTaggedProduct(
+  recipeId: number,
+  productId: number,
+  usageNote?: string | null
+): Promise<boolean> {
+  const { rowCount } = await pool.query(
+    `INSERT INTO recipe_tagged_products (recipe_id, product_id, usage_note)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (recipe_id, product_id)
+     DO UPDATE SET usage_note = EXCLUDED.usage_note`,
+    [recipeId, productId, usageNote || null]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function removeRecipeTaggedProduct(recipeId: number, productId: number): Promise<boolean> {
+  const { rowCount } = await pool.query(
+    `DELETE FROM recipe_tagged_products WHERE recipe_id = $1 AND product_id = $2`,
+    [recipeId, productId]
+  );
+  return (rowCount ?? 0) > 0;
+}
+

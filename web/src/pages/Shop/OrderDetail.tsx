@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Phone, User, CreditCard, Package, CheckCircle, Star, MessageCircle, Truck, Calendar, AlertTriangle, Clock } from 'lucide-react';
+import { MapPin, Phone, User, CreditCard, Package, CheckCircle, Star, MessageCircle, Truck, Calendar, AlertTriangle, Clock, Camera, X, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
@@ -15,6 +15,17 @@ type OrderReview = {
   product_id: number;
   rating: number;
   comment: string | null;
+  images?: string[];
+  video_url?: string | null;
+};
+
+type ReviewFormState = {
+  rating: number;
+  comment: string;
+  images: string[];
+  video_url: string;
+  submitting: boolean;
+  submitted: boolean;
 };
 
 const STATUS_STEPS = [
@@ -23,8 +34,17 @@ const STATUS_STEPS = [
   { key: 'preparing', label: 'Chuẩn bị' },
   { key: 'shipping', label: 'Đang giao' },
   { key: 'delivered', label: 'Đã giao' },
-  { key: 'completed', label: 'Hoàn thành' },
+  { key: 'completed', label: 'Hoàn tất' },
 ];
+
+const DEFAULT_REVIEW_FORM: ReviewFormState = {
+  rating: 5,
+  comment: '',
+  images: [],
+  video_url: '',
+  submitting: false,
+  submitted: false,
+};
 
 function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
@@ -34,7 +54,7 @@ export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<(Order & { items: OrderItem[] }) | null>(null);
   const [loading, setLoading] = useState(true);
-  const [reviewForms, setReviewForms] = useState<Record<number, { rating: number; comment: string; submitting: boolean; submitted: boolean }>>({});
+  const [reviewForms, setReviewForms] = useState<Record<number, ReviewFormState>>({});
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [transitData, setTransitData] = useState<{
@@ -118,15 +138,85 @@ export default function OrderDetail() {
     }));
   }, [order]);
 
-  const updateReviewForm = (productId: number, patch: Partial<{ rating: number; comment: string; submitting: boolean; submitted: boolean }>) => {
-    setReviewForms((prev) => ({
-      ...prev,
-      [productId]: {
-        ...{ rating: 5, comment: '', submitting: false, submitted: false },
-        ...prev[productId],
-        ...patch,
-      },
-    }));
+  const updateReviewForm = (productId: number, patch: Partial<ReviewFormState>) => {
+    setReviewForms((prev) => {
+      const existing = prev[productId] ?? DEFAULT_REVIEW_FORM;
+      return {
+        ...prev,
+        [productId]: {
+          ...existing,
+          ...patch,
+        },
+      };
+    });
+  };
+
+  const handleReviewImagesChange = (productId: number, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const cur = reviewForms[productId]?.images || [];
+    if (cur.length + files.length > 5) {
+      toast.error('Tối đa 5 hình ảnh thực tế cho mỗi đánh giá');
+      return;
+    }
+    Array.from(files).forEach((file) => {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`Ảnh ${file.name} vượt quá 5MB`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const b64 = reader.result as string;
+        setReviewForms((prev) => {
+          const existing = prev[productId] ?? DEFAULT_REVIEW_FORM;
+          if (existing.images.length >= 5) return prev;
+          return {
+            ...prev,
+            [productId]: {
+              ...existing,
+              images: [...existing.images, b64],
+              submitted: false,
+            },
+          };
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveReviewImage = (productId: number, idx: number) => {
+    setReviewForms((prev) => {
+      const existing = prev[productId] ?? DEFAULT_REVIEW_FORM;
+      return {
+        ...prev,
+        [productId]: {
+          ...existing,
+          images: existing.images.filter((_, i) => i !== idx),
+          submitted: false,
+        },
+      };
+    });
+  };
+
+  const [momoLoading, setMomoLoading] = useState(false);
+
+  const handlePayMoMo = async () => {
+    if (!order) return;
+    setMomoLoading(true);
+    try {
+      const res = await apiJson<{ success: boolean; payUrl?: string }>(`/api/marketplace/orders/${order.id}/momo`, {
+        method: 'POST',
+      });
+      if (res.payUrl) {
+        toast.success('Đang mở cổng thanh toán MoMo...');
+        window.location.href = res.payUrl;
+      } else {
+        toast.error('Không tạo được liên kết thanh toán MoMo');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi thanh toán MoMo');
+    } finally {
+      setMomoLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -143,6 +233,8 @@ export default function OrderDetail() {
             next[review.product_id] = {
               rating: review.rating,
               comment: review.comment ?? '',
+              images: review.images ?? [],
+              video_url: review.video_url ?? '',
               submitting: false,
               submitted: true,
             };
@@ -181,7 +273,7 @@ export default function OrderDetail() {
   const stepIndex = isCancelled ? -1 : STATUS_STEPS.findIndex((s) => s.key === order.status);
 
   const submitReview = async (item: OrderItem) => {
-    const form = reviewForms[item.product_id] ?? { rating: 5, comment: '', submitting: false, submitted: false };
+    const form = reviewForms[item.product_id] ?? { rating: 5, comment: '', images: [], video_url: '', submitting: false, submitted: false };
     updateReviewForm(item.product_id, { submitting: true });
     try {
       const response = await apiFetch('/api/marketplace/reviews', {
@@ -192,6 +284,8 @@ export default function OrderDetail() {
           order_id: order.id,
           rating: form.rating,
           comment: form.comment,
+          images: form.images || [],
+          video_url: form.video_url || undefined,
         }),
       });
       if (!response.ok) {
@@ -251,6 +345,32 @@ export default function OrderDetail() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Instant 1-2H Delivery Alert */}
+        {order.delivery_type === 'instant_1h' && (
+          <Reveal y={12}>
+            <div className="rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 p-4 md:p-5 dark:border-amber-700/50 shadow-sm">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center font-black text-xl shadow-md shadow-orange-500/30 shrink-0">
+                  ⚡
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-black text-sm md:text-base text-slate-900 dark:text-white uppercase tracking-wider">
+                      Đơn Hàng Giao Hỏa Tốc 1 - 2 Giờ
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500 text-white shadow-sm shadow-amber-500/30">
+                      Thực phẩm tươi sống
+                    </span>
+                  </div>
+                  <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                    Đơn hàng được ưu tiên đóng gói và bàn giao ngay cho shipper công nghệ. Thời gian giao hàng dự kiến trong <strong>60 - 90 phút</strong>.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        )}
+
         {/* Status Tracker */}
         <Reveal y={12}>
           <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-gray-100 dark:border-slate-700/50 p-6">
@@ -449,6 +569,57 @@ export default function OrderDetail() {
                         placeholder="Nhận xét của bạn"
                         className="w-full resize-none rounded-lg border border-amber-100 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 dark:border-slate-700 dark:bg-slate-950/40 dark:text-white"
                       />
+
+                      {/* Upload ảnh & video đánh giá */}
+                      <div className="mt-3 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-50 cursor-pointer transition-colors shadow-sm">
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>Thêm ảnh ({reviewForm.images?.length || 0}/5)</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              className="hidden"
+                              onChange={(e) => {
+                                handleReviewImagesChange(item.product_id, e.target.files);
+                                e.target.value = '';
+                              }}
+                            />
+                          </label>
+
+                          <div className="flex items-center gap-1 flex-1 min-w-[200px]">
+                            <Video className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <input
+                              type="url"
+                              value={reviewForm.video_url || ''}
+                              onChange={(e) => updateReviewForm(item.product_id, { video_url: e.target.value, submitted: false })}
+                              placeholder="Link video unboxing (Youtube/Tiktok)..."
+                              className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Danh sách ảnh đã chọn */}
+                        {reviewForm.images && reviewForm.images.length > 0 && (
+                          <div className="flex items-center gap-2 flex-wrap pt-1">
+                            {reviewForm.images.map((imgUrl, imgIdx) => (
+                              <div key={imgIdx} className="relative w-14 h-14 rounded-lg overflow-hidden border border-amber-300 dark:border-amber-600 group">
+                                <img src={imgUrl} alt={`Review ${imgIdx + 1}`} className="w-full h-full object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveReviewImage(item.product_id, imgIdx)}
+                                  className="absolute top-0.5 right-0.5 w-4 h-4 bg-black/70 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors"
+                                  title="Xóa ảnh này"
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
                       <button
                         type="button"
                         disabled={reviewForm.submitting}
@@ -485,12 +656,33 @@ export default function OrderDetail() {
                   </div>
                   <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
                     <span>Hình thức thanh toán</span>
-                    <span>{order.payment_method === 'cod' ? 'Thanh toán khi nhận hàng' : 'Chuyển khoản ngân hàng'}</span>
+                    <span>
+                      {order.payment_method === 'cod'
+                        ? 'Thanh toán khi nhận hàng'
+                        : order.payment_method === 'momo'
+                        ? 'Ví điện tử MoMo'
+                        : order.payment_method === 'cookpay'
+                        ? 'Ví Cook'
+                        : 'Chuyển khoản ngân hàng'}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center border-t border-gray-50 dark:border-slate-800/50 pt-2">
                     <span className="font-bold text-gray-900 dark:text-white">Tổng cộng</span>
                     <span className="text-xl font-extrabold text-red-600 dark:text-red-400">{formatPrice(order.total_amount)}</span>
                   </div>
+
+                  {!isPaid && !isCancelled && order.payment_method === 'momo' && (
+                    <div className="mt-4 pt-3 border-t border-gray-100 dark:border-slate-700/50">
+                      <button
+                        type="button"
+                        disabled={momoLoading}
+                        onClick={handlePayMoMo}
+                        className="w-full py-3 bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition"
+                      >
+                        {momoLoading ? 'Đang kết nối MoMo...' : '💳 Thanh toán ngay bằng Ví MoMo'}
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -552,11 +744,26 @@ export default function OrderDetail() {
                 {isPaid ? (
                   <span>Đã thanh toán qua {getPaidViaLabel(order.paid_via)}</span>
                 ) : (
-                  <span>Hình thức thanh toán: {order.payment_method === 'cod' ? 'Thanh toán khi nhận hàng' : 'Chuyển khoản ngân hàng'}</span>
+                  <span>
+                    Hình thức thanh toán:{' '}
+                    {order.payment_method === 'cod'
+                      ? 'Thanh toán khi nhận hàng'
+                      : order.payment_method === 'momo'
+                      ? 'Ví điện tử MoMo'
+                      : order.payment_method === 'cookpay'
+                      ? 'Ví Cook'
+                      : 'Chuyển khoản ngân hàng'}
+                  </span>
                 )}
               </p>
               {order.note && (
                 <p className="text-gray-500 dark:text-gray-500 italic mt-2">📝 {order.note}</p>
+              )}
+              {order.ref_recipe_id && (
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700/60 flex items-center gap-2 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                  <span className="text-base">🎁</span>
+                  <span>Đơn hàng liên kết từ bài viết công thức nấu ăn. Tác giả công thức được nhận 5% hoa hồng thưởng khi đơn hoàn tất!</span>
+                </div>
               )}
             </div>
           </div>

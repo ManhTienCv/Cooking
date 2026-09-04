@@ -72,6 +72,10 @@ export interface Order {
   paid_amount?: number;
   paid_via?: string | null;
   is_fast_food_only?: boolean;
+  delivery_type?: string;
+  ref_recipe_id?: number | null;
+  commission_amount?: number;
+  commission_paid?: boolean;
 }
 
 export interface OrderItem {
@@ -94,9 +98,26 @@ export interface ProductReview {
   rating: number;
   comment: string | null;
   images: string[];
+  video_url?: string | null;
   created_at: string;
   full_name: string;
   avatar_url: string | null;
+}
+
+export interface RecipeTaggedProduct {
+  id: number;
+  recipe_id: number;
+  product_id: number;
+  usage_note: string | null;
+  name: string;
+  slug: string;
+  price: number;
+  sale_price: number | null;
+  main_image: string | null;
+  rating: number;
+  total_reviews: number;
+  seller_id: number;
+  store_name: string;
 }
 
 export interface WishlistItem {

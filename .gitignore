@@ -108,3 +108,4 @@ web/public/uploads/
 # Dev Helper Scripts
 list_users.ts
 reset_password.ts
+scratch/

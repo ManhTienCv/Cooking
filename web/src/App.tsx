@@ -39,6 +39,7 @@ const Shop = lazy(() => import('./pages/Shop'));
 const ProductDetail = lazy(() => import('./pages/Shop/Detail'));
 const CartPage = lazy(() => import('./pages/Shop/Cart'));
 const Checkout = lazy(() => import('./pages/Shop/Checkout'));
+const OrderSuccess = lazy(() => import('./pages/Shop/OrderSuccess'));
 const OrdersPage = lazy(() => import('./pages/Shop/Orders'));
 const OrderDetailPage = lazy(() => import('./pages/Shop/OrderDetail'));
 const SellerDashboard = lazy(() => import('./pages/Seller'));
@@ -160,6 +161,7 @@ export default function App() {
                 <Route path="/shop/:slug" element={<ProductDetail />} />
                 <Route path="/cart" element={<CartPage />} />
                 <Route path="/checkout" element={<Checkout />} />
+                <Route path="/order-success" element={<OrderSuccess />} />
                 <Route path="/orders" element={<OrdersPage />} />
                 <Route path="/orders/:id" element={<OrderDetailPage />} />
                 <Route path="/seller" element={<SellerDashboard />} />

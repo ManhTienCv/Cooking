@@ -134,6 +134,7 @@ export interface ProductReview {
   rating: number;
   comment: string | null;
   images: string[];
+  video_url: string | null;
   created_at: Date;
   /* joined */
   full_name: string;

@@ -6,6 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 import ProductCard from '../../components/shop/ProductCard';
+import FlashSaleSection from '../../components/shop/FlashSaleSection';
 import AiRecommendations from '../../components/shop/AiRecommendations';
 import FeaturedBundles from '../../components/shop/FeaturedBundles';
 import Pagination from '../../components/ui/Pagination';
@@ -167,6 +168,9 @@ export default function Shop() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" ref={filterRef}>
+        {/* Flash Sale Section */}
+        <FlashSaleSection products={products} />
+
         {/* Search + Filter Bar */}
         <div className="flex flex-col md:flex-row items-center gap-4 mb-8">
           {/* Search */}

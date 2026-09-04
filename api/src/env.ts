@@ -70,9 +70,33 @@ export const env = {
   brevoSenderEmail: process.env.BREVO_SENDER_EMAIL ?? '',
   brevoSenderName: process.env.BREVO_SENDER_NAME ?? '',
 
+  /** Resend (HTTP API) — alternative cloud provider */
+  resendApiKey: process.env.RESEND_API_KEY ?? '',
+  resendSenderEmail: process.env.RESEND_SENDER_EMAIL ?? '',
+
   /** Google reCAPTCHA v3 secret. Login checks are enforced after repeated failures. */
   otpEmailMode: (process.env.OTP_EMAIL_MODE ?? 'auto').toLowerCase(),
   testOtpCode: process.env.TEST_OTP_CODE ?? '',
   recaptchaSecretKey: process.env.RECAPTCHA_SECRET_KEY ?? '',
   recaptchaMinScore: Number(process.env.RECAPTCHA_MIN_SCORE) || 0.5,
+
+  /** GHN Express API */
+  ghn: {
+    apiUrl: process.env.GHN_API_URL ?? 'https://online-gateway.ghn.vn/shiip/public-api',
+    apiToken: process.env.GHN_API_TOKEN ?? '5a8e6646-a763-11f1-be93-ea52ad3d88b7',
+    shopId: Number(process.env.GHN_SHOP_ID) || 6643423,
+    verifySsl: (process.env.GHN_VERIFY_SSL ?? 'false').toLowerCase() !== 'false',
+    senderDistrictId: Number(process.env.GHN_SENDER_DISTRICT_ID) || 1485,
+    senderWardCode: String(process.env.GHN_SENDER_WARD_CODE ?? '1A0607').replace(/['"]/g, ''),
+  },
+
+  /** MoMo Sandbox Payment Gateway */
+  momo: {
+    partnerCode: process.env.MOMO_PARTNER_CODE ?? 'MOMOR78120260520_TEST',
+    accessKey: process.env.MOMO_ACCESS_KEY ?? 'LcNmWV2YZglxe76U',
+    secretKey: process.env.MOMO_SECRET_KEY ?? 'lYj7X4SNGWKIuLEbrgVjNwiNhJ2xNK6r',
+    endpoint: process.env.MOMO_ENDPOINT ?? 'https://test-payment.momo.vn/v2/gateway/api/create',
+    redirectUrl: process.env.MOMO_REDIRECT_URL ?? 'http://127.0.0.1:8000/order-success',
+    ipnUrl: process.env.MOMO_IPN_URL ?? 'http://127.0.0.1:8000/api/v1/payment/momo/ipn',
+  },
 };

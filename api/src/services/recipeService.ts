@@ -194,3 +194,54 @@ export async function deleteRecipe(idRaw: unknown, userId: number) {
   await recipeRepo.deleteRecipe(id);
   return { success: true };
 }
+
+/* ================================================================
+ * Recipe Tagged Products (Gắn đồ bếp / nguyên liệu)
+ * ================================================================ */
+
+export async function getRecipeTaggedProducts(recipeIdRaw: unknown) {
+  const recipeId = Number(recipeIdRaw);
+  if (!recipeId) throw { status: 400, message: 'Mã công thức không hợp lệ' };
+  const products = await recipeRepo.getRecipeTaggedProducts(recipeId);
+  return { products };
+}
+
+export async function addRecipeTaggedProduct(
+  recipeIdRaw: unknown,
+  userId: number,
+  productIdRaw: unknown,
+  usageNote?: string | null
+) {
+  const recipeId = Number(recipeIdRaw);
+  const productId = Number(productIdRaw);
+  if (!recipeId || !productId) throw { status: 400, message: 'Thiếu mã công thức hoặc mã sản phẩm' };
+
+  const recipe = await recipeRepo.getRecipeById(recipeId, userId);
+  if (!recipe) throw { status: 404, message: 'Không tìm thấy công thức' };
+  if (recipe.author_id !== userId) {
+    throw { status: 403, message: 'Chỉ tác giả công thức mới có quyền gắn sản phẩm' };
+  }
+
+  const ok = await recipeRepo.addRecipeTaggedProduct(recipeId, productId, usageNote);
+  return { success: ok };
+}
+
+export async function removeRecipeTaggedProduct(
+  recipeIdRaw: unknown,
+  userId: number,
+  productIdRaw: unknown
+) {
+  const recipeId = Number(recipeIdRaw);
+  const productId = Number(productIdRaw);
+  if (!recipeId || !productId) throw { status: 400, message: 'Thiếu mã công thức hoặc mã sản phẩm' };
+
+  const recipe = await recipeRepo.getRecipeById(recipeId, userId);
+  if (!recipe) throw { status: 404, message: 'Không tìm thấy công thức' };
+  if (recipe.author_id !== userId) {
+    throw { status: 403, message: 'Chỉ tác giả công thức mới có quyền gỡ sản phẩm' };
+  }
+
+  const ok = await recipeRepo.removeRecipeTaggedProduct(recipeId, productId);
+  return { success: ok };
+}
+

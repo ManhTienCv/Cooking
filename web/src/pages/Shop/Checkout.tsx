@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Building2, CreditCard, MapPin, Phone, User, FileText, ArrowLeft, CheckCircle, Wallet } from 'lucide-react';
+import { Building2, CreditCard, MapPin, Phone, User, FileText, ArrowLeft, CheckCircle, Wallet, Clock, Truck, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useCart } from '../../contexts/CartContext';
@@ -9,6 +9,8 @@ import { Reveal } from '../../components/motion/ScrollReveal';
 import { scrollWindowToTop } from '../../lib/scroll';
 import { loadProfilePreferences, saveProfilePreferences, type LinkedBankAccount, type SavedAddress } from '../../lib/profilePreferences';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../../lib/authEvents';
+import { useCheckoutTimer } from '../../hooks/useCheckoutTimer';
+import { MapAddressModal, type SelectedMapAddress } from '../../components/common/MapAddressModal';
 
 function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
@@ -18,6 +20,19 @@ export default function Checkout() {
   const { items: allCartItems, refresh } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Bộ đếm 20 phút giữ chỗ đơn hàng (tự reset khi về giỏ hàng, giữ nguyên khi chuyển bước)
+  const {
+    formatted: timerFormatted,
+    percentage: timerPercentage,
+    isUrgent: timerIsUrgent,
+    isExpired: timerIsExpired,
+  } = useCheckoutTimer(() => {
+    toast.error('⏰ Đã hết thời gian giữ đơn hàng (20 phút). Đang đưa về giỏ hàng...');
+    setTimeout(() => {
+      navigate('/cart', { replace: true });
+    }, 2000);
+  });
 
   const state = location.state as { cartItemIds?: number[] } | null;
   const cartItemIds = useMemo(() => state?.cartItemIds || [], [state]);
@@ -42,11 +57,21 @@ export default function Checkout() {
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [selectedBankId, setSelectedBankId] = useState('');
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
+
+  // GHN & Map states
+  const [shippingFee, setShippingFee] = useState(0);
+  const [toDistrictId, setToDistrictId] = useState<number | null>(null);
+  const [toWardCode, setToWardCode] = useState<string | null>(null);
+  const [mapModalOpen, setMapModalOpen] = useState(false);
+  const [deliveryType, setDeliveryType] = useState<'standard' | 'instant_1h'>('standard');
+  const instantShippingFee = total >= 300000 ? 0 : 35000;
+  const effectiveShippingFee = deliveryType === 'instant_1h' ? instantShippingFee : (shippingFee || 29000);
+
   const [form, setForm] = useState({
     shipping_name: '',
     shipping_phone: '',
     shipping_address: '',
-    payment_method: 'cod',
+    payment_method: 'momo',
     note: '',
   });
 
@@ -146,6 +171,26 @@ export default function Checkout() {
     return () => window.removeEventListener(AUTH_CHANGE_EVENT, onAuthChange);
   }, [loadMe]);
 
+  const calculateGhnShippingFee = useCallback(async (districtId: number, wardCode: string) => {
+    try {
+      const feeRes = await apiJson<{ success: boolean; data: { total: number } }>('/api/marketplace/shipping/ghn/fee', {
+        method: 'POST',
+        body: JSON.stringify({
+          to_district_id: districtId,
+          to_ward_code: wardCode,
+          weight: 500,
+          insurance_value: total,
+        }),
+      });
+      if (feeRes.data?.total) {
+        setShippingFee(feeRes.data.total);
+        toast.success(`Cập nhật cước vận chuyển GHN: ${feeRes.data.total.toLocaleString('vi-VN')}đ`);
+      }
+    } catch {
+      setShippingFee(29000);
+    }
+  }, [total]);
+
   const selectAddress = useCallback((address: SavedAddress) => {
     setSelectedAddressId(address.id);
     setForm((f) => ({
@@ -154,7 +199,23 @@ export default function Checkout() {
       shipping_phone: address.phone,
       shipping_address: address.address,
     }));
+    // Mặc định cước GHN cơ bản khi chọn địa chỉ lưu
+    setShippingFee(29000);
   }, []);
+
+  const handleMapSelectAddress = useCallback(async (data: SelectedMapAddress) => {
+    setForm((f) => ({ ...f, shipping_address: data.fullAddress }));
+    setSelectedAddressId('');
+
+    if (data.ghnDistrictId) {
+      setToDistrictId(data.ghnDistrictId);
+      const wardCode = data.ghnWardCode || '20101';
+      setToWardCode(wardCode);
+      void calculateGhnShippingFee(data.ghnDistrictId, wardCode);
+    } else {
+      setShippingFee(29000);
+    }
+  }, [calculateGhnShippingFee]);
 
   const onSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,6 +237,8 @@ export default function Checkout() {
       return;
     }
 
+    const refRecipeId = Number(sessionStorage.getItem('cook_ref_recipe_id')) || undefined;
+
     setSubmitting(true);
     try {
       const result = await apiJson<{ success: boolean; order_id: number; total_amount: number }>(
@@ -184,10 +247,35 @@ export default function Checkout() {
           method: 'POST',
           body: JSON.stringify({
             ...form,
+            shipping_fee: effectiveShippingFee,
+            to_district_id: toDistrictId,
+            to_ward_code: toWardCode,
+            delivery_type: deliveryType,
+            ref_recipe_id: refRecipeId,
             cart_item_ids: cartItemIds.length > 0 ? cartItemIds : undefined,
           }),
         }
       );
+
+      // Nếu thanh toán bằng MoMo Sandbox
+      if (form.payment_method === 'momo') {
+        try {
+          const momoRes = await apiJson<{ success: boolean; payUrl?: string; message?: string }>(
+            `/api/marketplace/orders/${result.order_id}/momo`,
+            { method: 'POST' }
+          );
+          if (momoRes.payUrl) {
+            await refresh();
+            toast.success('Đang chuyển sang cổng thanh toán MoMo...');
+            window.location.href = momoRes.payUrl;
+            return;
+          }
+        } catch (momoErr) {
+          toast.error(momoErr instanceof Error ? momoErr.message : 'Lỗi khởi tạo thanh toán MoMo');
+          navigate('/orders/' + result.order_id, { replace: true });
+          return;
+        }
+      }
 
       // If paying with CookPay, call pay-order API
       if (form.payment_method === 'cookpay') {
@@ -203,6 +291,7 @@ export default function Checkout() {
       }
 
       await refresh();
+      sessionStorage.removeItem('cook_ref_recipe_id');
       toast.success('Đặt hàng thành công!');
       navigate('/orders/' + result.order_id, { replace: true });
     } catch (err) {
@@ -240,6 +329,72 @@ export default function Checkout() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 20-Minute Order Holding Countdown */}
+        <Reveal y={12}>
+          <div
+            className={`mb-8 rounded-2xl border p-4 sm:p-5 transition-all flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm ${
+              timerIsUrgent
+                ? 'border-red-300 bg-red-50/90 dark:border-red-900/60 dark:bg-red-950/30 text-red-900 dark:text-red-200'
+                : 'border-amber-200/90 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/20 text-amber-950 dark:text-amber-200'
+            }`}
+          >
+            <div className="flex items-center gap-3.5 w-full sm:w-auto">
+              <div
+                className={`p-2.5 rounded-xl shrink-0 ${
+                  timerIsUrgent
+                    ? 'bg-red-200 dark:bg-red-900/60 text-red-700 dark:text-red-300 animate-pulse'
+                    : 'bg-amber-200/80 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300'
+                }`}
+              >
+                <Clock className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider">Thời gian giữ đơn hàng:</span>
+                  <span className="font-mono text-base sm:text-lg font-extrabold tracking-tight">{timerFormatted}</span>
+                </div>
+                <p className="text-xs opacity-80 mt-0.5">
+                  {timerIsUrgent
+                    ? '⚠️ Sắp hết 20 phút giữ chỗ các sản phẩm trong giỏ. Vui lòng hoàn tất đặt hàng!'
+                    : 'Giỏ hàng & đơn thanh toán được bảo lưu tự động trong 20 phút.'}
+                </p>
+              </div>
+            </div>
+            <div className="w-full sm:w-44 space-y-1">
+              <div className="w-full h-2.5 bg-gray-200/80 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-1000 rounded-full ${
+                    timerIsUrgent ? 'bg-red-500' : 'bg-amber-500'
+                  }`}
+                  style={{ width: `${timerPercentage}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </Reveal>
+
+        {/* Timeout modal if 20 mins expire */}
+        {timerIsExpired && (
+          <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center space-y-4 border border-red-200 dark:border-red-900/50 shadow-2xl">
+              <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 mx-auto flex items-center justify-center text-3xl">
+                ⏰
+              </div>
+              <h3 className="text-xl font-bold text-gray-950 dark:text-white">Hết thời gian giữ đơn hàng!</h3>
+              <p className="text-sm text-gray-600 dark:text-slate-300">
+                Đã hết hạn 20 phút giữ chỗ các sản phẩm. Hệ thống sẽ chuyển bạn về giỏ hàng để cập nhật trạng thái mới nhất.
+              </p>
+              <Link
+                to="/cart"
+                onClick={scrollWindowToTop}
+                className="inline-block w-full py-3.5 bg-black dark:bg-white text-white dark:text-black rounded-xl font-bold text-sm hover:opacity-85 transition"
+              >
+                Quay lại Giỏ hàng
+              </Link>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={onSubmitOrder} className="grid lg:grid-cols-5 gap-8">
           {/* Form */}
           <div className="lg:col-span-3 space-y-6">
@@ -315,9 +470,19 @@ export default function Checkout() {
 
                   {/* Address */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                      <MapPin className="w-3.5 h-3.5 inline mr-1" /> Địa chỉ giao hàng *
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <MapPin className="w-3.5 h-3.5 inline mr-1" /> Địa chỉ giao hàng *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setMapModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition"
+                      >
+                        <MapPin className="w-3.5 h-3.5" />
+                        Chọn từ Bản đồ (Maps & GPS)
+                      </button>
+                    </div>
                     <textarea
                       required
                       value={form.shipping_address}
@@ -326,6 +491,62 @@ export default function Checkout() {
                       rows={3}
                       className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 bg-white dark:bg-slate-800 text-black dark:text-white transition-all resize-none"
                     />
+                  </div>
+
+                  {/* Phương thức vận chuyển */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
+                      Phương thức vận chuyển
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Tiêu chuẩn */}
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryType('standard')}
+                        className={`text-left p-4 rounded-xl border transition-all ${
+                          deliveryType === 'standard'
+                            ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/30 dark:border-emerald-500 shadow-sm'
+                            : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <Truck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span className="text-sm font-bold text-gray-900 dark:text-white">Tiêu chuẩn (GHN)</span>
+                          </div>
+                          <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                            {shippingFee > 0 ? formatPrice(shippingFee) : '29.000đ'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-slate-400">
+                          Giao toàn quốc 2 - 3 ngày bởi GHN Express
+                        </p>
+                      </button>
+
+                      {/* Hỏa tốc trong 1-2 giờ */}
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryType('instant_1h')}
+                        className={`text-left p-4 rounded-xl border transition-all ${
+                          deliveryType === 'instant_1h'
+                            ? 'border-amber-500 bg-amber-50/70 dark:bg-amber-950/30 dark:border-amber-500 shadow-sm'
+                            : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+                            <span className="text-sm font-bold text-gray-900 dark:text-white">Hỏa tốc 1 - 2 Giờ</span>
+                          </div>
+                          <span className="text-xs font-black text-amber-600 dark:text-amber-400">
+                            {total >= 300000 ? 'MIỄN PHÍ' : '35.000đ'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-slate-400">
+                          Giao siêu tốc 60-90p cho thực phẩm tươi sống
+                        </p>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Note */}
@@ -352,31 +573,54 @@ export default function Checkout() {
                 </h3>
                 <div className="space-y-3">
                   {[
+                    { value: 'momo', label: 'Ví MoMo (Cổng MoMo Sandbox)', emoji: '👛', badge: 'Khuyên dùng' },
                     { value: 'cookpay', label: 'Ví Cook', emoji: '🪙' },
                     { value: 'cod', label: 'Thanh toán khi nhận hàng (COD)', emoji: '💰' },
                     { value: 'bank_transfer', label: 'Chuyển khoản ngân hàng', emoji: '🏦' },
-                    { value: 'qr', label: 'Thanh toán qua mã QR', emoji: '📱' },
                   ].map((pm) => (
                     <label
                       key={pm.value}
-                      className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                      className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
                         form.payment_method === pm.value
                           ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-500'
                           : 'border-gray-200 dark:border-slate-700 hover:border-gray-300'
                       }`}
                     >
-                      <input
-                        type="radio"
-                        name="payment"
-                        value={pm.value}
-                        checked={form.payment_method === pm.value}
-                        onChange={set('payment_method')}
-                        className="accent-amber-500"
-                      />
-                      <span className="text-xl">{pm.emoji}</span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">{pm.label}</span>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="payment"
+                          value={pm.value}
+                          checked={form.payment_method === pm.value}
+                          onChange={set('payment_method')}
+                          className="accent-amber-500"
+                        />
+                        <span className="text-xl">{pm.emoji}</span>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">{pm.label}</span>
+                      </div>
+                      {pm.badge && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300">
+                          {pm.badge}
+                        </span>
+                      )}
                     </label>
                   ))}
+
+                  {form.payment_method === 'momo' && (
+                    <div className="rounded-xl border border-pink-200 bg-pink-50/70 p-4 dark:border-pink-900/40 dark:bg-pink-900/10">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-pink-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-sm">
+                          MoMo
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-pink-900 dark:text-pink-200">Cổng thanh toán MoMo Sandbox</p>
+                          <p className="text-xs text-pink-800 dark:text-pink-300 mt-1 leading-relaxed">
+                            Sau khi bấm "Xác nhận đặt hàng", hệ thống sẽ chuyển hướng bạn sang cổng MoMo an toàn để quét mã QR hoặc đăng nhập tài khoản MoMo.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {form.payment_method === 'cookpay' && (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/40 dark:bg-emerald-900/10">
                       <div className="flex items-center justify-between">
@@ -414,8 +658,8 @@ export default function Checkout() {
                               key={bank.id}
                               className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-all ${
                                 selectedBankId === bank.id
-                                  ? 'border-blue-400 bg-white dark:border-blue-500 dark:bg-slate-800'
-                                  : 'border-transparent bg-white/70 dark:bg-slate-800/60'
+                                    ? 'border-blue-400 bg-white dark:border-blue-500 dark:bg-slate-800'
+                                    : 'border-transparent bg-white/70 dark:bg-slate-800/60'
                               }`}
                             >
                               <input
@@ -435,15 +679,6 @@ export default function Checkout() {
                           ))}
                         </div>
                       )}
-                    </div>
-                  )}
-                  {form.payment_method === 'qr' && (
-                    <div className="rounded-xl border border-amber-100 bg-amber-50/70 p-6 text-center dark:border-amber-900/40 dark:bg-amber-900/10">
-                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-3">Quét mã QR để thanh toán trực tiếp</p>
-                      <div className="bg-white p-2 rounded-xl inline-block shadow-sm">
-                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PAYMENT_${total}`} alt="QR Code" className="w-32 h-32" />
-                      </div>
-                      <p className="text-xs text-amber-600 dark:text-amber-500 mt-3">Mã QR chứa sẵn số tiền cần thanh toán. Hệ thống sẽ tự động xác nhận sau khi chuyển khoản thành công.</p>
                     </div>
                   )}
                 </div>
@@ -484,16 +719,22 @@ export default function Checkout() {
                   <span className="font-medium text-gray-900 dark:text-white">{formatPrice(total)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Vận chuyển</span>
-                  <span className="text-green-600 font-medium">Miễn phí</span>
+                  <span className="text-gray-500">
+                    Phí vận chuyển ({deliveryType === 'instant_1h' ? 'Hỏa tốc' : 'GHN'})
+                  </span>
+                  <span className={effectiveShippingFee > 0 ? "font-medium text-gray-900 dark:text-white" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
+                    {effectiveShippingFee > 0 ? formatPrice(effectiveShippingFee) : 'Miễn phí'}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Dự kiến nhận hàng</span>
-                  <span className="text-gray-900 dark:text-gray-300 font-medium">2 - 3 ngày</span>
+                  <span className="text-gray-900 dark:text-gray-300 font-medium">
+                    {deliveryType === 'instant_1h' ? '⚡ 60 - 90 phút hôm nay' : '2 - 3 ngày (GHN Express)'}
+                  </span>
                 </div>
                 <div className="border-t border-gray-100 dark:border-slate-700 pt-3 flex justify-between">
-                  <span className="font-bold text-gray-900 dark:text-white">Tổng</span>
-                  <span className="text-xl font-extrabold text-red-600 dark:text-red-400">{formatPrice(total)}</span>
+                  <span className="font-bold text-gray-900 dark:text-white">Tổng thanh toán</span>
+                  <span className="text-xl font-extrabold text-red-600 dark:text-red-400">{formatPrice(total + effectiveShippingFee)}</span>
                 </div>
               </div>
 
@@ -513,6 +754,13 @@ export default function Checkout() {
           </div>
         </form>
       </div>
+
+      <MapAddressModal
+        open={mapModalOpen}
+        onClose={() => setMapModalOpen(false)}
+        initialAddress={form.shipping_address}
+        onSelectAddress={handleMapSelectAddress}
+      />
     </div>
   );
 }

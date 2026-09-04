@@ -85,3 +85,32 @@ recipesRouter.delete('/:id', requireAuth, requireCsrf, asyncHandler(async (req, 
   const result = await recipeService.deleteRecipe(req.params.id, req.session.userId!);
   res.json(result);
 }));
+
+/* ================================================================
+ * Recipe Tagged Products (Gắn đồ bếp / nguyên liệu)
+ * ================================================================ */
+
+recipesRouter.get('/:id/tagged-products', asyncHandler(async (req, res) => {
+  const result = await recipeService.getRecipeTaggedProducts(req.params.id);
+  res.json({ success: true, ...result });
+}));
+
+recipesRouter.post('/:id/tagged-products', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
+  const result = await recipeService.addRecipeTaggedProduct(
+    req.params.id,
+    req.session.userId!,
+    req.body?.product_id,
+    req.body?.usage_note
+  );
+  res.json(result);
+}));
+
+recipesRouter.delete('/:id/tagged-products/:productId', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
+  const result = await recipeService.removeRecipeTaggedProduct(
+    req.params.id,
+    req.session.userId!,
+    req.params.productId
+  );
+  res.json(result);
+}));
+

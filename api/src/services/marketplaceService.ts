@@ -290,15 +290,33 @@ export async function createOrder(userId: number, body: Record<string, unknown>)
     };
   });
 
+  const shippingFee = Math.max(0, Number(body?.shipping_fee) || 0);
+  const toDistrictId = body?.to_district_id ? Number(body.to_district_id) : undefined;
+  const toWardCode = body?.to_ward_code ? String(body.to_ward_code) : undefined;
+  const deliveryType = String(body?.delivery_type ?? 'standard').trim();
+  const refRecipeId = body?.ref_recipe_id ? Number(body.ref_recipe_id) : null;
+  const finalTotal = totalAmount + shippingFee;
+
   const orderId = await marketplaceRepo.createOrder(
     userId,
-    totalAmount,
-    { name: shippingName, phone: shippingPhone, address: shippingAddress, payment_method: paymentMethod, note },
+    finalTotal,
+    {
+      name: shippingName,
+      phone: shippingPhone,
+      address: shippingAddress,
+      payment_method: paymentMethod,
+      note,
+      shipping_fee: shippingFee,
+      to_district_id: toDistrictId,
+      to_ward_code: toWardCode,
+      delivery_type: deliveryType,
+      ref_recipe_id: refRecipeId,
+    },
     items,
     cartItemIds
   );
 
-  return { order_id: orderId, total_amount: totalAmount };
+  return { order_id: orderId, total_amount: finalTotal, shipping_fee: shippingFee };
 }
 
 async function autoConfirmPendingOrders(): Promise<void> {
@@ -445,6 +463,69 @@ async function settleOrderRevenue(
       client.release();
     }
   }
+
+  // ── Affiliate: Thưởng hoa hồng 5% cho tác giả bài viết nếu đơn hàng mua từ công thức ──
+  try {
+    const orderAffiliate = await pool.query(
+      `SELECT o.ref_recipe_id, o.commission_paid, o.buyer_id, r.author_id, r.title AS recipe_title
+       FROM orders o
+       JOIN recipes r ON r.id = o.ref_recipe_id
+       WHERE o.id = $1 AND o.ref_recipe_id IS NOT NULL AND o.commission_paid = false`,
+      [orderId]
+    );
+
+    if (orderAffiliate.rows.length > 0) {
+      const { author_id, buyer_id, recipe_title } = orderAffiliate.rows[0];
+      if (author_id && Number(author_id) !== Number(buyer_id)) {
+        let totalProductAmount = 0;
+        for (const item of order.items) {
+          totalProductAmount += Number(item.subtotal);
+        }
+        const affiliateCommission = Math.round(totalProductAmount * 0.05);
+
+        if (affiliateCommission > 0) {
+          const affClient = await pool.connect();
+          try {
+            await affClient.query('BEGIN');
+            await affClient.query(
+              'INSERT INTO wallets (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING',
+              [author_id]
+            );
+            const wRes = await affClient.query(
+              'UPDATE wallets SET balance = balance + $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2 RETURNING id',
+              [affiliateCommission, author_id]
+            );
+            const authorWalletId = wRes.rows[0]?.id;
+            if (authorWalletId) {
+              await affClient.query(
+                `INSERT INTO wallet_transactions (wallet_id, amount, type, status, reference_id, description)
+                 VALUES ($1, $2, 'deposit', 'completed', $3, $4)`,
+                [
+                  authorWalletId,
+                  affiliateCommission,
+                  'affiliate-order-' + orderId,
+                  `Hoa hồng tác giả công thức "${recipe_title}" (đơn #${orderId})`,
+                ]
+              );
+              await affClient.query(
+                'UPDATE orders SET commission_amount = $1, commission_paid = true WHERE id = $2',
+                [affiliateCommission, orderId]
+              );
+            }
+            await affClient.query('COMMIT');
+            console.info(`[affiliate] Order #${orderId} credited ${affiliateCommission}đ to author ${author_id}`);
+          } catch (affErr) {
+            await affClient.query('ROLLBACK');
+            console.error('[affiliate] Error crediting author commission:', affErr);
+          } finally {
+            affClient.release();
+          }
+        }
+      }
+    }
+  } catch (affGeneralErr) {
+    console.error('[affiliate] General error settling affiliate:', affGeneralErr);
+  }
 }
 
 export async function getOrderReviews(userId: number, idRaw: unknown) {
@@ -575,10 +656,18 @@ export async function createReview(userId: number, body: Record<string, unknown>
   }
 
   if (!order.items.some((item) => item.product_id === productId)) {
-    throw { status: 403, message: 'Sáº£n pháº©m khÃ´ng thuá»™c Ä‘Æ¡n hÃ ng nÃ y.' };
+    throw { status: 403, message: 'Sản phẩm không thuộc đơn hàng này.' };
   }
 
-  const id = await marketplaceRepo.createReview(userId, productId, orderId, rating, comment);
+  const rawImages = Array.isArray(body?.images) ? body.images : [];
+  const images = rawImages
+    .map((img: unknown) => String(img ?? '').trim())
+    .filter((url: string) => url.length > 0 && (url.startsWith('http') || url.startsWith('data:image/')))
+    .slice(0, 5);
+
+  const videoUrl = body?.video_url ? String(body.video_url).trim() || null : null;
+
+  const id = await marketplaceRepo.createReview(userId, productId, orderId, rating, comment, images, videoUrl);
   return { id, success: true };
 }
 

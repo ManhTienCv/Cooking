@@ -12,6 +12,7 @@ import AiRecommendations from '../../components/shop/AiRecommendations';
 import RecipeInstructions from '../../components/recipes/RecipeInstructions';
 import IngredientList from '../../components/recipes/IngredientList';
 import NutritionBox from '../../components/recipes/NutritionBox';
+import RecipeTaggedProductsSection from '../../components/recipes/RecipeTaggedProductsSection';
 
 interface RecipeRow {
   id: number;
@@ -47,6 +48,7 @@ export default function RecipeDetail() {
   const [recipe, setRecipe] = useState<RecipeRow | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   // Ingredient checklist
@@ -61,8 +63,11 @@ export default function RecipeDetail() {
 
     // Check auth
     try {
-      const me = await apiJson<{ authenticated: boolean }>('/api/auth/me');
+      const me = await apiJson<{ authenticated: boolean; user?: { id: number } }>('/api/auth/me');
       setIsAuthenticated(Boolean(me.authenticated));
+      if (me.authenticated && me.user) {
+        setCurrentUserId(me.user.id);
+      }
       if (!me.authenticated) { setIsLoading(false); return; }
     } catch {
       setIsAuthenticated(false);
@@ -256,6 +261,14 @@ export default function RecipeDetail() {
               formatTimer={formatTimer}
               extractMinutes={extractMinutes}
             />
+
+            {/* Tagged Products — Dụng cụ & Nguyên liệu gắn vào công thức */}
+            <div className="mt-8">
+              <RecipeTaggedProductsSection
+                recipeId={recipe.id}
+                isAuthor={Boolean(currentUserId && recipe.author_id && currentUserId === recipe.author_id)}
+              />
+            </div>
           </div>
 
           {/* â”€â”€ Sidebar â”€â”€ */}

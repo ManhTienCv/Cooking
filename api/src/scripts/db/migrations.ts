@@ -21,6 +21,10 @@ export const MIGRATION_FILES = [
   'migration_delivery_logistics.sql',
   'migration_marketplace_hot_trigger.sql',
   'migration_recipe_featured_trigger.sql',
+  'migration_ghn_momo.sql',
+  'migration_recipe_products_reviews.sql',
+  'migration_instant_delivery.sql',
+  'migration_recipe_affiliate.sql',
 ] as const;
 
 export type MigrationName = (typeof MIGRATION_FILES)[number];

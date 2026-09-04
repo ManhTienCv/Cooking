@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useCart } from '../../contexts/CartContext';
 import { Reveal } from '../../components/motion/ScrollReveal';
 import { scrollWindowToTop } from '../../lib/scroll';
+import { clearCheckoutTimer } from '../../hooks/useCheckoutTimer';
 
 function formatPrice(n: number) {
   return n.toLocaleString('vi-VN') + 'đ';
@@ -15,6 +16,11 @@ function formatPrice(n: number) {
 export default function Cart() {
   const { items, loading, updateItem, removeItem, clearAll } = useCart();
   const [removing, setRemoving] = useState<number | null>(null);
+
+  // Khi người dùng quay lại giỏ hàng, làm mới lại timer 20 phút cho lần checkout tiếp theo
+  useEffect(() => {
+    clearCheckoutTimer();
+  }, []);
 
   // Keep track of selected items
   const [selectedIds, setSelectedIds] = useState<number[]>([]);

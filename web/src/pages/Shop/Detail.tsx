@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Star, Minus, Plus, ChevronRight, Package, Store, ArrowLeft, Heart, MessageSquare, MessageCircle } from 'lucide-react';
+import { ShoppingCart, Star, Minus, Plus, ChevronRight, Package, Store, ArrowLeft, Heart, MessageSquare, MessageCircle, Camera, X, Video, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { apiJson, apiFetch } from '../../lib/api';
@@ -25,6 +25,8 @@ export default function ProductDetail() {
   const [wishlisted, setWishlisted] = useState(false);
   const [activeImg, setActiveImg] = useState(0);
   const [addingCart, setAddingCart] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState<'all' | 'with_media' | '5' | '4' | '1-3'>('all');
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -302,49 +304,151 @@ export default function ProductDetail() {
         {/* Reviews Section */}
         <div className="mt-16">
           <Reveal y={16}>
-            <div className="flex items-center gap-2 mb-6">
-              <MessageSquare className="w-5 h-5 text-amber-500" />
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Đánh giá ({reviewTotal})
-              </h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-amber-500" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Đánh giá ({reviewTotal})
+                </h2>
+                {product.rating > 0 && (
+                  <span className="flex items-center gap-1 ml-2 text-sm font-extrabold text-amber-500 bg-amber-500/10 px-2.5 py-0.5 rounded-full">
+                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    {product.rating.toFixed(1)} / 5
+                  </span>
+                )}
+              </div>
+
+              {/* Review filter tabs */}
+              <div className="flex items-center gap-1.5 flex-wrap text-xs font-semibold">
+                {[
+                  { key: 'all', label: `Tất cả (${reviews.length})` },
+                  { key: 'with_media', label: `📸 Có ảnh & video (${reviews.filter((r) => (r.images && r.images.length > 0) || Boolean(r.video_url)).length})` },
+                  { key: '5', label: '⭐ 5 sao' },
+                  { key: '4', label: '⭐ 4 sao' },
+                  { key: '1-3', label: '⭐ 1-3 sao' },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setReviewFilter(tab.key as typeof reviewFilter)}
+                    className={`px-3 py-1.5 rounded-full transition-all ${
+                      reviewFilter === tab.key
+                        ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/30'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </Reveal>
 
           {reviews.length === 0 ? (
-            <div className="text-center py-10">
-              <p className="text-gray-500 dark:text-gray-400">Chưa có đánh giá nào.</p>
-              <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">Khách hàng đánh giá tại trang chi tiết đơn hàng sau khi đơn đã giao.</p>
+            <div className="text-center py-10 bg-white dark:bg-slate-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-slate-700">
+              <p className="text-gray-500 dark:text-gray-400">Chưa có đánh giá nào cho sản phẩm này.</p>
+              <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">
+                Khách hàng sau khi nhận hàng có thể đăng đánh giá kèm hình ảnh thực tế tại trang Chi tiết đơn hàng.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {reviews.map((r) => (
-                <Reveal key={r.id} y={12}>
-                  <div className="p-5 bg-white dark:bg-slate-800/80 rounded-2xl border border-gray-100 dark:border-slate-700/50">
-                    <div className="flex items-center gap-3 mb-3">
-                      {r.avatar_url ? (
-                        <img src={r.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
-                      ) : (
-                        <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300">
-                          {r.full_name?.[0] || '?'}
+              {reviews
+                .filter((r) => {
+                  if (reviewFilter === 'with_media') return (r.images && r.images.length > 0) || Boolean(r.video_url);
+                  if (reviewFilter === '5') return r.rating === 5;
+                  if (reviewFilter === '4') return r.rating === 4;
+                  if (reviewFilter === '1-3') return r.rating <= 3;
+                  return true;
+                })
+                .map((r) => (
+                  <Reveal key={r.id} y={12}>
+                    <div className="p-5 bg-white dark:bg-slate-800/80 rounded-2xl border border-gray-100 dark:border-slate-700/50 space-y-3">
+                      <div className="flex items-center gap-3">
+                        {r.avatar_url ? (
+                          <img src={r.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300">
+                            {r.full_name?.[0] || '?'}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold text-sm text-gray-900 dark:text-white">{r.full_name}</p>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-3.5 h-3.5 ${
+                                  i < r.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300 dark:text-gray-600'
+                                }`}
+                              />
+                            ))}
+                          </div>
                         </div>
-                      )}
-                      <div>
-                        <p className="font-semibold text-sm text-gray-900 dark:text-white">{r.full_name}</p>
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className={`w-3.5 h-3.5 ${i < r.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300 dark:text-gray-600'}`} />
+                        <span className="ml-auto text-xs text-gray-400">{new Date(r.created_at).toLocaleDateString('vi-VN')}</span>
+                      </div>
+
+                      {r.comment && <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{r.comment}</p>}
+
+                      {/* Visual reviews: Image gallery */}
+                      {r.images && r.images.length > 0 && (
+                        <div className="flex items-center gap-2.5 flex-wrap pt-1">
+                          {r.images.map((imgUrl, imgIdx) => (
+                            <button
+                              key={imgIdx}
+                              type="button"
+                              onClick={() => setPreviewImage(imgUrl)}
+                              className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 hover:scale-105 transition-transform group"
+                            >
+                              <img src={imgUrl} alt={`Ảnh review ${imgIdx + 1}`} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                <Camera className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            </button>
                           ))}
                         </div>
-                      </div>
-                      <span className="ml-auto text-xs text-gray-400">{new Date(r.created_at).toLocaleDateString('vi-VN')}</span>
+                      )}
+
+                      {/* Video URL badge if any */}
+                      {r.video_url && (
+                        <div className="pt-1">
+                          <a
+                            href={r.video_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-100 transition-colors"
+                          >
+                            <Video className="w-3.5 h-3.5" />
+                            <span>Xem video unboxing / review thực tế</span>
+                            <ExternalLink className="w-3 h-3 ml-0.5" />
+                          </a>
+                        </div>
+                      )}
                     </div>
-                    {r.comment && <p className="text-sm text-gray-600 dark:text-gray-400">{r.comment}</p>}
-                  </div>
-                </Reveal>
-              ))}
+                  </Reveal>
+                ))}
             </div>
           )}
         </div>
+
+        {/* Lightbox Preview Modal */}
+        {previewImage && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setPreviewImage(null)}
+          >
+            <div className="relative max-w-3xl max-h-[90vh] bg-black rounded-2xl overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="absolute top-3 right-3 z-10 w-9 h-9 bg-black/60 hover:bg-black text-white rounded-full flex items-center justify-center transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <img src={previewImage} alt="Phóng to ảnh đánh giá" className="w-full h-auto max-h-[85vh] object-contain" />
+            </div>
+          </div>
+        )}
 
         {/* Related Products — AI-powered */}
         <div className="mt-14">

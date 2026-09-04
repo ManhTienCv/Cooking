@@ -160,11 +160,6 @@ export default function Navbar() {
     setIsAuthOpen(true);
   };
 
-  const openSignUp = () => {
-    setAuthInitialSignUp(true);
-    setIsAuthOpen(true);
-  };
-
   const handleLogout = async () => {
     try {
       await apiFetch('/api/auth/logout', { method: 'POST' });
@@ -376,10 +371,7 @@ export default function Navbar() {
                     </button>
                   </>
                 ) : (
-                  <>
-                    <button data-testid="nav-login-button" onClick={openLogin} className="btn btn-enhanced px-4 py-2 rounded-full text-sm font-semibold bg-black text-white hover:bg-gray-800 transition-all duration-300">Đăng nhập</button>
-                    <button data-testid="nav-signup-button" onClick={openSignUp} className="btn btn-enhanced px-4 py-2 rounded-full text-sm font-semibold bg-white text-black hover:bg-gray-100 border border-gray-300 transition-all duration-300">Đăng ký</button>
-                  </>
+                  <button data-testid="nav-login-button" onClick={openLogin} className="btn btn-enhanced px-4 py-2 rounded-full text-sm font-semibold bg-black text-white hover:bg-gray-800 transition-all duration-300">Đăng nhập</button>
                 )}
               </div>
               <button
@@ -466,10 +458,7 @@ export default function Navbar() {
                     </button>
                   </>
                 ) : (
-                  <>
-                    <button onClick={() => { openLogin(); setIsMenuOpen(false); }} className={`mobile-menu-item ${isMenuOpen ? 'show' : ''} w-full text-left block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-black hover:bg-gray-50`}>Đăng nhập</button>
-                    <button onClick={() => { openSignUp(); setIsMenuOpen(false); }} className={`mobile-menu-item ${isMenuOpen ? 'show' : ''} w-full text-left block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-black hover:bg-gray-50`}>Đăng ký</button>
-                  </>
+                  <button onClick={() => { openLogin(); setIsMenuOpen(false); }} className={`mobile-menu-item ${isMenuOpen ? 'show' : ''} w-full text-left block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-black hover:bg-gray-50`}>Đăng nhập</button>
                 )}
               </div>
             </div>

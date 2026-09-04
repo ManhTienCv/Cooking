@@ -124,7 +124,8 @@ export function verifyIpnSignature(body: MoMoIpnBody): boolean {
     .update(rawSignature)
     .digest('hex');
 
-  return calculatedSignature === body.signature;
+  if (calculatedSignature.length !== body.signature.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(calculatedSignature), Buffer.from(body.signature));
 }
 
 /**

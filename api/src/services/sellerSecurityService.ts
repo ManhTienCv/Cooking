@@ -114,7 +114,7 @@ export async function verifySellerOtp(req: Request) {
     throw httpError(429, 'Bạn đã nhập sai OTP quá nhiều lần.');
   }
 
-  const ok = (/^\d{6}$/.test(env.testOtpCode) && payload.otp === env.testOtpCode) || (await bcrypt.compare(payload.otp, challenge.otp_hash));
+  const ok = (env.nodeEnv !== 'production' && /^\d{6}$/.test(env.testOtpCode) && payload.otp === env.testOtpCode) || (await bcrypt.compare(payload.otp, challenge.otp_hash));
   if (!ok) {
     const nextAttempts = challenge.attempt_count + 1;
     if (nextAttempts >= OTP_MAX_ATTEMPTS) {

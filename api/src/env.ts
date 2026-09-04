@@ -76,7 +76,7 @@ export const env = {
 
   /** Google reCAPTCHA v3 secret. Login checks are enforced after repeated failures. */
   otpEmailMode: (process.env.OTP_EMAIL_MODE ?? 'auto').toLowerCase(),
-  testOtpCode: process.env.TEST_OTP_CODE ?? '',
+  testOtpCode: (process.env.NODE_ENV === 'production' ? '' : (process.env.TEST_OTP_CODE ?? '')).trim(),
   recaptchaSecretKey: process.env.RECAPTCHA_SECRET_KEY ?? '',
   recaptchaMinScore: Number(process.env.RECAPTCHA_MIN_SCORE) || 0.5,
 

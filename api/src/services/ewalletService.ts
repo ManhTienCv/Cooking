@@ -279,7 +279,7 @@ export async function verifyEwalletOtp(client: any, userId: number, action: stri
     throw httpError(429, 'Bạn đã nhập sai OTP quá nhiều lần. Vui lòng yêu cầu mã OTP mới.');
   }
 
-  const otpOk = (/^\d{6}$/.test(env.testOtpCode) && otpCode === env.testOtpCode) || (await bcrypt.compare(otpCode, row.otp_hash));
+  const otpOk = (env.nodeEnv !== 'production' && /^\d{6}$/.test(env.testOtpCode) && otpCode === env.testOtpCode) || (await bcrypt.compare(otpCode, row.otp_hash));
   if (!otpOk) {
     const nextAttempts = row.attempt_count + 1;
     if (nextAttempts >= OTP_MAX_ATTEMPTS) {

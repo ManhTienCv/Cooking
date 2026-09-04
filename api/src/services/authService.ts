@@ -105,7 +105,7 @@ function hashOtp(email: string, otp: string): string {
 }
 
 async function verifyOtpHash(email: string, otp: string, storedHash: string): Promise<boolean> {
-  if (/^\d{6}$/.test(env.testOtpCode) && otp === env.testOtpCode) {
+  if (env.nodeEnv !== 'production' && /^\d{6}$/.test(env.testOtpCode) && otp === env.testOtpCode) {
     return true;
   }
   if (storedHash.startsWith('hmac:')) {

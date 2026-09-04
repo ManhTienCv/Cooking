@@ -2,6 +2,7 @@ import * as marketplaceRepo from '../repos/marketplaceRepo.js';
 import * as aiService from './aiService.js';
 import { processImageBase64 } from '../lib/processImage.js';
 import type { CreateOrderInput } from '../types/marketplace.js';
+import { pool } from '../db/pool.js';
 
 /* ================================================================
  * Products
@@ -239,7 +240,8 @@ export async function createOrder(userId: number, body: Record<string, unknown>)
   const shippingName = String(body?.shipping_name ?? '').trim();
   const shippingPhone = String(body?.shipping_phone ?? '').trim();
   const shippingAddress = String(body?.shipping_address ?? '').trim();
-  const paymentMethod = String(body?.payment_method ?? 'cod').trim();
+  const rawPaymentMethod = String(body?.payment_method ?? 'cod').trim();
+  const paymentMethod = ['cod', 'momo', 'bank_transfer', 'cookpay'].includes(rawPaymentMethod) ? rawPaymentMethod : 'cod';
   const note = String(body?.note ?? '').trim() || null;
 
   if (!shippingName || !shippingPhone || !shippingAddress) {
@@ -290,10 +292,14 @@ export async function createOrder(userId: number, body: Record<string, unknown>)
     };
   });
 
-  const shippingFee = Math.max(0, Number(body?.shipping_fee) || 0);
+  const deliveryType = String(body?.delivery_type ?? 'standard').trim();
+  // Bảo mật: Nếu giao hỏa tốc, server tự áp mức phí (đơn >= 300k miễn phí, < 300k đồng giá 35k) để chống client can thiệp
+  const shippingFee = deliveryType === 'instant_1h'
+    ? (totalAmount >= 300000 ? 0 : 35000)
+    : Math.max(0, Number(body?.shipping_fee) || 0);
+
   const toDistrictId = body?.to_district_id ? Number(body.to_district_id) : undefined;
   const toWardCode = body?.to_ward_code ? String(body.to_ward_code) : undefined;
-  const deliveryType = String(body?.delivery_type ?? 'standard').trim();
   const refRecipeId = body?.ref_recipe_id ? Number(body.ref_recipe_id) : null;
   const finalTotal = totalAmount + shippingFee;
 
@@ -320,7 +326,6 @@ export async function createOrder(userId: number, body: Record<string, unknown>)
 }
 
 async function autoConfirmPendingOrders(): Promise<void> {
-  const { pool } = await import('../db/pool.js');
   try {
     await pool.query(`
       UPDATE orders 
@@ -396,11 +401,9 @@ async function settleOrderRevenue(
 ) {
   // Gom doanh thu theo seller
   const sellerTotals = new Map<number, number>();
-  for (const item of order.items) {
+  for (const item of (order.items || [])) {
     sellerTotals.set(item.seller_id, (sellerTotals.get(item.seller_id) ?? 0) + Number(item.subtotal));
   }
-
-  const { pool } = await import('../db/pool.js');
 
   for (const [sellerId, grossAmount] of sellerTotals) {
     const client = await pool.connect();
@@ -478,7 +481,7 @@ async function settleOrderRevenue(
       const { author_id, buyer_id, recipe_title } = orderAffiliate.rows[0];
       if (author_id && Number(author_id) !== Number(buyer_id)) {
         let totalProductAmount = 0;
-        for (const item of order.items) {
+        for (const item of (order.items || [])) {
           totalProductAmount += Number(item.subtotal);
         }
         const affiliateCommission = Math.round(totalProductAmount * 0.05);
@@ -665,7 +668,8 @@ export async function createReview(userId: number, body: Record<string, unknown>
     .filter((url: string) => url.length > 0 && (url.startsWith('http') || url.startsWith('data:image/')))
     .slice(0, 5);
 
-  const videoUrl = body?.video_url ? String(body.video_url).trim() || null : null;
+  const rawVideo = body?.video_url ? String(body.video_url).trim() : '';
+  const videoUrl = /^https?:\/\//i.test(rawVideo) ? rawVideo : null;
 
   const id = await marketplaceRepo.createReview(userId, productId, orderId, rating, comment, images, videoUrl);
   return { id, success: true };

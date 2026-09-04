@@ -410,7 +410,7 @@ export default function ProductDetail() {
                       )}
 
                       {/* Video URL badge if any */}
-                      {r.video_url && (
+                      {r.video_url && /^https?:\/\//i.test(r.video_url) && (
                         <div className="pt-1">
                           <a
                             href={r.video_url}

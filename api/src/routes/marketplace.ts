@@ -377,18 +377,27 @@ export async function handleMoMoIpnHandler(req: any, res: any) {
     console.info(`[MoMo IPN] Đơn hàng ${orderId}, ResultCode: ${resultCode}, TransId: ${transId}`);
 
     if (String(resultCode) === '0') {
-      await pool.query(
-        `UPDATE orders 
-         SET payment_status = 'paid',
-             paid_amount = $1,
-             paid_via = 'momo',
-             status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END,
-             momo_trans_id = $2,
-             momo_request_id = $3,
-             updated_at = NOW()
-         WHERE id = $4`,
-        [Number(amount) || 0, String(transId), String(requestId), Number(orderId)]
-      );
+      const orderRes = await pool.query<{ total_amount: number }>('SELECT total_amount FROM orders WHERE id = $1', [Number(orderId)]);
+      if (orderRes.rows.length > 0) {
+        const expectedTotal = Number(orderRes.rows[0].total_amount);
+        const paidAmount = Number(amount) || 0;
+        if (paidAmount >= expectedTotal) {
+          await pool.query(
+            `UPDATE orders 
+             SET payment_status = 'paid',
+                 paid_amount = $1,
+                 paid_via = 'momo',
+                 status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END,
+                 momo_trans_id = $2,
+                 momo_request_id = $3,
+                 updated_at = NOW()
+             WHERE id = $4`,
+            [paidAmount, String(transId), String(requestId), Number(orderId)]
+          );
+        } else {
+          console.warn(`[MoMo IPN] Số tiền thanh toán (${paidAmount}) nhỏ hơn tổng đơn hàng (${expectedTotal}) cho đơn #${orderId}!`);
+        }
+      }
     }
     return res.status(204).send();
   } catch (err) {

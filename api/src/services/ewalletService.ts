@@ -13,9 +13,6 @@ const OTP_MAX_ATTEMPTS = 5;
 const BCRYPT_COST = 12;
 
 function generateOtp(): string {
-  if (/^\d{6}$/.test(env.testOtpCode)) {
-    return env.testOtpCode;
-  }
   return String(randomInt(100000, 1000000));
 }
 

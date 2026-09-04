@@ -33,9 +33,6 @@ function parsePayload<T>(schema: z.ZodType<T>, input: unknown): T {
 }
 
 function generateOtp(): string {
-  if (/^\d{6}$/.test(env.testOtpCode)) {
-    return env.testOtpCode;
-  }
   return String(randomInt(100000, 1000000));
 }
 

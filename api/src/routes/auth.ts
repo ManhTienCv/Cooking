@@ -74,12 +74,52 @@ authRouter.post('/login', authLoginRateLimit, requireCsrf, asyncHandler(async (r
   });
 }));
 
+// Đăng nhập / Đăng ký 1 chạm bằng Google Identity Services
+authRouter.post('/google', authLoginRateLimit, requireCsrf, asyncHandler(async (req, res) => {
+  const { userId, user } = await authService.loginWithGoogle(req);
+
+  const oldCsrfToken = req.session.csrfToken;
+  req.session.regenerate((regenErr) => {
+    if (regenErr) {
+      res.status(500).json({ success: false, message: 'Google login failed.' });
+      return;
+    }
+    req.session.csrfToken = oldCsrfToken;
+    req.session.userId = userId;
+    res.json({
+      success: true,
+      message: 'Đăng nhập Google thành công.',
+      user,
+    });
+  });
+}));
+
+// Đăng ký tài khoản trực tiếp 1 bước (không cần chờ email OTP)
+authRouter.post('/register', authRegisterRateLimit, requireCsrf, asyncHandler(async (req, res) => {
+  const { userId, user } = await authService.registerDirect(req);
+
+  const oldCsrfToken = req.session.csrfToken;
+  req.session.regenerate((regenErr) => {
+    if (regenErr) {
+      res.status(500).json({ success: false, message: 'Đăng ký thất bại.' });
+      return;
+    }
+    req.session.csrfToken = oldCsrfToken;
+    req.session.userId = userId;
+    res.json({
+      success: true,
+      message: 'Đăng ký thành công.',
+      user,
+    });
+  });
+}));
+
 // Avoid raw Express "Cannot GET" if someone opens this URL in the browser.
 authRouter.get('/register', (_req, res) => {
   res.status(405).setHeader('Allow', 'POST');
   res.json({
     success: false,
-    message: 'Đăng ký: POST /api/auth/register/request-otp rồi /api/auth/register/verify (JSON).',
+    message: 'Đăng ký: POST /api/auth/register (JSON).',
   });
 });
 

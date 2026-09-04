@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, Sparkles, Timer, ShoppingCart } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -26,11 +26,9 @@ export default function FlashSaleSection({ products }: Props) {
 
   // Xác định khung giờ hiện tại
   const currentHour = new Date().getHours();
+  const currentIdx = SESSIONS.findIndex((s) => currentHour >= s.startH && currentHour < s.endH);
+  const activeSessionIndex = currentIdx !== -1 ? currentIdx : 0;
 
-  const activeSessionIndex = useMemo(() => {
-    const idx = SESSIONS.findIndex((s) => currentHour >= s.startH && currentHour < s.endH);
-    return idx !== -1 ? idx : 0;
-  }, [currentHour]);
 
   const [selectedSession, setSelectedSession] = useState(activeSessionIndex);
 
@@ -65,11 +63,9 @@ export default function FlashSaleSection({ products }: Props) {
   }, [selectedSession]);
 
   // Lọc các sản phẩm có giảm giá hoặc ưu đãi
-  const dealProducts = useMemo(() => {
-    const discounted = products.filter((p) => p.sale_price != null && p.sale_price < p.price);
-    if (discounted.length >= 4) return discounted.slice(0, 6);
-    return products.slice(0, 6);
-  }, [products]);
+  const discounted = products.filter((p) => p.sale_price != null && p.sale_price < p.price);
+  const dealProducts = discounted.length >= 4 ? discounted.slice(0, 6) : products.slice(0, 6);
+
 
   const handleQuickAdd = async (product: Product) => {
     setAddingId(product.id);

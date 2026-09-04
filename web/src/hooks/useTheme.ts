@@ -9,8 +9,9 @@ export function useTheme() {
       setIsDark(isDarkMode);
     };
 
-    // Initialize state
-    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    // Mặc định luôn là giao diện Sáng (Light Mode), chỉ bật Dark khi người dùng chủ động lưu 'dark' trong localStorage
+    const savedTheme = localStorage.getItem('theme') || localStorage.theme;
+    if (savedTheme === 'dark') {
       document.documentElement.classList.add('dark');
       setIsDark(true);
     } else {
@@ -28,9 +29,11 @@ export function useTheme() {
   const toggleTheme = () => {
     if (isDark) {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
       localStorage.theme = 'light';
     } else {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
       localStorage.theme = 'dark';
     }
   };

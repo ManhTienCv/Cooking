@@ -25,6 +25,7 @@ export const MIGRATION_FILES = [
   'migration_recipe_products_reviews.sql',
   'migration_instant_delivery.sql',
   'migration_recipe_affiliate.sql',
+  'migration_google_auth.sql',
 ] as const;
 
 export type MigrationName = (typeof MIGRATION_FILES)[number];

@@ -1,4 +1,4 @@
-import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import type { Request } from 'express';
 import { z } from 'zod';
@@ -206,6 +206,176 @@ export async function login(req: Request) {
   };
 
   return { userId, user: userJson };
+}
+
+interface GoogleTokenInfo {
+  iss?: string;
+  sub?: string;
+  azp?: string;
+  aud?: string;
+  email?: string;
+  email_verified?: string | boolean;
+  name?: string;
+  picture?: string;
+  given_name?: string;
+  family_name?: string;
+  exp?: string;
+  error_description?: string;
+}
+
+// Đăng nhập / Đăng ký 1 chạm bằng Google Identity Services (OAuth ID Token)
+export async function loginWithGoogle(req: Request): Promise<{ userId: number; user: Omit<User, 'password_hash'> }> {
+  const credential = String(req.body?.credential || req.body?.id_token || '').trim();
+  if (!credential) {
+    throw httpError(400, 'Thiếu mã xác thực (credential) từ Google.');
+  }
+
+  // Gọi Google API tokeninfo để giải mã và xác thực token JWT an toàn
+  const tokenInfoUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`;
+  let info: GoogleTokenInfo;
+  try {
+    const resp = await fetch(tokenInfoUrl, { method: 'GET' });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.warn('[GoogleAuth] Xác thực token thất bại từ Google:', errText);
+      throw httpError(401, 'Mã xác thực Google không hợp lệ hoặc đã hết hạn.');
+    }
+    info = (await resp.json()) as GoogleTokenInfo;
+  } catch (err: any) {
+    if (err.status) throw err;
+    console.error('[GoogleAuth] Lỗi kết nối tới máy chủ Google:', err);
+    throw httpError(503, 'Không thể kết nối đến máy chủ xác thực của Google.');
+  }
+
+  const email = info.email?.trim().toLowerCase();
+  if (!email) {
+    throw httpError(400, 'Không tìm thấy thông tin email từ tài khoản Google.');
+  }
+
+  const isVerified = info.email_verified === true || String(info.email_verified).toLowerCase() === 'true';
+  if (!isVerified) {
+    throw httpError(400, 'Email Google chưa được xác thực.');
+  }
+
+  if (env.googleClientId && info.aud && info.aud !== env.googleClientId) {
+    console.warn(`[GoogleAuth] Audience không khớp. Mong đợi: ${env.googleClientId}, Nhận được: ${info.aud}`);
+    if (env.nodeEnv === 'production') {
+      throw httpError(401, 'Mã xác thực Google không thuộc về ứng dụng này.');
+    }
+  }
+
+  const googleId = info.sub || null;
+  const fullName = info.name?.trim() || email.split('@')[0] || 'Người dùng Google';
+  const avatarUrl = info.picture || null;
+
+  // Kiểm tra xem email đã tồn tại trong bảng users chưa
+  const existingRes = await pool.query<User & { google_id?: string }>(
+    'SELECT id, full_name, email, avatar_url, bio, google_id, created_at, updated_at FROM users WHERE email = $1 LIMIT 1',
+    [email]
+  );
+
+  let userId: number;
+  let user: Omit<User, 'password_hash'>;
+
+  if (existingRes.rows.length > 0) {
+    const existing = existingRes.rows[0];
+    userId = existing.id;
+
+    // Cập nhật google_id hoặc avatar_url nếu chưa có
+    const updates: string[] = [];
+    const params: (string | number)[] = [];
+    let pIdx = 1;
+
+    if (!existing.google_id && googleId) {
+      updates.push(`google_id = $${pIdx++}`);
+      params.push(googleId);
+    }
+    if (!existing.avatar_url && avatarUrl) {
+      updates.push(`avatar_url = $${pIdx++}`);
+      params.push(avatarUrl);
+    }
+
+    if (updates.length > 0) {
+      params.push(userId);
+      await pool.query(
+        `UPDATE users SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${pIdx}`,
+        params
+      );
+    }
+
+    user = {
+      id: existing.id,
+      full_name: existing.full_name,
+      email: existing.email,
+      avatar_url: existing.avatar_url || avatarUrl,
+      bio: existing.bio,
+      created_at: existing.created_at,
+      updated_at: existing.updated_at,
+    };
+  } else {
+    // Người dùng mới: Tạo trực tiếp không cần OTP vì Google đã chứng thực email
+    const randomPassword = randomBytes(24).toString('hex');
+    const passHash = await bcrypt.hash(randomPassword, BCRYPT_COST);
+
+    const insertRes = await pool.query<User>(
+      `INSERT INTO users (full_name, email, password_hash, avatar_url, google_id)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, full_name, email, avatar_url, bio, created_at, updated_at`,
+      [fullName, email, passHash, avatarUrl, googleId]
+    );
+    const newUser = insertRes.rows[0];
+    userId = newUser.id;
+    user = {
+      id: newUser.id,
+      full_name: newUser.full_name,
+      email: newUser.email,
+      avatar_url: newUser.avatar_url,
+      bio: newUser.bio,
+      created_at: newUser.created_at,
+      updated_at: newUser.updated_at,
+    };
+  }
+
+  logAuthLogin('user', { success: true, email, req, subjectId: userId });
+  return { userId, user };
+}
+
+// Đăng ký trực tiếp 1 bước không cần chờ email OTP
+export async function registerDirect(req: Request): Promise<{ userId: number; user: Omit<User, 'password_hash'> }> {
+  const payload = parsePayload(registerRequestSchema, req.body);
+  await verifyRecaptchaIfConfigured(req, payload.recaptchaToken, 'register');
+
+  const existing = await pool.query<{ id: number }>('SELECT id FROM users WHERE email = $1 LIMIT 1', [payload.email]);
+  if (existing.rows.length > 0) {
+    throw httpError(409, 'Email này đã được đăng ký.');
+  }
+
+  const passHash = await bcrypt.hash(payload.password, BCRYPT_COST);
+  const res = await pool.query<User>(
+    `INSERT INTO users (full_name, email, password_hash)
+     VALUES ($1, $2, $3)
+     RETURNING id, full_name, email, avatar_url, bio, created_at, updated_at`,
+    [payload.full_name, payload.email, passHash]
+  );
+  const newUser = res.rows[0];
+  const userId = newUser.id;
+
+  // Dọn dẹp pending_registrations nếu có
+  await pool.query('DELETE FROM pending_registrations WHERE email = $1', [payload.email]).catch(() => {});
+
+  logAuthLogin('user', { success: true, email: payload.email, req, subjectId: userId });
+  return {
+    userId,
+    user: {
+      id: newUser.id,
+      full_name: newUser.full_name,
+      email: newUser.email,
+      avatar_url: newUser.avatar_url,
+      bio: newUser.bio,
+      created_at: newUser.created_at,
+      updated_at: newUser.updated_at,
+    },
+  };
 }
 
 // Gửi mã OTP đăng ký tài khoản mới về email và lưu tạm thông tin đăng ký của người dùng vào bảng pending_registrations

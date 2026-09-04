@@ -26,6 +26,23 @@
       }
       html { scroll-behavior: auto; }
     </style>
+
+    <!-- Google Identity Services (Sign in with Google) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- Theme initialization (Trắng sáng mặc định, chỉ tối khi user đã bật trong Cài đặt) -->
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('theme') || localStorage.theme;
+          if (t === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-white">
     <div id="root"></div>

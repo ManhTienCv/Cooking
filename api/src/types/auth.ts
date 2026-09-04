@@ -4,6 +4,7 @@ export interface User {
   email: string;
   avatar_url: string | null;
   bio: string | null;
+  google_id?: string | null;
   created_at: Date;
   updated_at: Date;
 }

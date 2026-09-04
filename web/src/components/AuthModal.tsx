@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import '../assets/css/BlackwhiteAuth.css';
 import { hasRecaptchaSiteKey } from '../lib/recaptchaSiteKey';
 import { apiFetch, resetCsrfCache } from '../lib/api';
 import { notifyAuthChanged } from '../lib/authEvents';
 import { createPortal } from 'react-dom';
 import { executeRecaptchaV3 } from '../lib/recaptchaV3';
+
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -15,17 +16,39 @@ interface AuthModalProps {
   initialSignUp?: boolean;
 }
 
+const GoogleIcon = () => (
+  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+    <path
+      fill="#4285F4"
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+    />
+    <path
+      fill="#EA4335"
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+    />
+  </svg>
+);
+
 export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = false }: AuthModalProps) {
   const [isActive, setIsActive] = useState(false); // false = sign in, true = sign up
   const [view, setView] = useState<'main' | 'forgot' | 'reset'>('main');
-  const [registerStep, setRegisterStep] = useState<1 | 2>(1);
-  const [pendingEmail, setPendingEmail] = useState('');
   const [forgotEmail, setForgotEmail] = useState('');
-  const [registerOtp, setRegisterOtp] = useState('');
   const [resetOtp, setResetOtp] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
+
+  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
+  const googleSignInRef = useRef<HTMLDivElement>(null);
+  const googleSignUpRef = useRef<HTMLDivElement>(null);
 
   const sanitizeOtp = (value: string) => value.replace(/\D/g, '').slice(0, 6);
 
@@ -51,7 +74,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
       e.preventDefault();
       return;
     }
-    // Ngăn chặn nhập tiếp khi đã đủ 6 số (trừ trường hợp đang bôi đen để ghi đè)
+    // Ngăn chặn nhập tiếp khi đã đủ 6 số
     const target = e.currentTarget;
     const start = target.selectionStart;
     const end = target.selectionEnd;
@@ -59,15 +82,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     if (target.value.length >= 6 && !hasSelection) {
       e.preventDefault();
     }
-  };
-
-  const handleRegisterOtpChange = (e: React.FormEvent<HTMLInputElement>) => {
-    const target = e.currentTarget;
-    const sanitized = sanitizeOtp(target.value);
-    if (target.value !== sanitized) {
-      target.value = sanitized;
-    }
-    setRegisterOtp(sanitized);
   };
 
   const handleResetOtpChange = (e: React.FormEvent<HTMLInputElement>) => {
@@ -79,6 +93,38 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     setResetOtp(sanitized);
   };
 
+  const handleGoogleCredentialResponse = useCallback(
+    async (response: { credential?: string }) => {
+      if (!response?.credential) {
+        setAuthError('Không nhận được thông tin xác thực từ Google.');
+        return;
+      }
+      setAuthLoading(true);
+      setAuthError(null);
+      setAuthSuccess(null);
+      try {
+        const r = await apiFetch('/api/auth/google', {
+          method: 'POST',
+          body: JSON.stringify({ credential: response.credential }),
+        });
+        const data = (await r.json()) as { success?: boolean; message?: string };
+        if (!r.ok) {
+          setAuthError(data.message ?? 'Đăng nhập Google thất bại.');
+          return;
+        }
+        resetCsrfCache();
+        notifyAuthChanged({ authenticated: true });
+        onSuccess?.();
+        onClose();
+      } catch (err) {
+        setAuthError(err instanceof Error ? err.message : 'Lỗi kết nối khi đăng nhập Google.');
+      } finally {
+        setAuthLoading(false);
+      }
+    },
+    [onClose, onSuccess]
+  );
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -86,10 +132,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
       setAuthError(null);
       setAuthSuccess(null);
       setIsActive(initialSignUp);
-      setRegisterStep(1);
-      setPendingEmail('');
       setForgotEmail('');
-      setRegisterOtp('');
       setResetOtp('');
     } else {
       document.body.style.overflow = '';
@@ -98,6 +141,66 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
       document.body.style.overflow = '';
     };
   }, [isOpen, initialSignUp]);
+
+  // Khởi tạo nút Google Sign-In / Sign-Up khi mở modal
+  useEffect(() => {
+    if (!isOpen || !googleClientId) return;
+
+    let isMounted = true;
+    const renderButtons = () => {
+      if (!window.google?.accounts?.id) return false;
+      try {
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: handleGoogleCredentialResponse,
+        });
+
+
+
+        if (googleSignInRef.current) {
+          googleSignInRef.current.innerHTML = '';
+          window.google.accounts.id.renderButton(googleSignInRef.current, {
+            theme: 'outline',
+            size: 'large',
+            text: 'continue_with',
+            shape: 'rectangular',
+            width: 280,
+          });
+        }
+
+        if (googleSignUpRef.current) {
+          googleSignUpRef.current.innerHTML = '';
+          window.google.accounts.id.renderButton(googleSignUpRef.current, {
+            theme: 'outline',
+            size: 'large',
+            text: 'signup_with',
+            shape: 'rectangular',
+            width: 280,
+          });
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    if (!renderButtons()) {
+      const interval = setInterval(() => {
+        if (!isMounted) {
+          clearInterval(interval);
+          return;
+        }
+        if (renderButtons()) {
+          clearInterval(interval);
+        }
+      }, 300);
+      return () => {
+        isMounted = false;
+        clearInterval(interval);
+      };
+    }
+  }, [isOpen, googleClientId, isActive, view, handleGoogleCredentialResponse]);
+
 
   if (!isOpen) return null;
 
@@ -110,8 +213,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
   const handleFocusSignUp = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsActive(true);
-    setRegisterStep(1);
-    setRegisterOtp('');
     setAuthError(null);
   };
 
@@ -180,7 +281,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     }
   };
 
-  const handleRegisterRequestOtp = async (e: React.FormEvent<HTMLFormElement>) => {
+  // Đăng ký trực tiếp 1 bước — không cần gửi và chờ OTP qua email
+  const handleRegisterDirect = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (authLoading) return;
     setAuthError(null);
@@ -189,7 +291,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     const email = String(fd.get('email') ?? '').trim().toLowerCase();
     const password = String(fd.get('password') ?? '');
 
-    // Kiểm tra độ dài & độ phức tạp mật khẩu để đảm bảo đúng đặc tả kiểm thử
     if (full_name.length < 3) {
       setAuthError('Họ tên phải từ 3 ký tự trở lên.');
       return;
@@ -235,38 +336,13 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     setAuthLoading(true);
     try {
       const recaptchaToken = hasRecaptchaSiteKey() ? await executeRecaptchaV3('register') : '';
-      const r = await apiFetch('/api/auth/register/request-otp', {
+      const r = await apiFetch('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify({ full_name, email, password, recaptchaToken }),
       });
       const data = (await r.json()) as { success?: boolean; message?: string };
       if (!r.ok) {
-        setAuthError(data.message ?? 'Không gửi được mã OTP.');
-        return;
-      }
-      setPendingEmail(email);
-      setRegisterOtp('');
-      setRegisterStep(2);
-    } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Lỗi mạng.');
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleRegisterVerify = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setAuthError(null);
-    const otp = registerOtp.trim();
-    setAuthLoading(true);
-    try {
-      const r = await apiFetch('/api/auth/register/verify', {
-        method: 'POST',
-        body: JSON.stringify({ email: pendingEmail, otp }),
-      });
-      const data = (await r.json()) as { success?: boolean; message?: string };
-      if (!r.ok) {
-        setAuthError(data.message ?? 'Xác thực thất bại.');
+        setAuthError(data.message ?? 'Đăng ký thất bại.');
         return;
       }
       resetCsrfCache();
@@ -280,6 +356,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     }
   };
 
+  // Quên mật khẩu: gửi mã OTP qua email (SMTP / Brevo)
   const handleForgotSendOtp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (authLoading) return;
@@ -319,6 +396,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     }
   };
 
+  // Đặt lại mật khẩu bằng mã OTP nhận qua email
   const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setAuthError(null);
@@ -355,102 +433,79 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
       >
         {/* Registration Form */}
         <div className="blackwhite-form-container blackwhite-sign-up">
-          {registerStep === 1 ? (
-            <form
-              className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900"
-              onSubmit={handleRegisterRequestOtp}
-            >
-              <h1 className="text-2xl font-bold mb-2 text-black dark:text-white">Tạo Tài Khoản</h1>
-              <span className="text-gray-500 dark:text-gray-400 text-xs mb-4">Nhập thông tin rồi nhận mã OTP qua email</span>
-              {authError && isActive && (
-                <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
-              )}
-              <input
-                name="full_name"
-                type="text"
-                placeholder="Họ tên"
-                required
-                minLength={3}
-                className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
-              />
-              <input
-                name="email"
-                type="email"
-                placeholder="Email"
-                required
-                className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
-              />
-              <input
-                name="password"
-                type="password"
-                placeholder="Mật khẩu (ít nhất 8 ký tự)"
-                required
-                minLength={8}
-                className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
-              />
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 mb-4">
-                Đã có tài khoản?{' '}
-                <a href="#" onClick={handleFocusSignIn} className="font-semibold text-black dark:text-white underline">
-                  Đăng nhập
-                </a>
-              </p>
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="bg-black text-white rounded-lg py-3 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors disabled:opacity-60"
-              >
-                {authLoading ? '…' : 'Gửi mã OTP'}
-              </button>
-            </form>
-          ) : (
-            <form
-              className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900"
-              autoComplete="off"
-              onSubmit={handleRegisterVerify}
-            >
-              <h1 className="text-2xl font-bold mb-2 text-black dark:text-white">Nhập mã OTP</h1>
-              <span className="text-gray-500 dark:text-gray-400 text-xs mb-2 text-center">
-                Đã gửi mã tới <strong className="text-black dark:text-white">{pendingEmail}</strong>
-              </span>
-              {authError && isActive && (
-                <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
-              )}
-              <input
-                name="otp"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                placeholder="Mã 6 số"
-                required
-                autoComplete="one-time-code"
-                autoCorrect="off"
-                spellCheck={false}
-                value={registerOtp}
-                onChange={handleRegisterOtpChange}
-                onInput={handleRegisterOtpChange}
-                onKeyDown={handleOtpKeyDown}
-                className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-4 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm tracking-widest text-center font-bold text-black dark:text-white"
-              />
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="bg-black text-white rounded-lg py-3 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors disabled:opacity-60"
-              >
-                {authLoading ? '…' : 'Hoàn tất đăng ký'}
-              </button>
+          <form
+            className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900"
+            onSubmit={handleRegisterDirect}
+          >
+            <h1 className="text-2xl font-bold mb-1 text-black dark:text-white">Tạo Tài Khoản</h1>
+            <span className="text-gray-500 dark:text-gray-400 text-xs mb-3">Đăng ký nhanh chóng để khám phá món ngon</span>
+
+            {/* Google Sign-Up */}
+            {googleClientId ? (
+              <div className="w-full flex justify-center mb-2 min-h-[40px]">
+                <div ref={googleSignUpRef} />
+              </div>
+            ) : (
               <button
                 type="button"
-                className="mt-3 text-sm text-gray-600 dark:text-gray-400 underline"
-                onClick={() => {
-                  setRegisterStep(1);
-                  setAuthError(null);
-                }}
+                onClick={() => setAuthError('Vui lòng thêm VITE_GOOGLE_CLIENT_ID vào file .env để bật Google Sign-In.')}
+                className="w-full max-w-[280px] flex items-center justify-center gap-2.5 py-2 px-4 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2 shadow-sm"
+                style={{ padding: '8px 16px', textTransform: 'none', letterSpacing: 'normal', marginTop: 0 }}
               >
-                ← Quay lại nhập thông tin
+                <GoogleIcon />
+                <span>Đăng ký nhanh với Google</span>
               </button>
-            </form>
-          )}
+            )}
+
+            <div className="w-full max-w-[280px] flex items-center gap-2 my-1">
+              <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1" />
+              <span className="text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider font-medium">hoặc điền email</span>
+              <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1" />
+            </div>
+
+            {authError && isActive && (
+              <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
+            )}
+
+            <input
+              name="full_name"
+              type="text"
+              placeholder="Họ và tên"
+              required
+              minLength={3}
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2.5 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
+            />
+            <input
+              name="email"
+              type="email"
+              placeholder="Email"
+              required
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2.5 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
+            />
+            <input
+              name="password"
+              type="password"
+              placeholder="Mật khẩu (ít nhất 8 ký tự, có số & hoa)"
+              required
+              minLength={8}
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
+            />
+
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 mb-3">
+              Đã có tài khoản?{' '}
+              <a href="#" onClick={handleFocusSignIn} className="font-semibold text-black dark:text-white underline">
+                Đăng nhập ngay
+              </a>
+            </p>
+
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="bg-black text-white rounded-lg py-2.5 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors disabled:opacity-60"
+            >
+              {authLoading ? 'Đang xử lý…' : 'Đăng Ký'}
+            </button>
+          </form>
         </div>
 
         {/* Login Form */}
@@ -460,21 +515,46 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
           style={{ display: view === 'main' ? 'block' : 'none' }}
         >
           <form className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900" onSubmit={handleLogin}>
-            <h1 className="text-2xl font-bold mb-2 text-black dark:text-white">Đăng Nhập</h1>
-            <span className="text-gray-500 dark:text-gray-400 text-xs mb-4">hoặc sử dụng email và mật khẩu</span>
+            <h1 className="text-2xl font-bold mb-1 text-black dark:text-white">Đăng Nhập</h1>
+            <span className="text-gray-500 dark:text-gray-400 text-xs mb-3">Chào mừng bạn quay trở lại</span>
+
+            {/* Google Sign-In */}
+            {googleClientId ? (
+              <div className="w-full flex justify-center mb-2 min-h-[40px]">
+                <div ref={googleSignInRef} />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAuthError('Vui lòng thêm VITE_GOOGLE_CLIENT_ID vào file .env để bật Google Sign-In.')}
+                className="w-full max-w-[280px] flex items-center justify-center gap-2.5 py-2 px-4 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2 shadow-sm"
+                style={{ padding: '8px 16px', textTransform: 'none', letterSpacing: 'normal', marginTop: 0 }}
+              >
+                <GoogleIcon />
+                <span>Tiếp tục với Google</span>
+              </button>
+            )}
+
+            <div className="w-full max-w-[280px] flex items-center gap-2 my-1">
+              <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1" />
+              <span className="text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider font-medium">hoặc email</span>
+              <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1" />
+            </div>
+
             {!isActive && authSuccess && (
-              <p className="text-green-700 text-xs mb-2 w-full text-center">{authSuccess}</p>
+              <p className="text-green-700 text-xs mb-2 w-full text-center font-medium">{authSuccess}</p>
             )}
             {!isActive && authError && (
               <p data-testid="auth-login-error" className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
             )}
+
             <input
               data-testid="auth-login-email"
               name="email"
               type="email"
               placeholder="Email"
               required
-              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2.5 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
             />
             <input
               data-testid="auth-login-password"
@@ -482,24 +562,27 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               type="password"
               placeholder="Mật khẩu"
               required
-              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
             />
-            <a href="#" onClick={handleShowForgot} className="text-xs text-gray-400 hover:text-black dark:hover:text-white mb-4">
+
+            <a href="#" onClick={handleShowForgot} className="text-xs text-gray-500 hover:text-black dark:hover:text-white mb-3">
               Quên mật khẩu?
             </a>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 mb-4">
+
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
               Chưa có tài khoản?{' '}
               <a href="#" onClick={handleFocusSignUp} className="font-semibold text-black dark:text-white underline">
-                Đăng ký
+                Đăng ký ngay
               </a>
             </p>
+
             <button
               data-testid="auth-login-submit"
               type="submit"
               disabled={authLoading}
-              className="bg-black text-white rounded-lg py-3 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors disabled:opacity-60"
+              className="bg-black text-white rounded-lg py-2.5 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors disabled:opacity-60"
             >
-              {authLoading ? '…' : 'Đăng Nhập'}
+              {authLoading ? 'Đang xử lý…' : 'Đăng Nhập'}
             </button>
           </form>
         </div>
@@ -519,7 +602,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
             <div className="flex items-center justify-center bg-white dark:bg-slate-900 p-8">
               <form className="w-full max-w-sm flex flex-col items-center justify-center" onSubmit={handleForgotSendOtp}>
                 <h1 className="text-2xl font-bold mb-2 text-black dark:text-white">Quên Mật Khẩu</h1>
-                <span className="text-gray-500 dark:text-gray-400 text-xs mb-4 text-center">Chỉ email đã đăng ký mới nhận được mã</span>
+                <span className="text-gray-500 dark:text-gray-400 text-xs mb-4 text-center">Nhập email đăng ký để nhận mã OTP xác minh</span>
                 {authError && view === 'forgot' && (
                   <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
                 )}
@@ -535,7 +618,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                   disabled={authLoading}
                   className="bg-black text-white rounded-lg py-3 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors mt-2 disabled:opacity-60"
                 >
-                  {authLoading ? '…' : 'Gửi mã OTP'}
+                  {authLoading ? 'Đang gửi…' : 'Gửi mã OTP qua Email'}
                 </button>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-4">
                   <a href="#" onClick={handleBackToLogin} className="font-semibold text-black dark:text-white underline">
@@ -579,7 +662,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               >
                 <h1 className="text-2xl font-bold mb-2 text-black dark:text-white">Đặt Lại Mật Khẩu</h1>
                 <span className="text-gray-500 dark:text-gray-400 text-xs mb-2 text-center">
-                  Mã đã gửi tới <strong className="text-black dark:text-white">{forgotEmail}</strong>
+                  Mã OTP 6 số đã được gửi tới <strong className="text-black dark:text-white">{forgotEmail}</strong>
                 </span>
                 {authError && view === 'reset' && (
                   <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
@@ -599,7 +682,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                   onChange={handleResetOtpChange}
                   onInput={handleResetOtpChange}
                   onKeyDown={handleOtpKeyDown}
-                  className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
+                  className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium tracking-widest text-center text-black dark:text-white"
                 />
                 <input
                   name="new_password"
@@ -614,7 +697,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                   disabled={authLoading}
                   className="bg-black text-white rounded-lg py-3 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors mt-2 disabled:opacity-60"
                 >
-                  {authLoading ? '…' : 'Đổi mật khẩu'}
+                  {authLoading ? 'Đang cập nhật…' : 'Xác nhận đổi mật khẩu'}
                 </button>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-4">
                   <a href="#" onClick={handleBackToLogin} className="font-semibold text-black dark:text-white underline">

@@ -54,6 +54,7 @@ export const env = {
     .map((s) => s.trim())
     .filter(Boolean),
   aiApiKey: process.env.AI_API_KEY ?? '',
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
 
   /** SMTP — để gửi OTP; nếu trống, dev sẽ log OTP ra console */
   smtpHost: process.env.SMTP_HOST ?? '',

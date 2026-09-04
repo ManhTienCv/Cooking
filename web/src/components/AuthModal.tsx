@@ -243,6 +243,17 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     }
   };
 
+  const handleFocusSignUp = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsActive(true);
+    setAuthError(null);
+  };
+
+  const handleFocusSignIn = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsActive(false);
+    setAuthError(null);
+  };
 
   const handleShowForgot = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -451,13 +462,13 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     <div className={`blackwhite-auth-overlay ${isOpen ? 'show' : ''}`} onClick={handleOverlayClick}>
       <div
         data-testid="auth-modal-container"
-        className="blackwhite-container bg-white dark:bg-slate-900 overflow-hidden relative"
+        className={`blackwhite-container ${isActive ? 'active' : ''} bg-white dark:bg-slate-900 overflow-hidden relative`}
       >
         {/* Nút đóng modal X ở góc trên bên phải */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-3.5 right-3.5 z-50 p-2 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          className="absolute top-3.5 right-3.5 z-[1001] p-1.5 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-black/10 transition-colors cursor-pointer"
           aria-label="Đóng"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -465,246 +476,172 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
           </svg>
         </button>
 
-        {/* 1. Màn hình chính: Đăng nhập & Đăng ký (Layout 2 cột mượt mà, không giật lag/lệch layout) */}
-        {view === 'main' && (
-          <div className="grid h-full w-full grid-cols-1 md:grid-cols-[1.15fr_0.85fr]">
-            {/* Cột Form tương tác */}
-            <div className="flex flex-col items-center justify-center p-6 sm:p-8 bg-white dark:bg-slate-900 overflow-y-auto">
-              {/* Tab chuyển đổi Đăng Nhập / Đăng Ký */}
-              <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-xl mb-4 w-full max-w-[320px]">
-                <button
-                  type="button"
-                  onClick={() => { setIsActive(false); setAuthError(null); setAuthSuccess(null); }}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    !isActive
-                      ? 'bg-white dark:bg-slate-900 text-black dark:text-white shadow-sm'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'
-                  }`}
-                >
-                  Đăng Nhập
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsActive(true); setAuthError(null); setAuthSuccess(null); }}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-white dark:bg-slate-900 text-black dark:text-white shadow-sm'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'
-                  }`}
-                >
-                  Đăng Ký
-                </button>
-              </div>
+        {/* Registration Form */}
+        <div
+          className="blackwhite-form-container blackwhite-sign-up"
+          style={{ display: view === 'main' ? 'block' : 'none' }}
+        >
+          <form
+            className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900"
+            onSubmit={handleRegisterDirect}
+          >
+            <h1 className="text-2xl font-bold mb-1 text-black dark:text-white">Tạo Tài Khoản</h1>
+            <span className="text-gray-500 dark:text-gray-400 text-xs mb-3">Đăng ký nhanh chóng để khám phá món ngon</span>
 
-              {isActive ? (
-                /* Form Đăng Ký */
-                <form
-                  className="w-full max-w-[320px] flex flex-col items-center justify-center"
-                  onSubmit={handleRegisterDirect}
-                >
-                  <h1 className="text-2xl font-bold mb-1 text-black dark:text-white text-center">Tạo Tài Khoản</h1>
-                  <span className="text-gray-500 dark:text-gray-400 text-xs mb-3 text-center">Đăng ký nhanh chóng để khám phá món ngon</span>
-
-                  {/* Clean Custom Google Sign-Up Button */}
-                  <button
-                    type="button"
-                    disabled={authLoading}
-                    onClick={handleGoogleLoginClick}
-                    className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2 shadow-sm cursor-pointer"
-                    style={{ textTransform: 'none', letterSpacing: 'normal' }}
-                  >
-                    <GoogleIcon />
-                    <span>Đăng ký nhanh bằng Google</span>
-                  </button>
-
-                  <div className="w-full flex items-center gap-2 my-1.5">
-                    <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1" />
-                    <span className="text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider font-medium">hoặc điền email</span>
-                    <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1" />
-                  </div>
-
-                  {authError && (
-                    <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
-                  )}
-
-                  <input
-                    name="full_name"
-                    type="text"
-                    placeholder="Họ và tên"
-                    required
-                    minLength={3}
-                    className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
-                  />
-                  <input
-                    name="email"
-                    type="email"
-                    placeholder="Email"
-                    required
-                    className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
-                  />
-                  <input
-                    name="password"
-                    type="password"
-                    placeholder="Mật khẩu (ít nhất 8 ký tự, có số & hoa)"
-                    required
-                    minLength={8}
-                    className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
-                  />
-
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 mb-3">
-                    Đã có tài khoản?{' '}
-                    <button
-                      type="button"
-                      onClick={() => { setIsActive(false); setAuthError(null); }}
-                      className="font-semibold text-black dark:text-white underline cursor-pointer"
-                    >
-                      Đăng nhập ngay
-                    </button>
-                  </p>
-
-                  <button
-                    type="submit"
-                    disabled={authLoading}
-                    className="bg-black text-white rounded-lg py-2.5 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors disabled:opacity-60 w-full cursor-pointer"
-                  >
-                    {authLoading ? 'Đang xử lý…' : 'Đăng Ký'}
-                  </button>
-                </form>
-              ) : (
-                /* Form Đăng Nhập */
-                <form
-                  data-testid="auth-login-form"
-                  className="w-full max-w-[320px] flex flex-col items-center justify-center"
-                  onSubmit={handleLogin}
-                >
-                  <h1 className="text-2xl font-bold mb-1 text-black dark:text-white text-center">Đăng Nhập</h1>
-                  <span className="text-gray-500 dark:text-gray-400 text-xs mb-3 text-center">Chào mừng bạn quay trở lại</span>
-
-                  {/* Clean Custom Google Sign-In Button */}
-                  <button
-                    type="button"
-                    disabled={authLoading}
-                    onClick={handleGoogleLoginClick}
-                    className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2 shadow-sm cursor-pointer"
-                    style={{ textTransform: 'none', letterSpacing: 'normal' }}
-                  >
-                    <GoogleIcon />
-                    <span>Tiếp tục với Google</span>
-                  </button>
-
-                  <div className="w-full flex items-center gap-2 my-1.5">
-                    <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1" />
-                    <span className="text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider font-medium">hoặc email</span>
-                    <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1" />
-                  </div>
-
-                  {!isActive && authSuccess && (
-                    <p className="text-green-700 text-xs mb-2 w-full text-center font-medium">{authSuccess}</p>
-                  )}
-                  {!isActive && authError && (
-                    <p data-testid="auth-login-error" className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
-                  )}
-
-                  <input
-                    data-testid="auth-login-email"
-                    name="email"
-                    type="email"
-                    placeholder="Email"
-                    required
-                    className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
-                  />
-                  <input
-                    data-testid="auth-login-password"
-                    name="password"
-                    type="password"
-                    placeholder="Mật khẩu"
-                    required
-                    className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
-                  />
-
-                  <div className="w-full flex justify-end mb-2">
-                    <button
-                      type="button"
-                      onClick={handleShowForgot}
-                      className="text-xs text-gray-500 hover:text-black dark:hover:text-white transition-colors cursor-pointer"
-                    >
-                      Quên mật khẩu?
-                    </button>
-                  </div>
-
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-                    Chưa có tài khoản?{' '}
-                    <button
-                      type="button"
-                      onClick={() => { setIsActive(true); setAuthError(null); }}
-                      className="font-semibold text-black dark:text-white underline cursor-pointer"
-                    >
-                      Đăng ký ngay
-                    </button>
-                  </p>
-
-                  <button
-                    data-testid="auth-login-submit"
-                    type="submit"
-                    disabled={authLoading}
-                    className="bg-black text-white rounded-lg py-2.5 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors disabled:opacity-60 w-full cursor-pointer"
-                  >
-                    {authLoading ? 'Đang xử lý…' : 'Đăng Nhập'}
-                  </button>
-                </form>
-              )}
-            </div>
-
-            {/* Cột Banner hình ảnh truyền cảm hứng */}
-            <div
-              className="hidden md:flex relative items-center justify-center text-white overflow-hidden"
-              style={{
-                backgroundImage: `url(${isActive ? '/assets/images/avatar2.jpg' : '/assets/images/avatar3.jpg'})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
+            {/* Clean Custom Google Sign-Up Button */}
+            <button
+              type="button"
+              disabled={authLoading}
+              onClick={handleGoogleLoginClick}
+              className="w-full max-w-[280px] flex items-center justify-center gap-2.5 py-2 px-4 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2 shadow-sm"
+              style={{ padding: '9px 16px', textTransform: 'none', letterSpacing: 'normal', marginTop: 0 }}
             >
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/60 to-black/40" />
-              <div className="relative z-10 px-8 text-center max-w-sm flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center mb-3 shadow-lg">
-                  <span className="text-2xl">🍳</span>
-                </div>
-                <h2 className="text-2xl font-bold mb-2">
-                  {isActive ? 'Gia nhập CookingBoy!' : 'Chào mừng trở lại!'}
-                </h2>
-                <p className="text-xs text-white/80 leading-relaxed mb-5">
-                  {isActive
-                    ? 'Khám phá hàng ngàn công thức nấu ăn ngon, lưu món yêu thích và mua sắm nguyên liệu tươi sạch.'
-                    : 'Đăng nhập để tiếp tục nấu ăn, quản lý công thức và kết nối cùng cộng đồng đầu bếp.'}
-                </p>
+              <GoogleIcon />
+              <span>Đăng ký nhanh bằng Google</span>
+            </button>
 
-                <div className="w-full space-y-2 text-left bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/15 text-xs text-white/90">
-                  <div className="flex items-center gap-2">
-                    <span className="text-yellow-400 font-bold">✓</span>
-                    <span>Hơn 10,000+ công thức nấu ăn phong phú</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-yellow-400 font-bold">✓</span>
-                    <span>Nguyên liệu tươi ngon giao tận nhà</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-yellow-400 font-bold">✓</span>
-                    <span>Cộng đồng ẩm thực sôi nổi mỗi ngày</span>
-                  </div>
-                </div>
-              </div>
+            <div className="w-full max-w-[280px] flex items-center gap-2 my-1">
+              <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1" />
+              <span className="text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider font-medium">hoặc điền email</span>
+              <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1" />
             </div>
-          </div>
-        )}
 
-        {/* 2. Màn hình Quên mật khẩu */}
-        {view === 'forgot' && (
-          <div className="grid h-full w-full grid-cols-1 md:grid-cols-[1.15fr_0.85fr]">
-            <div className="flex flex-col items-center justify-center bg-white dark:bg-slate-900 p-6 sm:p-8 overflow-y-auto">
-              <form className="w-full max-w-[320px] flex flex-col items-center justify-center" onSubmit={handleForgotSendOtp}>
+            {authError && isActive && (
+              <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
+            )}
+
+            <input
+              name="full_name"
+              type="text"
+              placeholder="Họ và tên"
+              required
+              minLength={3}
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2.5 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
+            />
+            <input
+              name="email"
+              type="email"
+              placeholder="Email"
+              required
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2.5 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
+            />
+            <input
+              name="password"
+              type="password"
+              placeholder="Mật khẩu (ít nhất 8 ký tự, có số & hoa)"
+              required
+              minLength={8}
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
+            />
+
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 mb-3">
+              Đã có tài khoản?{' '}
+              <a href="#" onClick={handleFocusSignIn} className="font-semibold text-black dark:text-white underline">
+                Đăng nhập ngay
+              </a>
+            </p>
+
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="bg-black text-white rounded-lg py-2.5 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors disabled:opacity-60"
+            >
+              {authLoading ? 'Đang xử lý…' : 'Đăng Ký'}
+            </button>
+          </form>
+        </div>
+
+        {/* Login Form */}
+        <div
+          data-testid="auth-login-form"
+          className="blackwhite-form-container blackwhite-sign-in"
+          style={{ display: view === 'main' ? 'block' : 'none' }}
+        >
+          <form className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900" onSubmit={handleLogin}>
+            <h1 className="text-2xl font-bold mb-1 text-black dark:text-white">Đăng Nhập</h1>
+            <span className="text-gray-500 dark:text-gray-400 text-xs mb-3">Chào mừng bạn quay trở lại</span>
+
+            {/* Clean Custom Google Sign-In Button */}
+            <button
+              type="button"
+              disabled={authLoading}
+              onClick={handleGoogleLoginClick}
+              className="w-full max-w-[280px] flex items-center justify-center gap-2.5 py-2 px-4 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2 shadow-sm"
+              style={{ padding: '9px 16px', textTransform: 'none', letterSpacing: 'normal', marginTop: 0 }}
+            >
+              <GoogleIcon />
+              <span>Tiếp tục với Google</span>
+            </button>
+
+            <div className="w-full max-w-[280px] flex items-center gap-2 my-1">
+              <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1" />
+              <span className="text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider font-medium">hoặc email</span>
+              <div className="h-px bg-gray-200 dark:bg-slate-700 flex-1" />
+            </div>
+
+            {!isActive && authSuccess && (
+              <p className="text-green-700 text-xs mb-2 w-full text-center font-medium">{authSuccess}</p>
+            )}
+            {!isActive && authError && (
+              <p data-testid="auth-login-error" className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
+            )}
+
+            <input
+              data-testid="auth-login-email"
+              name="email"
+              type="email"
+              placeholder="Email"
+              required
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2.5 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
+            />
+            <input
+              data-testid="auth-login-password"
+              name="password"
+              type="password"
+              placeholder="Mật khẩu"
+              required
+              className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
+            />
+
+            <a href="#" onClick={handleShowForgot} className="text-xs text-gray-500 hover:text-black dark:hover:text-white mb-3">
+              Quên mật khẩu?
+            </a>
+
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+              Chưa có tài khoản?{' '}
+              <a href="#" onClick={handleFocusSignUp} className="font-semibold text-black dark:text-white underline">
+                Đăng ký ngay
+              </a>
+            </p>
+
+            <button
+              data-testid="auth-login-submit"
+              type="submit"
+              disabled={authLoading}
+              className="bg-black text-white rounded-lg py-2.5 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors disabled:opacity-60"
+            >
+              {authLoading ? 'Đang xử lý…' : 'Đăng Nhập'}
+            </button>
+          </form>
+        </div>
+
+        {/* Forgot Password */}
+        <div
+          className="blackwhite-form-container blackwhite-forgot-password"
+          style={{
+            display: view === 'forgot' ? 'block' : 'none',
+            left: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: 10,
+          }}
+        >
+          <div className="grid h-full w-full grid-cols-1 md:grid-cols-[1.1fr_0.9fr]">
+            <div className="flex items-center justify-center bg-white dark:bg-slate-900 p-8">
+              <form className="w-full max-w-sm flex flex-col items-center justify-center" onSubmit={handleForgotSendOtp}>
                 <h1 className="text-2xl font-bold mb-2 text-black dark:text-white">Quên Mật Khẩu</h1>
                 <span className="text-gray-500 dark:text-gray-400 text-xs mb-4 text-center">Nhập email đăng ký để nhận mã OTP xác minh</span>
-                {authError && (
+                {authError && view === 'forgot' && (
                   <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
                 )}
                 <input
@@ -712,19 +649,19 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                   type="email"
                   placeholder="Email đã đăng ký"
                   required
-                  className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
+                  className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
                 />
                 <button
                   type="submit"
                   disabled={authLoading}
-                  className="bg-black text-white rounded-lg py-2.5 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors mt-2 disabled:opacity-60 w-full cursor-pointer"
+                  className="bg-black text-white rounded-lg py-3 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors mt-2 disabled:opacity-60"
                 >
                   {authLoading ? 'Đang gửi…' : 'Gửi mã OTP qua Email'}
                 </button>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-4">
-                  <button type="button" onClick={handleBackToLogin} className="font-semibold text-black dark:text-white underline cursor-pointer">
+                  <a href="#" onClick={handleBackToLogin} className="font-semibold text-black dark:text-white underline">
                     Quay lại Đăng nhập
-                  </button>
+                  </a>
                 </p>
               </form>
             </div>
@@ -732,7 +669,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               className="hidden md:flex relative items-center justify-center text-white"
               style={{ backgroundImage: "url('/assets/images/avatar3.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
             >
-              <div className="absolute inset-0 bg-black/60" />
+              <div className="absolute inset-0 bg-black/55" />
               <div className="relative z-10 px-8 text-center">
                 <h2 className="text-2xl font-bold mb-2">Khôi phục tài khoản</h2>
                 <p className="text-sm text-white/80">
@@ -741,14 +678,23 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               </div>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* 3. Màn hình Đặt lại mật khẩu */}
-        {view === 'reset' && (
-          <div className="grid h-full w-full grid-cols-1 md:grid-cols-[1.15fr_0.85fr]">
-            <div className="flex flex-col items-center justify-center bg-white dark:bg-slate-900 p-6 sm:p-8 overflow-y-auto">
+        {/* Reset Password */}
+        <div
+          className="blackwhite-form-container blackwhite-reset-password"
+          style={{
+            display: view === 'reset' ? 'block' : 'none',
+            left: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: 10,
+          }}
+        >
+          <div className="grid h-full w-full grid-cols-1 md:grid-cols-[1.1fr_0.9fr]">
+            <div className="flex items-center justify-center bg-white dark:bg-slate-900 p-8">
               <form
-                className="w-full max-w-[320px] flex flex-col items-center justify-center"
+                className="w-full max-w-sm flex flex-col items-center justify-center"
                 autoComplete="off"
                 onSubmit={handleResetPassword}
               >
@@ -756,7 +702,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                 <span className="text-gray-500 dark:text-gray-400 text-xs mb-2 text-center">
                   Mã OTP 6 số đã được gửi tới <strong className="text-black dark:text-white">{forgotEmail}</strong>
                 </span>
-                {authError && (
+                {authError && view === 'reset' && (
                   <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
                 )}
                 <input
@@ -774,7 +720,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                   onChange={handleResetOtpChange}
                   onInput={handleResetOtpChange}
                   onKeyDown={handleOtpKeyDown}
-                  className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium tracking-widest text-center text-black dark:text-white"
+                  className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium tracking-widest text-center text-black dark:text-white"
                 />
                 <input
                   name="new_password"
@@ -782,19 +728,19 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                   placeholder="Mật khẩu mới (≥8 ký tự)"
                   required
                   minLength={8}
-                  className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-4 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
+                  className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-6 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
                 />
                 <button
                   type="submit"
                   disabled={authLoading}
-                  className="bg-black text-white rounded-lg py-2.5 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors disabled:opacity-60 w-full cursor-pointer"
+                  className="bg-black text-white rounded-lg py-3 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors mt-2 disabled:opacity-60"
                 >
                   {authLoading ? 'Đang cập nhật…' : 'Xác nhận đổi mật khẩu'}
                 </button>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-4">
-                  <button type="button" onClick={handleBackToLogin} className="font-semibold text-black dark:text-white underline cursor-pointer">
+                  <a href="#" onClick={handleBackToLogin} className="font-semibold text-black dark:text-white underline">
                     Quay lại Đăng nhập
-                  </button>
+                  </a>
                 </p>
               </form>
             </div>
@@ -802,7 +748,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               className="hidden md:flex relative items-center justify-center text-white"
               style={{ backgroundImage: "url('/assets/images/avatar2.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
             >
-              <div className="absolute inset-0 bg-black/60" />
+              <div className="absolute inset-0 bg-black/55" />
               <div className="relative z-10 px-8 text-center">
                 <h2 className="text-2xl font-bold mb-2">Bảo mật tài khoản</h2>
                 <p className="text-sm text-white/80">
@@ -811,13 +757,22 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               </div>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* 4. Form điền / xác nhận tên người dùng sau khi login bằng Google */}
-        {view === 'google-name' && (
-          <div className="grid h-full w-full grid-cols-1 md:grid-cols-[1.15fr_0.85fr]">
-            <div className="flex flex-col items-center justify-center bg-white dark:bg-slate-900 p-6 sm:p-8 overflow-y-auto">
-              <form className="w-full max-w-[320px] flex flex-col items-center justify-center" onSubmit={handleSaveGoogleName}>
+        {/* Form điền / xác nhận tên người dùng sau khi login bằng Google */}
+        <div
+          className="blackwhite-form-container blackwhite-google-name"
+          style={{
+            display: view === 'google-name' ? 'block' : 'none',
+            left: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: 15,
+          }}
+        >
+          <div className="grid h-full w-full grid-cols-1 md:grid-cols-[1.1fr_0.9fr]">
+            <div className="flex items-center justify-center bg-white dark:bg-slate-900 p-8">
+              <form className="w-full max-w-sm flex flex-col items-center justify-center" onSubmit={handleSaveGoogleName}>
                 {googleUserData?.avatarUrl ? (
                   <img
                     src={googleUserData.avatarUrl}
@@ -840,7 +795,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                   </span>
                 )}
 
-                {authError && (
+                {authError && view === 'google-name' && (
                   <p className="text-red-600 text-xs mb-2 w-full text-center">{authError}</p>
                 )}
 
@@ -867,7 +822,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                 <button
                   type="submit"
                   disabled={authLoading}
-                  className="bg-black text-white rounded-lg py-2.5 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors mt-3 w-full disabled:opacity-60 cursor-pointer"
+                  className="bg-black text-white rounded-lg py-3 px-8 text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors mt-3 w-full disabled:opacity-60"
                 >
                   {authLoading ? 'Đang lưu…' : 'Xác Nhận & Bắt Đầu'}
                 </button>
@@ -875,7 +830,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                 <button
                   type="button"
                   onClick={handleSkipGoogleName}
-                  className="mt-3 text-xs text-gray-500 hover:text-black dark:hover:text-white underline transition-colors cursor-pointer"
+                  className="mt-3 text-xs text-gray-500 hover:text-black dark:hover:text-white underline transition-colors"
                 >
                   Bỏ qua và dùng tên này sau
                 </button>
@@ -886,7 +841,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               className="hidden md:flex relative items-center justify-center text-white"
               style={{ backgroundImage: "url('/assets/images/avatar1.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
             >
-              <div className="absolute inset-0 bg-black/60" />
+              <div className="absolute inset-0 bg-black/55" />
               <div className="relative z-10 px-8 text-center">
                 <h2 className="text-2xl font-bold mb-2">Gia nhập cộng đồng</h2>
                 <p className="text-sm text-white/80">
@@ -895,7 +850,48 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               </div>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Toggle Overlays */}
+        <div className="blackwhite-toggle-container" style={{ display: view === 'main' ? 'block' : 'none' }}>
+          <div className="blackwhite-toggle">
+            <div
+              className="blackwhite-toggle-panel blackwhite-toggle-left flex flex-col items-center justify-center text-center p-8 text-white"
+              style={{ backgroundImage: "url('/assets/images/avatar2.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
+            >
+              <div className="absolute inset-0 bg-black/60 pointer-events-none"></div>
+              <div className="relative z-10 w-full">
+                <h1 className="text-3xl font-bold mb-4">Chào mừng trở lại!</h1>
+                <p className="text-sm text-gray-200 mb-6">Đăng nhập để tiếp tục nấu ăn</p>
+                <button
+                  type="button"
+                  onClick={handleFocusSignIn}
+                  className="bg-transparent border-2 border-white text-white rounded-lg py-3 px-8 text-xs font-bold uppercase tracking-wider hover:bg-white hover:text-black transition-colors cursor-pointer"
+                >
+                  Đăng Nhập
+                </button>
+              </div>
+            </div>
+
+            <div
+              className="blackwhite-toggle-panel blackwhite-toggle-right flex flex-col items-center justify-center text-center p-8 text-white"
+              style={{ backgroundImage: "url('/assets/images/avatar3.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
+            >
+              <div className="absolute inset-0 bg-black/60 pointer-events-none"></div>
+              <div className="relative z-10 w-full">
+                <h1 className="text-3xl font-bold mb-4">Xin chào, bạn mới!</h1>
+                <p className="text-sm text-gray-200 mb-6">Nhập thông tin cá nhân để khám phá thế giới ẩm thực</p>
+                <button
+                  type="button"
+                  onClick={handleFocusSignUp}
+                  className="bg-transparent border-2 border-white text-white rounded-lg py-3 px-8 text-xs font-bold uppercase tracking-wider hover:bg-white hover:text-black transition-colors cursor-pointer"
+                >
+                  Đăng Ký
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>,
     document.body

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, Lock, Moon, ShieldCheck, Check, Loader2 } from 'lucide-react';
 import { Skeleton } from '../ui/Skeleton';
 import type { ProfileUser } from './types';
@@ -11,7 +11,6 @@ interface ProfileSettingsFormProps {
   isLoading: boolean;
   user: ProfileUser | null;
   onSuccessSubmit: () => void;
-  initialView?: string;
 }
 
 type TabKey = 'info' | 'security' | 'preferences';
@@ -28,6 +27,14 @@ export default function ProfileSettingsForm({
   const [fullName, setFullName] = useState(user?.full_name ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [savingProfile, setSavingProfile] = useState(false);
+
+  // Đồng bộ lại khi user prop được load hoặc cập nhật
+  useEffect(() => {
+    if (user) {
+      setFullName(user.full_name ?? '');
+      setBio(user.bio ?? '');
+    }
+  }, [user]);
 
   // Form State: Đổi mật khẩu
   const [currentPassword, setCurrentPassword] = useState('');

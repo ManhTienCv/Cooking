@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   X, Mail, Lock, User, Phone, Eye, EyeOff, 
-  ArrowRight, CheckCircle2, AlertCircle, Loader2, Sparkles, ChefHat 
+  ArrowRight, AlertCircle, Loader2, Sparkles, ChefHat 
 } from 'lucide-react';
 import { apiFetch, resetCsrfCache } from '../../lib/api';
 import { notifyAuthChanged } from '../../lib/authEvents';
@@ -78,7 +78,6 @@ export default function KitchenCookAuthModal({
   // UI state
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
 
@@ -88,7 +87,6 @@ export default function KitchenCookAuthModal({
       setTab(initialSignUp ? 'signup' : 'signin');
       setView('main');
       setErrorMessage(null);
-      setSuccessMessage(null);
     } else {
       document.body.style.overflow = '';
     }
@@ -113,7 +111,6 @@ export default function KitchenCookAuthModal({
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-    setSuccessMessage(null);
 
     const email = signInEmail.trim().toLowerCase();
     const password = signInPassword;
@@ -153,7 +150,6 @@ export default function KitchenCookAuthModal({
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-    setSuccessMessage(null);
 
     const fullName = signUpName.trim();
     const email = signUpEmail.trim().toLowerCase();
@@ -444,17 +440,11 @@ export default function KitchenCookAuthModal({
 
         {/* Modal Body */}
         <div className="p-6 sm:p-8">
-          {/* Error & Success Messages */}
+          {/* Error Message */}
           {errorMessage && (
             <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2.5">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
               <span>{errorMessage}</span>
-            </div>
-          )}
-          {successMessage && (
-            <div className="mb-5 p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2.5">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-              <span>{successMessage}</span>
             </div>
           )}
 

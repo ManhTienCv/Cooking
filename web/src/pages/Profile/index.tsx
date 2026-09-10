@@ -483,8 +483,10 @@ export default function Profile() {
                   <ProfileSettingsForm
                     isLoading={isLoading}
                     user={user}
-                    initialView={(searchParams.get('settings') as 'main' | 'account' | 'addresses' | 'banks' | null) ?? 'main'}
-                    onSuccessSubmit={() => setShowSuccessMenu(true)}
+                    onSuccessSubmit={() => {
+                      setShowSuccessMenu(true);
+                      void loadMe();
+                    }}
                   />
                 )}
               </Reveal>

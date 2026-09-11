@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChefHat, Menu, LogOut } from 'lucide-react';
@@ -35,6 +35,28 @@ export default function Navbar() {
   const [me, setMe] = useState<MeState | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const navRef = useRef<HTMLElement | null>(null);
+
+  // Tự động đóng mobile menu khi bấm ra ngoài hoặc nhấn ESC
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMenuOpen]);
 
   const currentPage = location.pathname;
 
@@ -93,7 +115,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav id="navbar" className="fixed w-full top-0 z-50 transition-all duration-300 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-sm border-b border-gray-200 dark:border-slate-800">
+      <nav id="navbar" ref={navRef} className="fixed w-full top-0 z-50 transition-all duration-300 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-sm border-b border-gray-200 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" onClick={() => scrollWindowToTop()} className="flex items-center space-x-2 group">

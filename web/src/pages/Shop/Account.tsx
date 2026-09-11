@@ -102,6 +102,16 @@ export default function AccountPage() {
     setMapModalOpen(false);
   }, []);
 
+  // Đóng modal địa chỉ khi nhấn ESC
+  useEffect(() => {
+    if (!addressModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAddressModalOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [addressModalOpen]);
+
   // Security - Password
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -1119,8 +1129,14 @@ export default function AccountPage() {
 
       {/* Modal Thêm / Chỉnh Sửa Địa Chỉ */}
       {addressModalOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-amber-900/10 dark:border-slate-700 shadow-2xl relative">
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150 cursor-pointer"
+          onClick={() => setAddressModalOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-amber-900/10 dark:border-slate-700 shadow-2xl relative cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
               onClick={() => setAddressModalOpen(false)}

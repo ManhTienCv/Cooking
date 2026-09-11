@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { apiJson } from '../../lib/api';
@@ -29,6 +29,16 @@ export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDat
     activityLevel: 'light',
     goal: 'maintain',
   }));
+
+  // Đóng modal khi nhấn ESC
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -96,8 +106,14 @@ export default function CreatePlanModal({ isOpen, onClose, onSuccess, defaultDat
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 py-8">
-      <div className="bg-white rounded-2xl w-full max-w-xl max-h-[85vh] overflow-hidden flex flex-col my-4 shadow-2xl">
+    <div
+      className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 py-8 cursor-pointer"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl w-full max-w-xl max-h-[85vh] overflow-hidden flex flex-col my-4 shadow-2xl cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h3 className="text-2xl font-bold text-black">Tạo kế hoạch mới</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-black transition-colors">

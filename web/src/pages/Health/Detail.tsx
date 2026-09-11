@@ -85,6 +85,16 @@ export default function HealthDetail() {
     type: 'danger',
   });
 
+  // Đóng modal thêm món ăn khi nhấn ESC
+  useEffect(() => {
+    if (!addingMeal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAddingMeal(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [addingMeal]);
+
   const loadPlanAndMeals = useCallback(async () => {
     if (!id) return;
     setIsLoading(true);
@@ -634,8 +644,14 @@ export default function HealthDetail() {
       </div>
 
       {addingMeal && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden relative flex flex-col">
+        <div
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setAddingMeal(null)}
+        >
+          <div
+            className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden relative flex flex-col cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-start p-6 border-b border-gray-100 dark:border-slate-700">
               <div>
                 <h3 className="text-2xl font-bold text-black dark:text-white mb-1">Thêm món ăn vào thực đơn</h3>

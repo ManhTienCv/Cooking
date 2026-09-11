@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChefHat, Home, ShoppingBag, Search, Package, User, LogOut, Sun, Moon } from 'lucide-react';
 import { useCart } from '../../contexts/CartContext';
@@ -29,6 +29,30 @@ export default function KitchenCookNavbar() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [me, setMe] = useState<MeState>({ authenticated: false });
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
+
+  // Tự động đóng menu profile khi bấm ra ngoài hoặc nhấn ESC
+  useEffect(() => {
+    if (!showUserMenu) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showUserMenu]);
 
   const refreshMe = useCallback(async () => {
     try {
@@ -189,7 +213,7 @@ export default function KitchenCookNavbar() {
 
               {/* Nút Tài Khoản / Đăng Nhập (Chuẩn màu be-trắng thanh lịch) */}
               {me.authenticated && me.user ? (
-                <div className="relative">
+                <div className="relative" ref={userMenuRef}>
                   <button
                     type="button"
                     onClick={() => setShowUserMenu(!showUserMenu)}

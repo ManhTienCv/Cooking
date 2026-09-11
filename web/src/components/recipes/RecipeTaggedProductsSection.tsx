@@ -50,6 +50,16 @@ export default function RecipeTaggedProductsSection({ recipeId, isAuthor }: Prop
     void fetchTaggedProducts();
   }, [fetchTaggedProducts]);
 
+  // Đóng modal khi nhấn ESC
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsModalOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isModalOpen]);
+
   // Tìm kiếm sản phẩm để gắn tag
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -298,8 +308,14 @@ export default function RecipeTaggedProductsSection({ recipeId, isAuthor }: Prop
 
       {/* Modal tìm và gắn sản phẩm */}
       {isModalOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh]">
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn cursor-pointer"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh] cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
               <h4 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Tag className="w-5 h-5 text-amber-500" />

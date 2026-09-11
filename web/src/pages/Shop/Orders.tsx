@@ -106,6 +106,18 @@ export default function Orders() {
     void fetchOrders();
   }, [fetchOrders]);
 
+  // Đóng modal khi nhấn phím ESC
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setCancelModalOpen(false);
+        setReviewModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Tab counters
   const tabCounts = useMemo(() => {
     const counts = { all: orders.length, pending: 0, shipping: 0, completed: 0, cancelled: 0 };
@@ -636,8 +648,14 @@ export default function Orders() {
 
       {/* MODAL HỦY ĐƠN HÀNG */}
       {cancelModalOpen && orderToCancel && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full border border-amber-900/10 dark:border-slate-700 shadow-2xl">
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150 cursor-pointer"
+          onClick={() => setCancelModalOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full border border-amber-900/10 dark:border-slate-700 shadow-2xl cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-950/40 text-red-600 mx-auto flex items-center justify-center mb-4">
               <AlertTriangle className="w-6 h-6" />
             </div>
@@ -707,8 +725,14 @@ export default function Orders() {
 
       {/* MODAL ĐÁNH GIÁ SẢN PHẨM */}
       {reviewModalOpen && reviewItem && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full border border-stone-200 dark:border-slate-700 shadow-2xl">
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150 cursor-pointer"
+          onClick={() => setReviewModalOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full border border-stone-200 dark:border-slate-700 shadow-2xl cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
               Đánh giá sản phẩm
             </h3>

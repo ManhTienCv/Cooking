@@ -173,6 +173,16 @@ export default function Messages() {
     activeIdRef.current = activeId;
   }, [activeId]);
 
+  // Đóng modal xác nhận xóa khi nhấn ESC
+  useEffect(() => {
+    if (deleteConfirmId === null) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDeleteConfirmId(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [deleteConfirmId]);
+
   useEffect(() => {
     let active = true;
     apiJson<MeState>('/api/auth/me')
@@ -646,14 +656,16 @@ export default function Messages() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setDeleteConfirmId(null)}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm cursor-pointer"
           >
             <motion.div
               initial={{ scale: 0.95, y: 10, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.95, y: 10, opacity: 0 }}
               transition={{ type: 'spring', duration: 0.3 }}
-              className="w-full max-w-sm overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 cursor-default"
             >
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className="rounded-full bg-red-100 p-3 dark:bg-red-950/30 text-red-600 dark:text-red-400">

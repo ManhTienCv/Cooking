@@ -45,15 +45,24 @@ export default function AdminLayout() {
 
   return (
     <NotificationProvider role="admin">
-    <div className="bg-slate-50 text-slate-900 h-screen flex overflow-hidden dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300">
-      <AdminSidebar pendingCount={stats.pending} pendingProducts={stats.pendingProducts} />
-      <main className="flex-1 flex flex-col overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
-        <div className="p-10 flex-1">
-          <AdminHeader />
-          <Outlet />
+      <div className="w-screen h-screen overflow-hidden bg-slate-50 dark:bg-slate-900">
+        <div 
+          className="bg-slate-50 text-slate-900 flex overflow-hidden dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300"
+          style={{
+            zoom: 0.9,
+            width: 'calc(100vw / 0.9)',
+            height: 'calc(100vh / 0.9)',
+          }}
+        >
+          <AdminSidebar pendingCount={stats.pending} pendingProducts={stats.pendingProducts} />
+          <main className="flex-1 flex flex-col overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+            <div className="p-10 flex-1">
+              <AdminHeader />
+              <Outlet />
+            </div>
+          </main>
         </div>
-      </main>
-    </div>
+      </div>
     </NotificationProvider>
   );
 }

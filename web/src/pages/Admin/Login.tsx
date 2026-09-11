@@ -49,8 +49,16 @@ export default function AdminLogin() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden grid md:grid-cols-[1.1fr_0.9fr]">
+    <div className="w-screen min-h-screen overflow-x-hidden bg-gradient-to-br from-blue-50 to-indigo-50">
+      <main 
+        className="min-h-screen flex items-center justify-center px-4 py-10"
+        style={{
+          zoom: 0.9,
+          width: 'calc(100vw / 0.9)',
+          minHeight: 'calc(100vh / 0.9)',
+        }}
+      >
+        <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden grid md:grid-cols-[1.1fr_0.9fr]">
         {/* Left Panel: Cover Image */}
         <div className="relative hidden md:block">
           <img
@@ -132,6 +140,7 @@ export default function AdminLogin() {
           </form>
         </div>
       </div>
-    </main>
+      </main>
+    </div>
   );
 }

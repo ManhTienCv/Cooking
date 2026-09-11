@@ -5,7 +5,6 @@ import {
   MapPin,
   ShieldCheck,
   Package,
-  ShoppingBag,
   Camera,
   Plus,
   Trash2,
@@ -680,33 +679,6 @@ export default function AccountPage() {
                 <ShieldCheck className="w-4 h-4" />
                 <span>Bảo mật & Đổi mật khẩu</span>
               </button>
-            </div>
-
-            {/* Quick Links Card */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-stone-200 dark:border-slate-700 shadow-sm space-y-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                Phím tắt đơn hàng
-              </span>
-              <Link
-                to="/orders"
-                className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-100/70 dark:hover:bg-slate-700/50 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors"
-              >
-                <span className="flex items-center gap-2">
-                  <Package className="w-3.5 h-3.5 text-slate-900 dark:text-white" />
-                  Xem lịch sử đơn mua
-                </span>
-                <span className="font-bold text-slate-400">&rarr;</span>
-              </Link>
-              <Link
-                to="/cart"
-                className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-100/70 dark:hover:bg-slate-700/50 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors"
-              >
-                <span className="flex items-center gap-2">
-                  <ShoppingBag className="w-3.5 h-3.5 text-slate-900 dark:text-white" />
-                  Kiểm tra giỏ hàng
-                </span>
-                <span className="font-bold text-slate-400">&rarr;</span>
-              </Link>
             </div>
           </div>
 

@@ -71,7 +71,7 @@ export default function KitchenCookFooter() {
             </div>
 
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-sm">
-              KitchenCook là cửa hàng chuyên cung cấp dụng cụ nhà bếp, nồi niêu xoong chảo cao cấp. Nơi biến việc nấu nướng thành trải nghiệm nghệ thuật mỗi ngày.
+              Dụng cụ nhà bếp cao cấp, đồng hành cùng cảm hứng nấu nướng mỗi ngày.
             </p>
 
             {/* Box kết nối Cổng Công Thức CookingBoy */}

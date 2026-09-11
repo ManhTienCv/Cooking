@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Tag, Plus, Trash2, Search, ExternalLink, Star, Check, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -296,8 +297,8 @@ export default function RecipeTaggedProductsSection({ recipeId, isAuthor }: Prop
       )}
 
       {/* Modal tìm và gắn sản phẩm */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
               <h4 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -307,7 +308,7 @@ export default function RecipeTaggedProductsSection({ recipeId, isAuthor }: Prop
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -344,7 +345,7 @@ export default function RecipeTaggedProductsSection({ recipeId, isAuthor }: Prop
                       key={p.id}
                       type="button"
                       onClick={() => setSelectedProduct(p)}
-                      className={`w-full p-2.5 flex items-center gap-3 text-left transition-colors ${
+                      className={`w-full p-2.5 flex items-center gap-3 text-left transition-colors cursor-pointer ${
                         selectedProduct?.id === p.id
                           ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200'
                           : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-800 dark:text-slate-200'
@@ -390,7 +391,7 @@ export default function RecipeTaggedProductsSection({ recipeId, isAuthor }: Prop
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
               >
                 Hủy
               </button>
@@ -398,13 +399,14 @@ export default function RecipeTaggedProductsSection({ recipeId, isAuthor }: Prop
                 type="button"
                 onClick={handleAddTag}
                 disabled={!selectedProduct || isSavingTag}
-                className="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-bold rounded-xl shadow-md shadow-amber-500/20 active:scale-95 transition-all disabled:opacity-50"
+                className="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-bold rounded-xl shadow-md shadow-amber-500/20 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
               >
                 {isSavingTag ? 'Đang lưu...' : 'Gắn vào công thức'}
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

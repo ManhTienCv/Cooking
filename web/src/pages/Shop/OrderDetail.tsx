@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
 import { MapPin, Phone, User, CreditCard, Package, CheckCircle, Star, MessageCircle, Truck, Calendar, AlertTriangle, Clock, Camera, X, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -794,7 +795,7 @@ export default function OrderDetail() {
 
       {/* Complete Confirmation Modal */}
       <AnimatePresence>
-        {showCompleteModal && (
+        {showCompleteModal && createPortal(
           <>
             <motion.div
               initial={{ opacity: 0 }}
@@ -820,7 +821,7 @@ export default function OrderDetail() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowCompleteModal(false)}
-                    className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-slate-700 font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                    className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-slate-700 font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                   >
                     Hủy
                   </button>
@@ -829,14 +830,15 @@ export default function OrderDetail() {
                       setShowCompleteModal(false);
                       await handleConfirmComplete();
                     }}
-                    className="flex-1 bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 transition-colors"
+                    className="flex-1 bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 transition-colors cursor-pointer"
                   >
                     Xác nhận
                   </button>
                 </div>
               </motion.div>
             </div>
-          </>
+          </>,
+          document.body
         )}
       </AnimatePresence>
 

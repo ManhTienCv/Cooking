@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import {
   User,
@@ -20,7 +21,8 @@ import {
   Home,
   CheckCircle2,
   Truck,
-  DollarSign
+  DollarSign,
+  X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiFetch, apiJson } from '../../lib/api';
@@ -32,6 +34,7 @@ import {
 } from '../../lib/profilePreferences';
 import type { Order } from '../../types/marketplace';
 import KitchenCookAuthModal from '../../components/shop/KitchenCookAuthModal';
+import { MapAddressModal, type SelectedMapAddress } from '../../components/common/MapAddressModal';
 
 const VN_PHONE_REGEX = /^(0[3|5|7|8|9])[0-9]{8}$/;
 
@@ -76,6 +79,7 @@ export default function AccountPage() {
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [addressModalOpen, setAddressModalOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [mapModalOpen, setMapModalOpen] = useState(false);
   const [addressForm, setAddressForm] = useState<{
     name: string;
     phone: string;
@@ -89,6 +93,14 @@ export default function AccountPage() {
     label: 'home',
     isDefault: false,
   });
+
+  const handleMapSelectAddress = useCallback((data: SelectedMapAddress) => {
+    setAddressForm((prev) => ({
+      ...prev,
+      address: data.fullAddress,
+    }));
+    setMapModalOpen(false);
+  }, []);
 
   // Security - Password
   const [currentPassword, setCurrentPassword] = useState('');
@@ -1106,10 +1118,18 @@ export default function AccountPage() {
       </div>
 
       {/* Modal Thêm / Chỉnh Sửa Địa Chỉ */}
-      {addressModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+      {addressModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-amber-900/10 dark:border-slate-700 shadow-2xl relative">
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
+            <button
+              type="button"
+              onClick={() => setAddressModalOpen(false)}
+              className="absolute top-5 right-5 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1 pr-8">
               {editingAddressId ? 'Chỉnh sửa địa chỉ nhận hàng' : 'Thêm địa chỉ nhận hàng mới'}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
@@ -1176,9 +1196,19 @@ export default function AccountPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Địa chỉ chi tiết <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Địa chỉ chi tiết <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setMapModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition cursor-pointer"
+                  >
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span>Chọn từ Bản đồ (Maps & GPS)</span>
+                  </button>
+                </div>
                 <textarea
                   rows={3}
                   value={addressForm.address}
@@ -1219,8 +1249,17 @@ export default function AccountPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
+
+      {/* Modal Chọn Địa Chỉ Trên Bản Đồ */}
+      <MapAddressModal
+        open={mapModalOpen}
+        onClose={() => setMapModalOpen(false)}
+        initialAddress={addressForm.address}
+        onSelectAddress={handleMapSelectAddress}
+      />
     </div>
   );
 }

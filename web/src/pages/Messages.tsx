@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { MessageCircle, Send, Store, User, ShoppingBag, ArrowRight, X, Trash2, AlertTriangle } from 'lucide-react';
@@ -640,12 +641,12 @@ export default function Messages() {
       </div>
 
       <AnimatePresence>
-        {deleteConfirmId !== null && (
+        {deleteConfirmId !== null && createPortal(
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.95, y: 10, opacity: 0 }}
@@ -668,7 +669,7 @@ export default function Messages() {
                   <button
                     type="button"
                     onClick={() => setDeleteConfirmId(null)}
-                    className="flex-1 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800 rounded-full transition-colors"
+                    className="flex-1 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
                   >
                     Hủy
                   </button>
@@ -680,14 +681,15 @@ export default function Messages() {
                         setDeleteConfirmId(null);
                       }
                     }}
-                    className="flex-1 py-3 text-sm font-semibold bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors shadow-sm shadow-red-500/20"
+                    className="flex-1 py-3 text-sm font-semibold bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors shadow-sm shadow-red-500/20 cursor-pointer"
                   >
                     Xóa
                   </button>
                 </div>
               </div>
             </motion.div>
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
       </AnimatePresence>
     </div>

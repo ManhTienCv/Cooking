@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Building2, CreditCard, MapPin, Phone, User, FileText, ArrowLeft, CheckCircle, Wallet, Clock, Truck, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -374,7 +375,7 @@ export default function Checkout() {
         </Reveal>
 
         {/* Timeout modal if 20 mins expire */}
-        {timerIsExpired && (
+        {timerIsExpired && createPortal(
           <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center space-y-4 border border-red-200 dark:border-red-900/50 shadow-2xl">
               <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 mx-auto flex items-center justify-center text-3xl">
@@ -392,7 +393,8 @@ export default function Checkout() {
                 Quay lại Giỏ hàng
               </Link>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         <form onSubmit={onSubmitOrder} className="grid lg:grid-cols-5 gap-8">

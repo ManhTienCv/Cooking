@@ -81,6 +81,12 @@ export default function RecipeDetail() {
   useEffect(() => { void loadRecipe(); }, [loadRecipe]);
 
   useEffect(() => {
+    if (recipe?.title) {
+      document.title = `${recipe.title} | CookingBoy`;
+    }
+  }, [recipe?.title]);
+
+  useEffect(() => {
     const handleAuthChanged = () => {
       void loadRecipe();
     };

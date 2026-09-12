@@ -8,6 +8,7 @@ import KitchenCookLayout from './components/shop/KitchenCookLayout';
 import { CartProvider } from './contexts/CartContext';
 import { scrollWindowToTop } from './lib/scroll';
 import { useTheme } from './hooks/useTheme';
+import { syncPageMeta } from './lib/pageTitle';
 
 const Home = lazy(() => import('./pages/Home'));
 const About = lazy(() => import('./pages/About'));
@@ -75,9 +76,10 @@ export default function App() {
   const reduceMotion = useReducedMotion();
   useTheme(); // Initialize theme globally
 
-  /* Chỉ cuộn về đầu khi đổi pathname, tránh nháy khi đổi query (filter) */
+  /* Cuộn về đầu và đồng bộ Document Title + Favicon theo phân hệ & trang */
   useLayoutEffect(() => {
     scrollWindowToTop();
+    syncPageMeta(location.pathname);
   }, [location.pathname]);
 
   // 1. Không gian Quản Trị Hệ Thống (Admin Portal)

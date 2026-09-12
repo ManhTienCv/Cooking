@@ -44,6 +44,7 @@ export default function ProductDetail() {
 
   useEffect(() => {
     if (!product) return;
+    document.title = `${product.name} | KitchenCook`;
     apiJson<{ reviews: ProductReview[]; total: number }>(`/api/marketplace/products/${product.id}/reviews?limit=10`)
       .then((d) => { setReviews(d.reviews ?? []); setReviewTotal(d.total ?? 0); })
       .catch(() => {});

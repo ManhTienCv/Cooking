@@ -114,6 +114,12 @@ export default function BlogDetail() {
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
+    if (post?.title) {
+      document.title = `${post.title} | CookingBoy`;
+    }
+  }, [post?.title]);
+
+  useEffect(() => {
     const handleAuthChanged = () => {
       void load();
     };

@@ -103,10 +103,10 @@ export interface Order {
   shipping_address: string | null;
   payment_method: string;
   note: string | null;
-  cancelled_reason: string | null;
+  cancel_reason?: string | null;
+  cancelled_reason?: string | null;
   created_at: Date;
   updated_at: Date;
-  is_fast_food_only?: boolean;
 }
 
 export interface OrderWithItems extends Order {

@@ -43,7 +43,6 @@ const OrderSuccess = lazy(() => import('./pages/Shop/OrderSuccess'));
 const OrdersPage = lazy(() => import('./pages/Shop/Orders'));
 const OrderDetailPage = lazy(() => import('./pages/Shop/OrderDetail'));
 const AccountPage = lazy(() => import('./pages/Shop/Account'));
-const CookPayWallet = lazy(() => import('./pages/Seller/EWallet'));
 const Messages = lazy(() => import('./pages/Messages'));
 const PublicProfile = lazy(() => import('./pages/Creator/PublicProfile'));
 
@@ -102,9 +101,6 @@ export default function App() {
               <Route path="feedback" element={<FeedbackTab />} />
               <Route path="market-products" element={<MarketProductsTab />} />
               <Route path="market-orders" element={<MarketOrdersTab />} />
-              <Route path="market-sellers" element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="withdrawals" element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="commission-wallet" element={<Navigate to="/admin/dashboard" replace />} />
             </Route>
           </Routes>
         </Suspense>
@@ -227,9 +223,8 @@ export default function App() {
                   <Route path="/health/detail/:id" element={<HealthDetail />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/seller" element={<Navigate to="/admin" replace />} />
-                  <Route path="/seller/settings" element={<Navigate to="/admin" replace />} />
-                  <Route path="/wallet" element={<CookPayWallet />} />
-                  <Route path="/seller/wallet" element={<Navigate to="/wallet" replace />} />
+                  <Route path="/seller/*" element={<Navigate to="/admin" replace />} />
+                  <Route path="/wallet" element={<Navigate to="/shop" replace />} />
                   <Route path="/messages" element={<Messages />} />
                   <Route path="/creator/:id" element={<PublicProfile />} />
                 </Routes>

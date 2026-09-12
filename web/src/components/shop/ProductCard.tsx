@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Star, Heart, Package, Flame } from 'lucide-react';
+import { ShoppingCart, Star, Heart, Package, Flame, ShieldCheck } from 'lucide-react';
 import type { Product } from '../../types/marketplace';
 import { scrollWindowToTop } from '../../lib/scroll';
 
@@ -115,7 +115,7 @@ export default function ProductCard({ product, index = 0, onAddToCart, onToggleW
         {/* Price + Cart */}
         <div className="flex items-end justify-between mt-1">
           <div>
-            <span className="text-lg font-bold text-red-600 dark:text-red-400">{formatPrice(finalPrice)}</span>
+            <span className="text-lg font-black text-[#E8590C] dark:text-[#f77b31]">{formatPrice(finalPrice)}</span>
             {hasDiscount && (
               <span className="ml-2 text-xs text-gray-400 line-through">{formatPrice(product.price)}</span>
             )}
@@ -123,9 +123,9 @@ export default function ProductCard({ product, index = 0, onAddToCart, onToggleW
 
           {onAddToCart && product.stock > 0 && (
             <motion.button
-              whileTap={{ scale: 0.9 }}
+              whileTap={{ scale: 0.92 }}
               onClick={() => onAddToCart(product.id)}
-              className="p-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors shadow-md"
+              className="p-2.5 rounded-xl bg-[#E8590C] hover:bg-[#d44e08] text-white transition-all shadow-md shadow-[#E8590C]/20 hover:shadow-[#E8590C]/35 cursor-pointer"
               aria-label="Thêm vào giỏ"
             >
               <ShoppingCart className="w-4 h-4" />
@@ -133,12 +133,15 @@ export default function ProductCard({ product, index = 0, onAddToCart, onToggleW
           )}
         </div>
 
-        {/* Seller */}
-        {product.store_name && (
-          <div className="pt-2 border-t border-gray-50 dark:border-slate-700/50 text-xs text-gray-400 dark:text-gray-500 truncate">
-            {product.store_name}
-          </div>
-        )}
+        {/* Brand & Guarantee */}
+        <div className="pt-2.5 border-t border-gray-100 dark:border-slate-700/50 flex items-center justify-between text-xs">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+            <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> Chính Hãng
+          </span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+            Giao GHN 2-3 ngày
+          </span>
+        </div>
       </div>
     </motion.div>
   );

@@ -1,18 +1,11 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { requireSeller } from '../middleware/requireSeller.js';
 import { requireCsrf } from '../middleware/csrf.js';
-import { requireSellerOtp, requireSellerStepUp } from '../middleware/requireSellerSecurity.js';
 import {
   orderCreateRateLimit,
   reviewCreateRateLimit,
-  sellerOtpRateLimit,
-  sellerProductRateLimit,
-  sellerSecurityRateLimit,
 } from '../middleware/rateLimits.js';
 import * as marketplaceService from '../services/marketplaceService.js';
-import * as sellerSettingsService from '../services/sellerSettingsService.js';
-import * as sellerSecurityService from '../services/sellerSecurityService.js';
 import * as logisticsService from '../services/logisticsService.js';
 import * as ghnService from '../services/ghnService.js';
 import * as momoService from '../services/momoService.js';
@@ -80,12 +73,6 @@ marketplaceRouter.get('/bundles/:slug', asyncHandler(async (req, res) => {
 /* ================================================================
  * Smart Features (AI-powered)
  * ================================================================ */
-
-// POST /api/marketplace/smart/match-ingredients — tìm sản phẩm khớp nguyên liệu
-marketplaceRouter.post('/smart/match-ingredients', asyncHandler(async (req, res) => {
-  const result = await marketplaceService.matchRecipeIngredients(req.body?.ingredients);
-  res.json({ success: true, ...result });
-}));
 
 // GET /api/marketplace/smart/recommend — AI gợi ý sản phẩm (Groq ưu tiên)
 marketplaceRouter.get('/smart/recommend', asyncHandler(async (req, res) => {
@@ -214,123 +201,6 @@ marketplaceRouter.post('/wishlist/:productId', requireAuth, asyncHandler(async (
   res.json({ success: true, ...result });
 }));
 
-/* ================================================================
- * Seller Dashboard
- * ================================================================ */
-
-// Đăng ký seller
-marketplaceRouter.post('/seller/register', requireAuth, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await marketplaceService.registerSeller(req.session.userId!, req.body);
-  res.json(result);
-}));
-
-// Lấy seller profile
-marketplaceRouter.get('/seller/profile', requireAuth, asyncHandler(async (req, res) => {
-  const result = await marketplaceService.getSellerProfile(req.session.userId!);
-  res.json({ success: true, ...result });
-}));
-
-marketplaceRouter.get('/seller/settings', requireAuth, requireSeller, asyncHandler(async (req, res) => {
-  const result = await sellerSettingsService.getSettings(req.session.userId!);
-  res.json({
-    success: true,
-    ...result,
-    security: sellerSecurityService.getSellerSecurityState(req),
-  });
-}));
-
-marketplaceRouter.post('/seller/security/password', requireAuth, requireSeller, sellerSecurityRateLimit, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await sellerSecurityService.verifySellerPassword(req);
-  res.json(result);
-}));
-
-marketplaceRouter.post('/seller/security/otp/request', requireAuth, requireSeller, requireSellerStepUp, sellerOtpRateLimit, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await sellerSecurityService.requestSellerOtp(req);
-  res.json(result);
-}));
-
-marketplaceRouter.post('/seller/security/otp/verify', requireAuth, requireSeller, requireSellerStepUp, sellerOtpRateLimit, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await sellerSecurityService.verifySellerOtp(req);
-  res.json(result);
-}));
-
-marketplaceRouter.put('/seller/settings/store', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await sellerSettingsService.updateStore(req.session.userId!, req.body);
-  res.json(result);
-}));
-
-marketplaceRouter.put('/seller/settings/preferences', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await sellerSettingsService.updatePreferences(req.session.userId!, req.body);
-  res.json(result);
-}));
-
-marketplaceRouter.put('/seller/settings/verification', requireAuth, requireSeller, requireSellerStepUp, sellerSecurityRateLimit, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await sellerSettingsService.submitVerification(req.session.userId!, req.body);
-  res.json(result);
-}));
-
-marketplaceRouter.post('/seller/payout-accounts', requireAuth, requireSeller, requireSellerStepUp, requireSellerOtp, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await sellerSettingsService.createPayoutAccount(req.session.userId!, req.body);
-  res.json(result);
-}));
-
-marketplaceRouter.put('/seller/payout-accounts/:id/default', requireAuth, requireSeller, requireSellerStepUp, requireSellerOtp, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await sellerSettingsService.setDefaultPayoutAccount(req.session.userId!, req.params.id);
-  res.json(result);
-}));
-
-marketplaceRouter.delete('/seller/payout-accounts/:id', requireAuth, requireSeller, requireSellerStepUp, requireSellerOtp, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await sellerSettingsService.deletePayoutAccount(req.session.userId!, req.params.id);
-  res.json(result);
-}));
-
-// Sản phẩm của seller
-marketplaceRouter.get('/seller/products', requireAuth, requireSeller, asyncHandler(async (req, res) => {
-  const result = await marketplaceService.getSellerProducts(req.session.userId!, req.query.limit as string, req.query.offset as string);
-  res.json({ success: true, ...result });
-}));
-
-// Tạo sản phẩm
-marketplaceRouter.post('/seller/products', requireAuth, requireSeller, sellerProductRateLimit, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await marketplaceService.createProduct(req.session.userId!, req.body);
-  res.json({ success: true, ...result });
-}));
-
-// Cập nhật sản phẩm
-marketplaceRouter.put('/seller/products/:id', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await marketplaceService.updateProduct(req.session.userId!, req.params.id, req.body);
-  res.json(result);
-}));
-
-// Xóa sản phẩm
-marketplaceRouter.delete('/seller/products/:id', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await marketplaceService.deleteProduct(req.session.userId!, req.params.id);
-  res.json(result);
-}));
-
-// Đơn hàng seller nhận
-marketplaceRouter.get('/seller/orders', requireAuth, requireSeller, asyncHandler(async (req, res) => {
-  const result = await marketplaceService.getSellerOrders(req.session.userId!, req.query.limit as string, req.query.offset as string);
-  res.json({ success: true, ...result });
-}));
-
-// Cập nhật trạng thái đơn hàng (seller)
-marketplaceRouter.put('/seller/orders/:id/status', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await marketplaceService.updateOrderStatus(req.session.userId!, req.params.id, req.body, false);
-  res.json(result);
-}));
-
-// Khởi động giao hàng với đơn vị vận chuyển (seller)
-marketplaceRouter.post('/seller/orders/:id/shipping', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await logisticsService.initializeShipping(Number(req.params.id), req.session.userId!, req.body);
-  res.json(result);
-}));
-
-// Thêm lịch trình vận chuyển / bưu cục (seller)
-marketplaceRouter.post('/seller/orders/:id/transit-logs', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await logisticsService.addTransitLog(Number(req.params.id), req.session.userId!, req.body);
-  res.json(result);
-}));
 
 /* ================================================================
  * MoMo Sandbox Payment Gateway
@@ -558,82 +428,4 @@ marketplaceRouter.post('/shipping/ghn/fee', asyncHandler(async (req, res) => {
   res.json({ success: true, data: fee });
 }));
 
-// POST /api/marketplace/seller/orders/:id/ghn-create — Tạo vận đơn GHN tự động
-marketplaceRouter.post('/seller/orders/:id/ghn-create', requireAuth, requireSeller, requireCsrf, asyncHandler(async (req, res) => {
-  const orderId = Number(req.params.id);
-  const userId = req.session.userId!;
-
-  const { rows: orderRows } = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
-  const order = orderRows[0];
-  if (!order) {
-    throw httpError(404, 'Đơn hàng không tồn tại.');
-  }
-
-  const { rows: itemRows } = await pool.query('SELECT * FROM order_items WHERE order_id = $1', [orderId]);
-  const sellerIds = itemRows.map((r: any) => Number(r.seller_id));
-  if (!sellerIds.includes(userId)) {
-    throw httpError(403, 'Bạn không có quyền tạo đơn vận chuyển cho đơn hàng này.');
-  }
-
-  if (order.ghn_order_code) {
-    return res.json({
-      success: true,
-      message: 'Đơn hàng đã có mã vận đơn GHN.',
-      order_code: order.ghn_order_code,
-    });
-  }
-
-  const toDistrictId = order.to_district_id || req.body.to_district_id || 1442;
-  const toWardCode = order.to_ward_code || req.body.to_ward_code || '20101';
-
-  const isPaidOnline = order.payment_status === 'paid' || order.payment_method !== 'cod';
-
-  const ghnResult = await ghnService.createShippingOrder({
-    orderId: order.id,
-    toName: order.shipping_name,
-    toPhone: order.shipping_phone,
-    toAddress: order.shipping_address,
-    toDistrictId: Number(toDistrictId),
-    toWardCode: String(toWardCode),
-    codAmount: order.payment_method === 'cod' ? Number(order.total_amount) : 0,
-    isPaidOnline,
-    paymentMethod: order.payment_method,
-    items: itemRows.map((item: any) => ({
-      name: item.product_name,
-      quantity: item.quantity,
-      price: Number(item.unit_price),
-    })),
-  });
-
-  const estimatedDelivery = ghnResult.expected_delivery_time
-    ? new Date(ghnResult.expected_delivery_time)
-    : new Date(Date.now() + 3 * 86400000);
-
-  await pool.query(
-    `UPDATE orders
-     SET status = 'shipping',
-         carrier_name = 'Giao Hàng Nhanh (GHN)',
-         tracking_number = $1,
-         tracking_code = $1,
-         ghn_order_code = $1,
-         shipping_partner = 'GHN Express',
-         estimated_delivery_at = $2,
-         updated_at = NOW()
-     WHERE id = $3`,
-    [ghnResult.order_code, estimatedDelivery, order.id]
-  );
-
-  await pool.query(
-    `INSERT INTO order_transit_logs (order_id, status, current_location, description)
-     VALUES ($1, 'picked_up', 'Bưu cục GHN Tiếp nhận', $2)`,
-    [order.id, `Đơn hàng đã được tạo thành công trên hệ thống GHN Express. Mã vận đơn: ${ghnResult.order_code}.`]
-  );
-
-  res.json({
-    success: true,
-    message: 'Tạo vận đơn GHN thành công!',
-    order_code: ghnResult.order_code,
-    expected_delivery_time: ghnResult.expected_delivery_time,
-  });
-}));
 

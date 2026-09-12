@@ -9,14 +9,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   // Các trang phụ, ẩn footer
   const hideFooterRoutes = [
     '/admin',
-    '/seller',
     '/messages',
     '/profile',
     '/settings',
     '/cart',
     '/checkout',
     '/orders',
-    '/wallet',
     '/recipes/fridge',
     '/recipes/detail',
     '/blog/detail',

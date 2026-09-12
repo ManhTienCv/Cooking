@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Quản lý dynamic Document Title và Favicon tương ứng theo từng route & phân hệ
  * (CookingBoy, KitchenCook Store, Admin Portal)
  */
@@ -81,9 +81,6 @@ export function getPageTitle(pathname: string): string {
   }
   if (pathname === '/profile') {
     return 'CookingBoy - Trang cá nhân';
-  }
-  if (pathname === '/wallet') {
-    return 'CookingBoy - Ví CookPay';
   }
   if (pathname === '/messages') {
     return 'CookingBoy - Hộp thư tin nhắn';

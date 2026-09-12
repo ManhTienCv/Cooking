@@ -8,7 +8,7 @@ import { NotificationProvider } from '../../contexts/NotificationContext';
 export default function AdminLayout() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ pending: 0, pendingProducts: 0 });
+  const [stats, setStats] = useState({ pending: 0 });
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -24,7 +24,6 @@ export default function AdminLayout() {
         ]);
         setStats({
           pending: (d.pendingRecipes ?? 0) + (d.pendingBlogs ?? 0),
-          pendingProducts: d.pendingProducts ?? 0,
         });
       } catch {
         navigate('/admin/login');
@@ -54,7 +53,7 @@ export default function AdminLayout() {
             height: 'calc(100vh / 0.9)',
           }}
         >
-          <AdminSidebar pendingCount={stats.pending} pendingProducts={stats.pendingProducts} />
+          <AdminSidebar pendingCount={stats.pending} />
           <main className="flex-1 flex flex-col overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
             <div className="p-10 flex-1">
               <AdminHeader />

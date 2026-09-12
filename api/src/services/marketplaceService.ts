@@ -54,124 +54,6 @@ export async function getCategories(type?: string) {
 }
 
 /* ================================================================
- * Seller
- * ================================================================ */
-
-export async function registerSeller(
-  userId: number,
-  body: Record<string, unknown>
-) {
-  const storeName = String(body?.store_name ?? '').trim();
-  if (storeName.length < 2) throw { status: 422, message: 'Tên cửa hàng phải có ít nhất 2 ký tự.' };
-
-  const ok = await marketplaceRepo.createSellerProfile(userId, {
-    store_name: storeName,
-    store_description: String(body?.store_description ?? '').trim() || null,
-    phone: String(body?.phone ?? '').trim() || null,
-    address: String(body?.address ?? '').trim() || null,
-  });
-  if (!ok) throw { status: 400, message: 'Không thể tạo hồ sơ người bán.' };
-  return { success: true };
-}
-
-export async function getSellerProfile(userId: number) {
-  const profile = await marketplaceRepo.getSellerProfile(userId);
-  let stats = null;
-  if (profile) {
-    try {
-      stats = await marketplaceRepo.getSellerStats(userId);
-    } catch (error) {
-      console.error('[marketplace] getSellerStats failed', { userId, error });
-      stats = null;
-    }
-  }
-  return { profile, stats };
-}
-
-export async function getSellerProducts(userId: number, limitRaw: unknown, offsetRaw: unknown) {
-  const limit = Math.min(100, Math.max(1, Number(limitRaw) || 20));
-  const offset = Math.max(0, Number(offsetRaw) || 0);
-  const { rows, total } = await marketplaceRepo.getProductsBySeller(userId, limit, offset);
-  return { products: rows, total, limit, offset };
-}
-
-export async function createProduct(userId: number, body: Record<string, unknown>) {
-  const profile = await marketplaceRepo.getSellerProfile(userId);
-  if (!profile) throw { status: 403, message: 'Bạn chưa đăng ký bán hàng.' };
-  if (!profile.is_verified) throw { status: 403, message: 'Tài khoản bán hàng của bạn đang chờ quản trị viên xác duyệt. Vui lòng chờ trước khi đăng sản phẩm.' };
-
-  const name = String(body?.name ?? '').trim();
-  const price = Number(body?.price ?? 0);
-
-  if (name.length < 2) throw { status: 422, message: 'Tên sản phẩm phải có ít nhất 2 ký tự.' };
-  if (price <= 0) throw { status: 422, message: 'Giá sản phẩm phải lớn hơn 0.' };
-
-  const categoryId = Number(body?.category_id ?? 0);
-  if (!categoryId) throw { status: 422, message: 'Vui lòng chọn danh mục sản phẩm.' };
-
-  const imageUrl = processImageBase64(String(body?.image_url ?? '').trim() || null);
-
-  const id = await marketplaceRepo.createProduct(userId, {
-    name,
-    description: String(body?.description ?? '').trim() || null,
-    price,
-    sale_price: body?.sale_price ? Number(body.sale_price) : null,
-    image_url: imageUrl,
-    images: Array.isArray(body?.images) ? (body.images as string[]) : [],
-    product_type: (['food', 'ingredient', 'equipment'].includes(String(body?.product_type ?? ''))
-      ? String(body?.product_type)
-      : 'food') as 'food' | 'ingredient' | 'equipment',
-    category_id: categoryId,
-    specs: (typeof body?.specs === 'object' && body?.specs !== null ? body.specs : {}) as Record<string, string>,
-    stock: Math.max(0, Number(body?.stock ?? 0)),
-    unit: String(body?.unit ?? 'cái').trim(),
-    recipe_id: body?.recipe_id ? Number(body.recipe_id) : null,
-  });
-
-  if (!id) throw { status: 400, message: 'Không thể tạo sản phẩm.' };
-  return { id, status: 'pending' };
-}
-
-export async function updateProduct(userId: number, idRaw: unknown, body: Record<string, unknown>) {
-  const id = Number(idRaw);
-  if (!id) throw { status: 400, message: 'Mã sản phẩm không hợp lệ' };
-
-  const existing = await marketplaceRepo.getProductById(id);
-  if (!existing || existing.seller_id !== userId) {
-    throw { status: 403, message: 'Bạn không có quyền chỉnh sửa sản phẩm này.' };
-  }
-
-  const profile = await marketplaceRepo.getSellerProfile(userId);
-  if (!profile?.is_verified) {
-    throw { status: 403, message: 'Tài khoản bán hàng của bạn chưa được xác duyệt hoặc đã bị khóa.' };
-  }
-
-  const data: Record<string, unknown> = {};
-  if (body.name !== undefined) data.name = String(body.name).trim();
-  if (body.description !== undefined) data.description = String(body.description).trim() || null;
-  if (body.price !== undefined) data.price = Number(body.price);
-  if (body.sale_price !== undefined) data.sale_price = body.sale_price ? Number(body.sale_price) : null;
-  if (body.image_url !== undefined) data.image_url = processImageBase64(String(body.image_url).trim() || null);
-  if (body.images !== undefined) data.images = Array.isArray(body.images) ? body.images : [];
-  if (body.category_id !== undefined) data.category_id = Number(body.category_id);
-  if (body.specs !== undefined) data.specs = typeof body.specs === 'object' ? body.specs : {};
-  if (body.stock !== undefined) data.stock = Math.max(0, Number(body.stock));
-  if (body.unit !== undefined) data.unit = String(body.unit).trim();
-
-  const ok = await marketplaceRepo.updateProduct(id, userId, data as Parameters<typeof marketplaceRepo.updateProduct>[2]);
-  if (!ok) throw { status: 400, message: 'Không thể cập nhật sản phẩm.' };
-  return { success: true };
-}
-
-export async function deleteProduct(userId: number, idRaw: unknown) {
-  const id = Number(idRaw);
-  if (!id) throw { status: 400, message: 'Mã sản phẩm không hợp lệ' };
-  const ok = await marketplaceRepo.deleteProduct(id, userId);
-  if (!ok) throw { status: 403, message: 'Bạn không có quyền xóa sản phẩm này.' };
-  return { success: true };
-}
-
-/* ================================================================
  * Cart
  * ================================================================ */
 
@@ -241,7 +123,7 @@ export async function createOrder(userId: number, body: Record<string, unknown>)
   const shippingPhone = String(body?.shipping_phone ?? '').trim();
   const shippingAddress = String(body?.shipping_address ?? '').trim();
   const rawPaymentMethod = String(body?.payment_method ?? 'cod').trim();
-  const paymentMethod = ['cod', 'momo', 'bank_transfer', 'cookpay'].includes(rawPaymentMethod) ? rawPaymentMethod : 'cod';
+  const paymentMethod = ['cod', 'momo', 'bank_transfer'].includes(rawPaymentMethod) ? rawPaymentMethod : 'cod';
   const note = String(body?.note ?? '').trim() || null;
 
   if (!shippingName || !shippingPhone || !shippingAddress) {
@@ -545,14 +427,6 @@ export async function getOrderReviews(userId: number, idRaw: unknown) {
   return { reviews };
 }
 
-export async function getSellerOrders(userId: number, limitRaw: unknown, offsetRaw: unknown) {
-  await autoConfirmPendingOrders();
-  const limit = Math.min(50, Math.max(1, Number(limitRaw) || 10));
-  const offset = Math.max(0, Number(offsetRaw) || 0);
-  const { rows, total } = await marketplaceRepo.getOrdersBySeller(userId, limit, offset);
-  return { orders: rows, total, limit, offset };
-}
-
 export async function updateOrderStatus(
   userId: number,
   idRaw: unknown,
@@ -569,10 +443,9 @@ export async function updateOrderStatus(
   const order = await marketplaceRepo.getOrderById(id);
   if (!order) throw { status: 404, message: 'Đơn hàng không tồn tại.' };
 
-  // Quyền: admin hoặc seller sở hữu order
+  // Quyền: admin
   if (!isAdmin) {
-    const isSeller = order.items.some((i) => i.seller_id === userId);
-    if (!isSeller) throw { status: 403, message: 'Không có quyền cập nhật đơn hàng này.' };
+    throw { status: 403, message: 'Chỉ quản trị viên mới có quyền cập nhật đơn hàng.' };
   }
 
   // 1. Kiểm tra delay khoảng 2 phút trước khi xác nhận đơn
@@ -591,14 +464,8 @@ export async function updateOrderStatus(
 
   // 2. Kiểm tra điều kiện hủy đơn hàng
   if (status === 'cancelled') {
-    if (order.is_fast_food_only) {
-      if (order.status !== 'pending') {
-        throw { status: 400, message: 'Đơn hàng đồ ăn nhanh không được phép hủy sau khi được xác nhận.' };
-      }
-    } else {
-      if (['shipping', 'delivered', 'completed'].includes(order.status)) {
-        throw { status: 400, message: 'Đơn hàng lớn không được phép hủy sau khi đã vận chuyển.' };
-      }
+    if (['shipping', 'delivered', 'completed'].includes(order.status)) {
+      throw { status: 400, message: 'Đơn hàng không được phép hủy sau khi đã vận chuyển.' };
     }
   }
 
@@ -606,22 +473,9 @@ export async function updateOrderStatus(
   const ok = await marketplaceRepo.updateOrderStatus(id, status, reason ?? undefined);
   if (!ok) throw { status: 400, message: 'Không thể cập nhật trạng thái.' };
 
-  // ── Tự động hoàn kho & Auto-refund khi hủy đơn ──
+  // ── Tự động hoàn kho khi hủy đơn ──
   if (status === 'cancelled') {
     await marketplaceRepo.restockOrderItems(id);
-    const rawOrder = order as unknown as Record<string, unknown>;
-    const paidVia = String(rawOrder.paid_via ?? '');
-    const paidAmount = Number(rawOrder.paid_amount ?? 0);
-    const paymentStatus = String(rawOrder.payment_status ?? 'unpaid');
-
-    if (paidVia === 'cookpay' && paymentStatus === 'paid' && paidAmount > 0) {
-      try {
-        const { refundOrder } = await import('./ewalletService.js');
-        await refundOrder(id, order.buyer_id, paidAmount);
-      } catch (err) {
-        console.error('[refund] Auto-refund failed for order #' + id, err instanceof Error ? err.message : err);
-      }
-    }
   }
 
   return { success: true };
@@ -720,36 +574,6 @@ export async function getBundleDetail(slugRaw: unknown) {
 /* ================================================================
  * Smart Features
  * ================================================================ */
-
-/**
- * Tìm sản phẩm khớp với nguyên liệu của recipe.
- * Parse chuỗi ingredients → keywords → fuzzy match products trong DB.
- */
-export async function matchRecipeIngredients(ingredientsRaw: unknown) {
-  const text = String(ingredientsRaw ?? '').trim();
-  if (!text) throw { status: 400, message: 'Thiếu danh sách nguyên liệu.' };
-
-  // Parse ingredients text → keywords
-  const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-  const keywords: string[] = [];
-
-  for (const line of lines) {
-    // Remove quantities: "200g thịt bò" → "thịt bò", "2 quả trứng" → "trứng"
-    const cleaned = line
-      .replace(/^\d+[\s,.]*(g|kg|ml|l|lít|quả|trái|củ|bó|gói|hộp|lon|chai|muỗng|thìa|chén|bát|miếng|lát|cái|con|nhánh|tép)?\s*/i, '')
-      .replace(/^\d+\/\d+\s*/, '')
-      .trim();
-
-    if (cleaned.length >= 2) {
-      keywords.push(cleaned);
-    }
-  }
-
-  if (keywords.length === 0) return { products: [], keywords: [] };
-
-  const products = await marketplaceRepo.matchProductsByIngredients(keywords, 20);
-  return { products, keywords };
-}
 
 /**
  * AI-powered product recommendations.
@@ -866,14 +690,8 @@ export async function buyerCancelOrder(userId: number, idRaw: unknown, body: Rec
   }
 
   // Kiểm tra điều kiện hủy đơn hàng
-  if (order.is_fast_food_only) {
-    if (order.status !== 'pending') {
-      throw { status: 400, message: 'Đơn hàng đồ ăn nhanh không được phép hủy sau khi được xác nhận.' };
-    }
-  } else {
-    if (['shipping', 'delivered', 'completed'].includes(order.status)) {
-      throw { status: 400, message: 'Đơn hàng lớn không được phép hủy sau khi đã vận chuyển.' };
-    }
+  if (['shipping', 'delivered', 'completed'].includes(order.status)) {
+    throw { status: 400, message: 'Đơn hàng không được phép hủy sau khi đã vận chuyển.' };
   }
 
   const reason = String(body?.reason ?? '').trim() || 'Người mua yêu cầu hủy';
@@ -884,21 +702,6 @@ export async function buyerCancelOrder(userId: number, idRaw: unknown, body: Rec
   // Tự động hoàn kho sản phẩm cho đơn hàng bị hủy
   await marketplaceRepo.restockOrderItems(id);
 
-  // ── Auto-refund khi hủy đơn đã thanh toán bằng CookPay ──
-  const rawOrder = order as unknown as Record<string, unknown>;
-  const paidVia = String(rawOrder.paid_via ?? '');
-  const paidAmount = Number(rawOrder.paid_amount ?? 0);
-  const paymentStatus = String(rawOrder.payment_status ?? 'unpaid');
-
-  if (paidVia === 'cookpay' && paymentStatus === 'paid' && paidAmount > 0) {
-    try {
-      const { refundOrder } = await import('./ewalletService.js');
-      await refundOrder(id, order.buyer_id, paidAmount);
-    } catch (err) {
-      console.error('[refund] Auto-refund failed for order #' + id, err instanceof Error ? err.message : err);
-    }
-  }
-
   return { success: true };
 }
 
@@ -906,27 +709,16 @@ export async function getPendingOrdersCount(userId: number) {
   await autoConfirmPendingOrders();
   const { pool } = await import('../db/pool.js');
 
-  // Đếm đơn hàng đang chờ xác nhận (status = 'pending')
-  // 1. Dành cho người mua (buyer)
+  // Đếm đơn hàng đang chờ xác nhận (status = 'pending') của người mua
   const buyerRes = await pool.query(
     "SELECT COUNT(*) AS count FROM orders WHERE buyer_id = $1 AND status = 'pending'",
     [userId]
   );
   const buyerPending = Number(buyerRes.rows[0]?.count ?? 0);
 
-  // 2. Dành cho người bán (seller)
-  const sellerRes = await pool.query(
-    `SELECT COUNT(DISTINCT o.id) AS count 
-     FROM orders o 
-     JOIN order_items oi ON oi.order_id = o.id 
-     WHERE oi.seller_id = $1 AND o.status = 'pending'`,
-    [userId]
-  );
-  const sellerPending = Number(sellerRes.rows[0]?.count ?? 0);
-
   return {
-    pendingCount: buyerPending + sellerPending,
+    pendingCount: buyerPending,
     buyerPending,
-    sellerPending
+    sellerPending: 0
   };
 }

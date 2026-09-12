@@ -111,11 +111,7 @@ export default function OrderDetail() {
   const isCancelled = order?.status === 'cancelled';
   const canCancel = useMemo(() => {
     if (!order || isCancelled || order.status === 'completed') return false;
-    if (order.is_fast_food_only) {
-      return order.status === 'pending';
-    } else {
-      return ['pending', 'confirmed', 'preparing'].includes(order.status);
-    }
+    return ['pending', 'confirmed', 'preparing'].includes(order.status);
   }, [order, isCancelled]);
   const getPaidViaLabel = (via: string | null | undefined) => {
     if (!via) return 'Ví Cook';
@@ -389,8 +385,8 @@ export default function OrderDetail() {
               <div className="text-center py-4">
                 <div className="text-4xl mb-2">❌</div>
                 <p className="text-lg font-bold text-red-600 dark:text-red-400">Đơn hàng đã bị hủy</p>
-                {order.cancelled_reason && (
-                  <p className="text-sm text-gray-500 mt-1">Lý do: {order.cancelled_reason}</p>
+                {(order.cancel_reason || order.cancelled_reason) && (
+                  <p className="text-sm text-gray-500 mt-1">Lý do: {order.cancel_reason || order.cancelled_reason}</p>
                 )}
               </div>
             ) : (

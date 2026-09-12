@@ -30,7 +30,7 @@ export default function ShopProducts() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [showFilters, setShowFilters] = useState(() => {
-    return !!(searchParams.get('q') || searchParams.get('category') || searchParams.get('type'));
+    return !!(searchParams.get('q') || searchParams.get('category'));
   });
 
   const filterRef = useRef<HTMLDivElement>(null);
@@ -38,39 +38,28 @@ export default function ShopProducts() {
   /* Filters */
   const [search, setSearch] = useState(searchParams.get('q') || '');
   const [category, setCategory] = useState(searchParams.get('category') || '');
-  const [productType, setProductType] = useState(searchParams.get('type') || '');
   const [sort, setSort] = useState(searchParams.get('sort') || 'newest');
   const [page, setPage] = useState(1);
 
   useEffect(() => {
     const q = searchParams.get('q');
     const c = searchParams.get('category');
-    const t = searchParams.get('type');
     const s = searchParams.get('sort');
     if (q !== null) setSearch(q);
     if (c !== null) setCategory(c);
-    if (t !== null) setProductType(t);
     if (s !== null) setSort(s);
 
-    if (q || c || t) {
+    if (q || c) {
       setShowFilters(true);
     }
   }, [searchParams]);
 
-  /* Load categories */
+  /* Load categories (only equipment) */
   useEffect(() => {
-    apiJson<{ categories: ProductCategory[] }>('/api/marketplace/categories')
-      .then((d) => setCategories(d.categories ?? []))
+    apiJson<{ categories: ProductCategory[] }>('/api/marketplace/categories?type=equipment')
+      .then((d) => setCategories((d.categories ?? []).filter((c) => c.type === 'equipment')))
       .catch(() => {});
   }, []);
-
-  const handleProductType = useCallback((typeVal: string) => {
-    setProductType(typeVal);
-    setPage(1);
-    const params = new URLSearchParams(searchParams);
-    if (typeVal) params.set('type', typeVal); else params.delete('type');
-    setSearchParams(params);
-  }, [searchParams, setSearchParams]);
 
   const handleCategory = useCallback((catVal: string) => {
     setCategory(catVal);
@@ -95,7 +84,7 @@ export default function ShopProducts() {
       const q = new URLSearchParams();
       if (search.trim()) q.set('q', search.trim());
       if (category) q.set('category', category);
-      if (productType) q.set('type', productType);
+      q.set('type', 'equipment');
       q.set('sort', sort);
       q.set('limit', String(PAGE_SIZE));
       q.set('offset', String((page - 1) * PAGE_SIZE));
@@ -111,7 +100,7 @@ export default function ShopProducts() {
     } finally {
       setLoading(false);
     }
-  }, [search, category, productType, sort, page]);
+  }, [search, category, sort, page]);
 
   useEffect(() => {
     const t = setTimeout(() => void fetchProducts(), 250);
@@ -131,23 +120,14 @@ export default function ShopProducts() {
     setSearchParams({});
     setSearch('');
     setCategory('');
-    setProductType('');
     setSort('newest');
     setPage(1);
   }, [setSearchParams]);
 
   const hasActiveFilters = useMemo(() => 
-    !!(search || category || productType || sort !== 'newest'),
-    [search, category, productType, sort]
+    !!(search || category || sort !== 'newest'),
+    [search, category, sort]
   );
-
-  const equipCategories = useMemo(() => categories.filter((c) => c.type === 'equipment'), [categories]);
-  const foodCategories = useMemo(() => categories.filter((c) => c.type === 'food'), [categories]);
-  const activeCategories = useMemo(() => {
-    if (productType === 'equipment') return equipCategories;
-    if (productType === 'food') return foodCategories;
-    return categories;
-  }, [productType, categories, foodCategories, equipCategories]);
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] dark:bg-slate-900 transition-colors duration-300 font-vietnam">
@@ -189,7 +169,7 @@ export default function ShopProducts() {
                 setSearchParams(params);
               }}
               placeholder="Tìm kiếm nồi chảo, dao kéo, phụ kiện làm bếp..."
-              className="w-full pl-10 pr-10 py-2.5 text-sm border border-stone-300 dark:border-slate-700 rounded-full focus:outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 dark:focus:border-white bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
+              className="w-full pl-10 pr-10 py-2.5 text-sm border border-stone-300 dark:border-slate-700 rounded-full focus:outline-none focus:border-[#E8590C] focus:ring-2 focus:ring-[#E8590C]/20 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs transition-all"
             />
             {search && (
               <button
@@ -200,7 +180,7 @@ export default function ShopProducts() {
                   params.delete('q');
                   setSearchParams(params);
                 }}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#E8590C] transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -212,7 +192,7 @@ export default function ShopProducts() {
             <select
               value={sort}
               onChange={(e) => handleSort(e.target.value)}
-              className="appearance-none pl-4 pr-10 py-2.5 border border-stone-300 dark:border-slate-700 rounded-full bg-white dark:bg-slate-800 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-slate-900 dark:focus:border-white cursor-pointer shadow-xs"
+              className="appearance-none pl-4 pr-10 py-2.5 border border-stone-300 dark:border-slate-700 rounded-full bg-white dark:bg-slate-800 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#E8590C] cursor-pointer shadow-xs transition-all"
             >
               {SORT_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -227,8 +207,8 @@ export default function ShopProducts() {
             onClick={() => setShowFilters(!showFilters)}
             className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all border cursor-pointer shadow-xs ${
               showFilters
-                ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white'
-                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-stone-300 dark:border-slate-700 hover:border-slate-400'
+                ? 'bg-[#E8590C] text-white border-[#E8590C] shadow-md shadow-[#E8590C]/20'
+                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-stone-300 dark:border-slate-700 hover:border-[#E8590C]/60 hover:text-[#E8590C]'
             }`}
           >
             <SlidersHorizontal className="w-4 h-4" />
@@ -239,7 +219,7 @@ export default function ShopProducts() {
             <button
               type="button"
               onClick={onClearFilters}
-              className="text-xs sm:text-sm text-stone-700 dark:text-stone-300 hover:text-slate-900 dark:hover:text-white underline font-bold cursor-pointer"
+              className="text-xs sm:text-sm text-[#E8590C] dark:text-[#ff7e33] hover:underline font-bold cursor-pointer"
             >
               Xóa bộ lọc
             </button>
@@ -256,60 +236,33 @@ export default function ShopProducts() {
               transition={{ duration: 0.2 }}
               className="overflow-hidden mb-8"
             >
-              <div className="p-6 bg-white dark:bg-slate-800/90 rounded-3xl border border-stone-200 dark:border-slate-700/60 shadow-sm space-y-5">
-                {/* Loại sản phẩm */}
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5">
-                    Phân loại sản phẩm
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { value: '', label: 'Tất cả' },
-                      { value: 'equipment', label: '🍳 Dụng cụ & Đồ bếp' },
-                      { value: 'ingredient', label: '🥬 Gia vị & Nguyên liệu' },
-                    ].map((t) => (
-                      <button
-                        key={t.value}
-                        type="button"
-                        onClick={() => handleProductType(t.value)}
-                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all border cursor-pointer ${
-                          productType === t.value
-                            ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white shadow-sm'
-                            : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-stone-200 dark:border-slate-600 hover:border-slate-400'
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
+              <div className="p-6 bg-white dark:bg-slate-800/90 rounded-3xl border border-stone-200 dark:border-slate-700/60 shadow-sm space-y-4">
                 {/* Danh mục */}
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5">
-                    Danh mục chuyên sâu
+                    Danh mục dụng cụ & đồ bếp
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => handleCategory('')}
-                      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border cursor-pointer ${
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
                         !category
-                          ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white'
-                          : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-stone-200 dark:border-slate-600 hover:border-slate-400'
+                          ? 'bg-[#E8590C] text-white border-[#E8590C] shadow-xs'
+                          : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-stone-200 dark:border-slate-600 hover:border-[#E8590C]/50 hover:text-[#E8590C]'
                       }`}
                     >
                       Tất cả danh mục
                     </button>
-                    {activeCategories.map((c) => (
+                    {categories.map((c) => (
                       <button
                         key={c.slug}
                         type="button"
                         onClick={() => handleCategory(c.slug)}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border cursor-pointer ${
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
                           category === c.slug
-                            ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white'
-                            : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-stone-200 dark:border-slate-600 hover:border-slate-400'
+                            ? 'bg-[#E8590C] text-white border-[#E8590C] shadow-xs'
+                            : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-stone-200 dark:border-slate-600 hover:border-[#E8590C]/50 hover:text-[#E8590C]'
                         }`}
                       >
                         {c.name}
@@ -376,6 +329,7 @@ export default function ShopProducts() {
             totalItems={total}
             pageSize={PAGE_SIZE}
             onPageChange={setPage}
+            activeClassName="bg-[#E8590C] text-white border-[#E8590C] shadow-md shadow-[#E8590C]/25 hover:bg-[#d04e0a]"
           />
         )}
 

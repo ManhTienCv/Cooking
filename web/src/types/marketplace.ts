@@ -64,7 +64,8 @@ export interface Order {
   shipping_address: string | null;
   payment_method: string;
   note: string | null;
-  cancelled_reason: string | null;
+  cancel_reason?: string | null;
+  cancelled_reason?: string | null;
   created_at: string;
   updated_at: string;
   items?: OrderItem[];

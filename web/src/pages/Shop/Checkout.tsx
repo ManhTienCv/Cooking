@@ -1,14 +1,14 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Building2, CreditCard, MapPin, Phone, User, FileText, ArrowLeft, CheckCircle, Wallet, Clock, Truck, Zap } from 'lucide-react';
+import { Building2, CreditCard, MapPin, Phone, User, FileText, ArrowLeft, CheckCircle, Clock, Truck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useCart } from '../../contexts/CartContext';
 import { apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
 import { scrollWindowToTop } from '../../lib/scroll';
-import { loadProfilePreferences, saveProfilePreferences, type LinkedBankAccount, type SavedAddress } from '../../lib/profilePreferences';
+import { loadProfilePreferences, type LinkedBankAccount, type SavedAddress } from '../../lib/profilePreferences';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../../lib/authEvents';
 import { useCheckoutTimer } from '../../hooks/useCheckoutTimer';
 import { MapAddressModal, type SelectedMapAddress } from '../../components/common/MapAddressModal';
@@ -57,16 +57,13 @@ export default function Checkout() {
   const [linkedBanks, setLinkedBanks] = useState<LinkedBankAccount[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [selectedBankId, setSelectedBankId] = useState('');
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
 
   // GHN & Map states
   const [shippingFee, setShippingFee] = useState(0);
   const [toDistrictId, setToDistrictId] = useState<number | null>(null);
   const [toWardCode, setToWardCode] = useState<string | null>(null);
   const [mapModalOpen, setMapModalOpen] = useState(false);
-  const [deliveryType, setDeliveryType] = useState<'standard' | 'instant_1h'>('standard');
-  const instantShippingFee = total >= 300000 ? 0 : 35000;
-  const effectiveShippingFee = deliveryType === 'instant_1h' ? instantShippingFee : (shippingFee || 29000);
+  const effectiveShippingFee = shippingFee || 29000;
 
   const [form, setForm] = useState({
     shipping_name: '',
@@ -84,45 +81,7 @@ export default function Checkout() {
   const loadMe = useCallback(async () => {
     try {
       const me = await apiJson<{ authenticated: boolean; user?: { email: string; full_name?: string } }>('/api/auth/me');
-      let prefs = loadProfilePreferences(me.user?.email);
-
-      // Đồng bộ ví Cook
-      try {
-        const walletBanks = await apiJson<{ accounts?: { id: string; bank_name: string; account_number: string; account_name: string; is_default: boolean }[] }>('/api/ewallet/banks');
-        if (walletBanks && Array.isArray(walletBanks.accounts)) {
-          let updated = false;
-          walletBanks.accounts.forEach((acc) => {
-            const match = prefs.banks.find(
-              (b) =>
-                b.bankName.toLowerCase() === acc.bank_name.toLowerCase() &&
-                (b.accountNumber.replace(/\s+/g, '') === acc.account_number.replace(/\s+/g, '') ||
-                 b.accountNumber.replace(/\s+/g, '').endsWith(acc.account_number.replace(/\s+/g, '').slice(-4)) ||
-                 acc.account_number.replace(/\s+/g, '').endsWith(b.accountNumber.replace(/\s+/g, '').slice(-4)))
-            );
-            if (!match) {
-              prefs.banks.push({
-                id: String(acc.id),
-                bankName: acc.bank_name,
-                accountName: acc.account_name,
-                accountNumber: acc.account_number,
-                isDefault: acc.is_default,
-              });
-              updated = true;
-            } else {
-              if (match.isDefault !== acc.is_default) {
-                match.isDefault = acc.is_default;
-                updated = true;
-              }
-            }
-          });
-          if (updated) {
-            saveProfilePreferences(me.user?.email, prefs);
-            prefs = loadProfilePreferences(me.user?.email);
-          }
-        }
-      } catch {
-        // ignore
-      }
+      const prefs = loadProfilePreferences(me.user?.email);
 
       setSavedAddresses(prefs.addresses);
       setLinkedBanks(prefs.banks);
@@ -144,13 +103,6 @@ export default function Checkout() {
       if (defaultBank) setSelectedBankId(defaultBank.id);
     } catch {
       // ignore
-    }
-    // Fetch CookPay balance
-    try {
-      const wal = await apiJson<{ wallet: { balance: string } }>('/api/ewallet/me');
-      setWalletBalance(Number(wal.wallet.balance));
-    } catch {
-      setWalletBalance(null);
     }
   }, []);
 
@@ -251,7 +203,7 @@ export default function Checkout() {
             shipping_fee: effectiveShippingFee,
             to_district_id: toDistrictId,
             to_ward_code: toWardCode,
-            delivery_type: deliveryType,
+            delivery_type: 'standard',
             ref_recipe_id: refRecipeId,
             cart_item_ids: cartItemIds.length > 0 ? cartItemIds : undefined,
           }),
@@ -278,18 +230,6 @@ export default function Checkout() {
         }
       }
 
-      // If paying with CookPay, call pay-order API
-      if (form.payment_method === 'cookpay') {
-        try {
-          await apiJson('/api/ewallet/pay-order', {
-            method: 'POST',
-            body: JSON.stringify({ orderId: result.order_id }),
-          });
-          toast.success('Thanh toán thành công bằng Ví Cook!');
-        } catch (payErr) {
-          toast.error(payErr instanceof Error ? payErr.message : 'Lỗi thanh toán Ví Cook. Đơn hàng đã tạo, vui lòng thanh toán lại.');
-        }
-      }
 
       await refresh();
       sessionStorage.removeItem('cook_ref_recipe_id');
@@ -503,54 +443,19 @@ export default function Checkout() {
                     <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
                       Phương thức vận chuyển
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Tiêu chuẩn */}
-                      <button
-                        type="button"
-                        onClick={() => setDeliveryType('standard')}
-                        className={`text-left p-4 rounded-xl border transition-all ${
-                          deliveryType === 'standard'
-                            ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/30 dark:border-emerald-500 shadow-sm'
-                            : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <Truck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span className="text-sm font-bold text-gray-900 dark:text-white">Tiêu chuẩn (GHN)</span>
-                          </div>
-                          <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-                            {shippingFee > 0 ? formatPrice(shippingFee) : '29.000đ'}
-                          </span>
+                    <div className="p-4 rounded-xl border border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/30 dark:border-emerald-500 shadow-sm">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <Truck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-sm font-bold text-gray-900 dark:text-white">Tiêu chuẩn (GHN Express)</span>
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-slate-400">
-                          Giao toàn quốc 2 - 3 ngày bởi GHN Express
-                        </p>
-                      </button>
-
-                      {/* Hỏa tốc trong 1-2 giờ */}
-                      <button
-                        type="button"
-                        onClick={() => setDeliveryType('instant_1h')}
-                        className={`text-left p-4 rounded-xl border transition-all ${
-                          deliveryType === 'instant_1h'
-                            ? 'border-amber-500 bg-amber-50/70 dark:bg-amber-950/30 dark:border-amber-500 shadow-sm'
-                            : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
-                            <span className="text-sm font-bold text-gray-900 dark:text-white">Hỏa tốc 1 - 2 Giờ</span>
-                          </div>
-                          <span className="text-xs font-black text-amber-600 dark:text-amber-400">
-                            {total >= 300000 ? 'MIỄN PHÍ' : '35.000đ'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500 dark:text-slate-400">
-                          Giao siêu tốc 60-90p cho thực phẩm tươi sống
-                        </p>
-                      </button>
+                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                          {shippingFee > 0 ? formatPrice(shippingFee) : '29.000đ'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">
+                        Giao toàn quốc 2 - 3 ngày bởi GHN Express
+                      </p>
                     </div>
                   </div>
 
@@ -579,7 +484,6 @@ export default function Checkout() {
                 <div className="space-y-3">
                   {[
                     { value: 'momo', label: 'Ví MoMo (Cổng MoMo Sandbox)', emoji: '👛', badge: 'Khuyên dùng' },
-                    { value: 'cookpay', label: 'Ví Cook', emoji: '🪙' },
                     { value: 'cod', label: 'Thanh toán khi nhận hàng (COD)', emoji: '💰' },
                     { value: 'bank_transfer', label: 'Chuyển khoản ngân hàng', emoji: '🏦' },
                   ].map((pm) => (
@@ -633,24 +537,6 @@ export default function Checkout() {
                           <span>OTP: <strong>000000</strong></span>
                         </div>
                       </div>
-                    </div>
-                  )}
-                  {form.payment_method === 'cookpay' && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/40 dark:bg-emerald-900/10">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-300">
-                          <Wallet className="h-4 w-4" /> Số dư Ví Cook
-                        </div>
-                        <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">
-                          {walletBalance !== null ? walletBalance.toLocaleString('vi-VN') + 'đ' : '---'}
-                        </span>
-                      </div>
-                      {walletBalance !== null && walletBalance < total && (
-                        <p className="mt-2 text-sm text-red-600 dark:text-red-400">Số dư không đủ. Vui lòng <a href="/wallet" className="font-bold underline">nạp thêm</a>.</p>
-                      )}
-                      {walletBalance !== null && walletBalance >= total && (
-                        <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">✓ Đủ số dư. Đơn hàng sẽ được xác nhận tự động sau thanh toán.</p>
-                      )}
                     </div>
                   )}
                   {form.payment_method === 'bank_transfer' && (
@@ -734,7 +620,7 @@ export default function Checkout() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">
-                    Phí vận chuyển ({deliveryType === 'instant_1h' ? 'Hỏa tốc' : 'GHN'})
+                    Phí vận chuyển (GHN Express)
                   </span>
                   <span className={effectiveShippingFee > 0 ? "font-medium text-gray-900 dark:text-white" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
                     {effectiveShippingFee > 0 ? formatPrice(effectiveShippingFee) : 'Miễn phí'}
@@ -743,7 +629,7 @@ export default function Checkout() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Dự kiến nhận hàng</span>
                   <span className="text-gray-900 dark:text-gray-300 font-medium">
-                    {deliveryType === 'instant_1h' ? '⚡ 60 - 90 phút hôm nay' : '2 - 3 ngày (GHN Express)'}
+                    2 - 3 ngày (GHN Express)
                   </span>
                 </div>
                 <div className="border-t border-gray-100 dark:border-slate-700 pt-3 flex justify-between">

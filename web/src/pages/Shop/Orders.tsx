@@ -558,10 +558,10 @@ export default function Orders() {
                       ))}
 
                       {/* Cancelled Reason Note */}
-                      {isCancelled && order.cancelled_reason && (
+                      {isCancelled && (order.cancel_reason || order.cancelled_reason) && (
                         <div className="p-3 rounded-2xl bg-red-50/60 dark:bg-red-950/20 text-xs text-red-700 dark:text-red-300 flex items-start gap-2 border border-red-100 dark:border-red-900/30">
                           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                          <span>Lý do hủy: {order.cancelled_reason}</span>
+                          <span>Lý do hủy: {order.cancel_reason || order.cancelled_reason}</span>
                         </div>
                       )}
                     </div>
@@ -635,10 +635,8 @@ export default function Orders() {
                   currentPage={page}
                   totalItems={filteredOrders.length}
                   pageSize={PAGE_SIZE}
-                  onPageChange={(p) => {
-                    setPage(p);
-                    scrollWindowToTop();
-                  }}
+                  onPageChange={setPage}
+                  activeClassName="bg-[#E8590C] text-white border-[#E8590C] shadow-md shadow-[#E8590C]/25 hover:bg-[#d04e0a]"
                 />
               </div>
             )}

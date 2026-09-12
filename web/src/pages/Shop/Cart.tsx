@@ -270,7 +270,7 @@ export default function Cart() {
                   </div>
                   <div className="border-t border-gray-100 dark:border-slate-700 pt-3 flex justify-between">
                     <span className="font-bold text-gray-900 dark:text-white">Tổng cộng</span>
-                    <span className="text-xl font-extrabold text-red-600 dark:text-red-400">{formatPrice(selectedTotal)}</span>
+                    <span className="text-xl font-black text-[#E8590C] dark:text-[#f77b31]">{formatPrice(selectedTotal)}</span>
                   </div>
                 </div>
 
@@ -285,14 +285,14 @@ export default function Cart() {
                     }
                     scrollWindowToTop();
                   }}
-                  className={`w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold hover:bg-gray-800 dark:hover:bg-gray-100 transition-all shadow-lg ${
-                    selectedIds.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                  className={`w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[#E8590C] hover:bg-[#d44e08] text-white rounded-2xl font-black shadow-lg shadow-[#E8590C]/25 transition-all ${
+                    selectedIds.length === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-98'
                   }`}
                 >
                   Thanh toán <ArrowRight className="w-4 h-4" />
                 </Link>
 
-                <Link to="/shop" onClick={scrollWindowToTop} className="block text-center mt-3 text-sm text-amber-600 dark:text-amber-400 hover:underline font-medium">
+                <Link to="/shop" onClick={scrollWindowToTop} className="block text-center mt-3 text-sm text-slate-600 hover:text-[#E8590C] dark:text-slate-400 dark:hover:text-[#f77b31] hover:underline font-bold transition-colors">
                   ← Tiếp tục mua sắm
                 </Link>
               </div>

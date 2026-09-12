@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { ChefHat, LayoutDashboard, CheckCircle, Users, Utensils, FileText, MessageSquare, LogOut, MessageCircle, FolderTree, ShoppingBag, ClipboardList } from 'lucide-react';
 import { apiJson } from '../../../lib/api';
 
-export default function AdminSidebar({ pendingCount, pendingProducts }: { pendingCount: number; pendingProducts: number }) {
+export default function AdminSidebar({ pendingCount }: { pendingCount: number; pendingProducts?: number }) {
   const location = useLocation();
   const path = location.pathname;
 
@@ -77,14 +77,9 @@ export default function AdminSidebar({ pendingCount, pendingProducts }: { pendin
         </div>
         <Link to="/admin/market-products" className={navClass(path === '/admin/market-products')}>
           <ShoppingBag className="w-5 h-5" /> Đồ bếp & Quản lý kho
-          {pendingProducts > 0 && (
-            <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm border border-red-400 animate-pulse">
-              {pendingProducts}
-            </span>
-          )}
         </Link>
         <Link to="/admin/market-orders" className={navClass(path === '/admin/market-orders')}>
-          <ClipboardList className="w-5 h-5" /> Đơn hàng & 1-Click GHN
+          <ClipboardList className="w-5 h-5" /> Đơn hàng
         </Link>
         <Link to="/admin/categories" className={navClass(path === '/admin/categories')}>
           <FolderTree className="w-5 h-5" /> Danh mục sản phẩm

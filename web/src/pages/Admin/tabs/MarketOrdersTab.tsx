@@ -16,7 +16,6 @@ interface AdminOrder {
   payment_method?: string;
   payment_status?: string;
   tracking_code?: string;
-  tracking_number?: string;
   ghn_order_code?: string;
   shipping_partner?: string;
 }
@@ -208,7 +207,7 @@ export default function MarketOrdersTab() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {filteredOrders.map(o => {
-                  const trackingCode = o.tracking_code || o.ghn_order_code || o.tracking_number;
+                  const trackingCode = o.tracking_code || o.ghn_order_code;
                   const canDispatchGhn = (o.status === 'pending' || o.status === 'confirmed' || o.status === 'preparing') && !trackingCode;
 
                   return (

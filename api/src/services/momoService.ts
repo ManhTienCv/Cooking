@@ -224,13 +224,6 @@ export function verifyIpnSignature(body: Record<string, any>): boolean {
   return crypto.timingSafeEqual(Buffer.from(calculatedSignature), Buffer.from(body.signature));
 }
 
-/**
- * Hàm tương thích ngược cho ewalletService
- */
-export async function createMoMoPayment(orderId: number | string, amount: number, orderInfo?: string) {
-  return createPaymentUrl({ orderId, amount, orderInfo });
-}
-
 export function verifyMoMoSignature(body: any): boolean {
   return verifyIpnSignature(body);
 }

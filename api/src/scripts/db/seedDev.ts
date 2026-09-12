@@ -160,32 +160,6 @@ export async function seedDevData(
     );
   }
 
-  const catRes = await pool.query<{ id: number }>(
-    `SELECT id FROM product_categories WHERE slug = 'do-an-san' LIMIT 1`,
-  );
-  const productCatId = catRes.rows[0]?.id;
-  if (productCatId) {
-    const productSlug = 'set-nguyen-lieu-pho-demo';
-    const productExists = await pool.query(
-      `SELECT 1 FROM products WHERE slug = $1 LIMIT 1`,
-      [productSlug],
-    );
-    if ((productExists.rowCount ?? 0) === 0) {
-      await pool.query(
-        `INSERT INTO products (
-           seller_id, category_id, name, slug, description, price, stock, unit,
-           product_type, status, is_available, is_featured
-         ) VALUES ($1, $2, $3, $4, $5, 89000, 50, 'phần', 'food', 'approved', TRUE, TRUE)`,
-        [
-          sellerId,
-          productCatId,
-          'Set nguyên liệu phở (demo)',
-          productSlug,
-          'Gói demo cho marketplace và chat đơn hàng.',
-        ],
-      );
-    }
-  }
 
   await markSeedDone(pool);
 

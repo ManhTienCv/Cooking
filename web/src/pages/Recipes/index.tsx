@@ -9,7 +9,6 @@ import { FilterBar } from '../../components/ui/FilterBar';
 import RecipeList from '../../components/recipes/RecipeList';
 import CreateRecipeModal from '../../components/recipes/CreateRecipeModal';
 import Pagination from '../../components/ui/Pagination';
-import { RecipeToKitchenBanner } from '../../components/common/CrossPromotionBanners';
 import type { RecipeListRow, RecipeCategory } from '../../components/recipes/types';
 import { LEGACY_RECIPE_CATEGORIES } from '../../constants/recipes';
 import { useFilters } from '../../hooks/useFilters';
@@ -173,11 +172,6 @@ export default function Recipes() {
             onPageChange={setCurrentPage}
           />
         )}
-
-        {/* Cross-Promotion: Đề xuất sắm đồ bếp cao cấp tại KitchenCook */}
-        <div className="mt-12">
-          <RecipeToKitchenBanner />
-        </div>
       </div>
 
       <CreateRecipeModal

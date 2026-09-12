@@ -72,7 +72,7 @@ export default function Shop() {
 
             <Link
               to="/shop/products"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900 hover:bg-black dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs sm:text-sm font-bold shadow-md transition-all hover:scale-105 active:scale-95 shrink-0"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900 hover:bg-[#E8590C] text-white text-xs sm:text-sm font-bold shadow-md shadow-slate-900/10 hover:shadow-[#E8590C]/25 transition-all hover:scale-105 active:scale-95 shrink-0"
             >
               <span>Xem tất cả sản phẩm</span>
               <ArrowRight className="w-4 h-4" />

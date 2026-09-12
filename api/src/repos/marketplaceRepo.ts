@@ -27,9 +27,9 @@ function parseTotal(v: unknown): number {
  * ================================================================ */
 
 // Lấy danh sách các danh mục sản phẩm (có thể lọc theo loại)
-export async function getCategories(type?: string): Promise<ProductCategory[]> {
-  const cond = type ? 'WHERE type = $1' : '';
-  const params = type ? [type] : [];
+export async function getCategories(type: string = 'equipment'): Promise<ProductCategory[]> {
+  const cond = type && type !== 'all' ? 'WHERE type = $1' : '';
+  const params = type && type !== 'all' ? [type] : [];
   const { rows } = await pool.query(
     `SELECT * FROM product_categories ${cond} ORDER BY sort_order ASC, name ASC`,
     params
@@ -179,7 +179,7 @@ export async function searchProducts(
   offset: number,
   sortBy: string
 ): Promise<{ rows: ProductWithSeller[]; total: number }> {
-  const conditions: string[] = ["p.status = 'approved'", 'p.is_available = TRUE'];
+  const conditions: string[] = ["p.status = 'approved'", 'p.is_available = TRUE', "p.product_type = 'equipment'"];
   const params: (string | number)[] = [];
 
   if (search) {
@@ -189,10 +189,6 @@ export async function searchProducts(
   if (category) {
     params.push(category);
     conditions.push(`pc.slug = $${params.length}`);
-  }
-  if (productType) {
-    params.push(productType);
-    conditions.push(`p.product_type = $${params.length}`);
   }
 
   const orderMap: Record<string, string> = {
@@ -281,7 +277,7 @@ export async function getFeaturedProducts(limit: number): Promise<ProductWithSel
      LEFT JOIN product_categories pc ON p.category_id = pc.id
      LEFT JOIN users u ON p.seller_id = u.id
      LEFT JOIN seller_profiles sp ON p.seller_id = sp.user_id
-     WHERE p.status = 'approved' AND p.is_available = TRUE AND p.is_featured = TRUE
+     WHERE p.status = 'approved' AND p.is_available = TRUE AND p.is_featured = TRUE AND p.product_type = 'equipment'
      ORDER BY p.total_sold DESC, p.created_at DESC
      LIMIT $1`,
     [limit]
@@ -485,7 +481,12 @@ export async function createOrder(
     // Kiểm tra tồn kho & trừ stock (Optimistic lock)
     for (const item of items) {
       const { rows } = await client.query(
-        'UPDATE products SET stock = stock - $1, total_sold = total_sold + $1 WHERE id = $2 AND stock >= $1 RETURNING id',
+        `UPDATE products 
+         SET stock = stock - $1, 
+             total_sold = total_sold + $1,
+             is_available = CASE WHEN (stock - $1) <= 0 THEN FALSE ELSE is_available END
+         WHERE id = $2 AND stock >= $1 
+         RETURNING id`,
         [item.quantity, item.product_id]
       );
       if (rows.length === 0) {
@@ -575,12 +576,7 @@ export async function getOrdersByBuyer(
   offset: number,
   q?: string
 ): Promise<{ rows: OrderWithItems[]; total: number }> {
-  let dataSql = `SELECT *, NOT EXISTS (
-    SELECT 1 FROM order_items oi 
-    JOIN products p ON oi.product_id = p.id 
-    JOIN product_categories pc ON p.category_id = pc.id 
-    WHERE oi.order_id = orders.id AND pc.slug != 'do-an-san'
-  ) AS is_fast_food_only FROM orders WHERE buyer_id = $1`;
+  let dataSql = `SELECT * FROM orders WHERE buyer_id = $1`;
   let countSql = 'SELECT COUNT(*) AS total FROM orders WHERE buyer_id = $1';
   const params: unknown[] = [buyerId];
 
@@ -635,12 +631,7 @@ export async function getOrdersByBuyer(
 // Lấy thông tin chi tiết của một đơn hàng theo ID kèm danh sách sản phẩm
 export async function getOrderById(orderId: number): Promise<OrderWithItems | null> {
   const { rows: orderRows } = await pool.query(
-    `SELECT *, NOT EXISTS (
-      SELECT 1 FROM order_items oi 
-      JOIN products p ON oi.product_id = p.id 
-      JOIN product_categories pc ON p.category_id = pc.id 
-      WHERE oi.order_id = orders.id AND pc.slug != 'do-an-san'
-    ) AS is_fast_food_only FROM orders WHERE id = $1`,
+    `SELECT * FROM orders WHERE id = $1`,
     [orderId]
   );
   if (orderRows.length === 0) return null;
@@ -660,63 +651,13 @@ export async function getOrderById(orderId: number): Promise<OrderWithItems | nu
   };
 }
 
-// Lấy danh sách đơn hàng mà người bán hàng nhận được từ người mua
-export async function getOrdersBySeller(
-  sellerId: number,
-  limit: number,
-  offset: number
-): Promise<{ rows: OrderWithItems[]; total: number }> {
-  const dataSql = `SELECT DISTINCT o.*, NOT EXISTS (
-      SELECT 1 FROM order_items oi2 
-      JOIN products p ON oi2.product_id = p.id 
-      JOIN product_categories pc ON p.category_id = pc.id 
-      WHERE oi2.order_id = o.id AND pc.slug != 'do-an-san'
-    ) AS is_fast_food_only
-    FROM orders o
-    JOIN order_items oi ON oi.order_id = o.id
-    WHERE oi.seller_id = $1
-    ORDER BY o.created_at DESC
-    LIMIT $2 OFFSET $3`;
-  const countSql = `SELECT COUNT(DISTINCT o.id) AS total
-    FROM orders o
-    JOIN order_items oi ON oi.order_id = o.id
-    WHERE oi.seller_id = $1`;
-
-  const [dataResult, countResult] = await Promise.all([
-    pool.query(dataSql, [sellerId, limit, offset]),
-    pool.query(countSql, [sellerId]),
-  ]);
-
-  const orders = dataResult.rows as OrderWithItems[];
-  if (orders.length > 0) {
-    const orderIds = orders.map(o => o.id);
-    const { rows: itemRows } = await pool.query(
-      `SELECT oi.*, p.slug AS product_slug
-       FROM order_items oi
-       LEFT JOIN products p ON p.id = oi.product_id
-       WHERE oi.order_id = ANY($1) AND oi.seller_id = $2
-       ORDER BY oi.id`,
-      [orderIds, sellerId]
-    );
-
-    for (const order of orders) {
-      order.items = itemRows.filter(item => item.order_id === order.id);
-    }
-  }
-
-  return {
-    rows: orders,
-    total: parseTotal(countResult.rows[0]?.total),
-  };
-}
-
 // Cập nhật trạng thái của đơn hàng (có hỗ trợ lý do hủy đơn hàng)
 export async function updateOrderStatus(orderId: number, status: string, reason?: string): Promise<boolean> {
   const sets = ['status = $1', 'updated_at = NOW()'];
   const params: unknown[] = [status];
 
   if (reason !== undefined) {
-    sets.push(`cancelled_reason = $${params.length + 1}`, `cancel_reason = $${params.length + 1}`);
+    sets.push(`cancel_reason = $${params.length + 1}`);
     params.push(reason);
   }
   params.push(orderId);
@@ -743,6 +684,7 @@ export async function restockOrderItems(orderId: number): Promise<void> {
           `UPDATE products 
            SET stock = stock + $1, 
                total_sold = GREATEST(0, total_sold - $1),
+               is_available = CASE WHEN (stock + $1) > 0 THEN TRUE ELSE is_available END,
                updated_at = NOW() 
            WHERE id = $2`,
           [item.quantity, item.product_id]
@@ -985,48 +927,6 @@ export async function updateProductStatus(productId: number, status: string): Pr
  * ================================================================ */
 
 /**
- * Tìm sản phẩm khớp với danh sách nguyên liệu (fuzzy ILIKE search).
- * Mỗi keyword tạo OR condition → trả về danh sách products phù hợp nhất.
- */
-  // Tìm kiếm sản phẩm phù hợp với danh sách nguyên liệu (fuzzy ILIKE search)
-  export async function matchProductsByIngredients(
-  ingredientKeywords: string[],
-  limit = 20
-): Promise<ProductWithSeller[]> {
-  if (ingredientKeywords.length === 0) return [];
-
-  // Build OR conditions for each keyword
-  const conditions: string[] = [];
-  const params: (string | number)[] = [];
-
-  for (const kw of ingredientKeywords) {
-    const cleaned = kw.trim();
-    if (!cleaned || cleaned.length < 2) continue;
-    params.push(`%${cleaned}%`);
-    conditions.push(`p.name ILIKE $${params.length}`);
-  }
-
-  if (conditions.length === 0) return [];
-
-  params.push(limit);
-  const sql = `
-    SELECT p.*,
-      pc.name AS category_name, pc.slug AS category_slug,
-      u.full_name AS seller_name, u.avatar_url AS seller_avatar,
-      sp.store_name
-    FROM products p
-    LEFT JOIN product_categories pc ON p.category_id = pc.id
-    LEFT JOIN users u ON p.seller_id = u.id
-    LEFT JOIN seller_profiles sp ON p.seller_id = sp.user_id
-    WHERE p.status = 'approved' AND p.is_available = TRUE
-      AND (${conditions.join(' OR ')})
-    ORDER BY p.total_sold DESC, p.rating DESC
-    LIMIT $${params.length}
-  `;
-
-  const { rows } = await pool.query(sql, params);
-  return rows as ProductWithSeller[];
-}
 
 /**
  * Lấy danh sách products theo mảng IDs (cho AI recommend).

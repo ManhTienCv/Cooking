@@ -61,18 +61,16 @@ export default function AiRecommendations({ recipeTitle, ingredients, context = 
     <div>
       <Reveal y={16}>
         <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl shadow-md">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                {source === 'ai' ? 'AI Gợi ý cho bạn' : 'Sản phẩm nổi bật'}
-              </h3>
-              {reason && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">{reason}</p>
-              )}
-            </div>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+              {source === 'ai' ? 'AI Gợi ý cho bạn' : 'Sản phẩm nổi bật'}
+            </h3>
+            {reason && (
+              <p className="text-xs text-purple-600 dark:text-purple-400 mt-0.5 flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{reason}</span>
+              </p>
+            )}
           </div>
           <button
             onClick={() => setRefreshKey(k => k + 1)}

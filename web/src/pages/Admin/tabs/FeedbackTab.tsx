@@ -24,8 +24,8 @@ export default function FeedbackTab() {
     onConfirm: () => {}
   });
 
-  const loadFeedback = useCallback(async () => {
-    setLoading(true);
+  const loadFeedback = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await apiJson<{ feedback: Record<string, unknown>[] }>('/api/admin/feedback');
       setFeedback(data.feedback ?? []);
@@ -55,7 +55,7 @@ export default function FeedbackTab() {
         try {
           await apiJson(`/api/admin/feedback/${id}`, { method: 'DELETE' });
           toast.success('Đã xóa phản hồi thành công!');
-          void loadFeedback();
+          void loadFeedback(true);
         } catch {
           toast.error('Lỗi khi xóa phản hồi');
         }

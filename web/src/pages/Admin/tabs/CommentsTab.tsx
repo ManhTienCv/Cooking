@@ -24,8 +24,8 @@ export default function CommentsTab() {
     onConfirm: () => {}
   });
 
-  const loadComments = useCallback(async () => {
-    setLoading(true);
+  const loadComments = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await apiJson<{ comments: Record<string, unknown>[] }>('/api/admin/comments');
       setComments(data.comments ?? []);
@@ -56,7 +56,7 @@ export default function CommentsTab() {
         try {
           await apiJson(`/api/admin/comments/${id}`, { method: 'DELETE' });
           toast.success('Đã xóa bình luận thành công!');
-          void loadComments();
+          void loadComments(true);
         } catch {
           toast.error('Lỗi khi xóa bình luận');
         }

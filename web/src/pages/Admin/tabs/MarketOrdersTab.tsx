@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Search, X, Truck, ExternalLink, RefreshCw, Package } from 'lucide-react';
 import { apiJson } from '../../../lib/api';
 import toast from 'react-hot-toast';
+import Pagination from '../../../components/ui/Pagination';
 
 interface AdminOrder {
   id: number;
@@ -38,12 +39,17 @@ export default function MarketOrdersTab() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [dispatchingId, setDispatchingId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const loadOrders = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedOnce) {
+      setLoading(true);
+    }
     try {
       const d = await apiJson<{ orders: AdminOrder[]; total: number }>(
         `/api/admin/marketplace/orders?status=${statusFilter}&limit=50`
@@ -54,8 +60,9 @@ export default function MarketOrdersTab() {
       toast.error('Không thể tải danh sách đơn hàng');
     } finally {
       setLoading(false);
+      setHasLoadedOnce(true);
     }
-  }, [statusFilter]);
+  }, [statusFilter, hasLoadedOnce]);
 
   useEffect(() => {
     void loadOrders();
@@ -106,6 +113,23 @@ export default function MarketOrdersTab() {
       (o.tracking_code && o.tracking_code.toLowerCase().includes(q))
     );
   }, [orders, search]);
+
+  // Reset về trang 1 khi thay đổi điều kiện lọc / tìm kiếm
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
+
+  // Điều chỉnh trang nếu số lượng đơn hàng giảm
+  useEffect(() => {
+    if (currentPage > 1 && (currentPage - 1) * PAGE_SIZE >= filteredOrders.length) {
+      setCurrentPage(Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE)));
+    }
+  }, [filteredOrders.length, currentPage]);
+
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredOrders.slice(start, start + PAGE_SIZE);
+  }, [filteredOrders, currentPage]);
 
   const getStatusLabel = (s: string) => ORDER_STATUSES.find(st => st.value === s)?.label ?? s;
   const getStatusColor = (s: string) => ORDER_STATUSES.find(st => st.value === s)?.color ?? 'bg-slate-50 text-slate-600 border-slate-200';
@@ -163,7 +187,7 @@ export default function MarketOrdersTab() {
           <input 
             value={search} 
             onChange={e => setSearch(e.target.value)}
-            placeholder="Tìm mã đơn CAM-, tên khách, vận đơn..."
+            placeholder="Tìm mã đơn KC-, tên khách, số điện thoại..."
             className="w-full pl-10 pr-8 py-2 border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50/50 dark:bg-slate-700/50 text-xs sm:text-sm focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 dark:focus:border-white outline-none" 
           />
           {search && <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>}
@@ -206,7 +230,7 @@ export default function MarketOrdersTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                {filteredOrders.map(o => {
+                {paginatedOrders.map(o => {
                   const trackingCode = o.tracking_code || o.ghn_order_code;
                   const canDispatchGhn = (o.status === 'pending' || o.status === 'confirmed' || o.status === 'preparing') && !trackingCode;
 
@@ -298,6 +322,26 @@ export default function MarketOrdersTab() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {filteredOrders.length > PAGE_SIZE && (
+          <div className="p-5 border-t border-slate-100 dark:border-slate-700/70 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/30">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              Hiển thị <strong className="text-slate-700 dark:text-slate-200">{Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredOrders.length)}</strong> -{' '}
+              <strong className="text-slate-700 dark:text-slate-200">{Math.min(currentPage * PAGE_SIZE, filteredOrders.length)}</strong> trên tổng số{' '}
+              <strong className="text-slate-700 dark:text-slate-200">{filteredOrders.length}</strong> đơn hàng
+            </p>
+            <div className="scale-90 sm:scale-95 origin-center sm:origin-right">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredOrders.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={setCurrentPage}
+                autoScrollTop={false}
+                activeClassName="bg-blue-600 text-white shadow-md border-blue-600 dark:bg-blue-600 dark:text-white"
+              />
+            </div>
           </div>
         )}
       </div>

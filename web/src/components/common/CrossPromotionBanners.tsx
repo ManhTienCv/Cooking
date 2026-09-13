@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ChefHat, BookOpen, ArrowRight, Sparkles } from 'lucide-react';
+import { ChefHat, BookOpen, ArrowRight } from 'lucide-react';
 
 /**
  * Banner hiển thị tại Cửa hàng KitchenCook -> Gợi ý khách ghé thăm Trang Công Thức ẩm thực
@@ -13,10 +13,6 @@ export function KitchenToRecipeBanner() {
             <BookOpen className="w-6 h-6 sm:w-7 sm:h-7" />
           </div>
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-stone-100 dark:bg-slate-700 text-stone-800 dark:text-stone-300 border border-stone-200 dark:border-slate-600 text-[11px] font-extrabold uppercase tracking-wider mb-1">
-              <Sparkles className="w-3 h-3" />
-              Nguồn Cảm Hứng Bếp Việt & Âu
-            </div>
             <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
               Vừa sắm đồ bếp xịn nhưng chưa biết tối nay nấu món gì?
             </h3>
@@ -50,10 +46,6 @@ export function RecipeToKitchenBanner() {
             <ChefHat className="w-6 h-6 sm:w-7 sm:h-7" />
           </div>
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white dark:bg-slate-700 text-stone-800 dark:text-stone-300 border border-stone-200 dark:border-slate-600 text-[11px] font-extrabold uppercase tracking-wider mb-1">
-              <Sparkles className="w-3 h-3" />
-              KitchenCook Store · Đồ Gia Dụng Cao Cấp
-            </div>
             <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
               Nấu ăn ngon cần dụng cụ chuẩn! Bạn muốn mua đồ bếp xịn?
             </h3>

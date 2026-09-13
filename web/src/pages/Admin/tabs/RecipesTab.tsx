@@ -24,8 +24,8 @@ export default function RecipesTab() {
     onConfirm: () => {}
   });
 
-  const loadRecipes = useCallback(async () => {
-    setLoading(true);
+  const loadRecipes = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await apiJson<{ recipes: Record<string, unknown>[] }>('/api/admin/recipes?status=all');
       setRecipes(data.recipes ?? []);
@@ -83,7 +83,7 @@ export default function RecipesTab() {
             toast.error('Lỗi khi cập nhật trạng thái');
           }
         }
-        void loadRecipes();
+        void loadRecipes(true);
       }
     });
   }, [loadRecipes]);

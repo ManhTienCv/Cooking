@@ -25,12 +25,12 @@ export default function HomeEditorialHeader() {
   return (
     <section className="pt-2 pb-4 sm:pt-16 sm:pb-10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Typographic hero */}
-        <Reveal className="mb-6 flex flex-col items-center justify-center border-b border-gray-100 py-4 text-center dark:border-slate-800 sm:mb-12 sm:py-16">
-          <span className="mx-auto mb-3 block max-w-[22rem] break-words text-[10px] font-bold uppercase leading-relaxed tracking-[0.12em] text-gray-400 sm:mb-6 sm:max-w-[36rem] sm:text-base sm:tracking-[0.3em] md:text-xl">
+        {/* Typographic hero — scaled +10% */}
+        <Reveal className="mb-7 flex flex-col items-center justify-center border-b border-gray-100 py-5 text-center dark:border-slate-800 sm:mb-14 sm:py-18">
+          <span className="mx-auto mb-3.5 block max-w-[24rem] break-words text-[11px] font-bold uppercase leading-relaxed tracking-[0.15em] text-gray-400 sm:mb-7 sm:max-w-[40rem] sm:text-[17.5px] sm:tracking-[0.32em] md:text-[22px]">
             Công thức nấu ăn đơn giản dành cho
           </span>
-          <h1 className="mx-auto max-w-[24rem] break-words font-serif text-xl italic leading-snug tracking-tight text-gray-900 dark:text-white sm:max-w-[42rem] sm:text-5xl sm:leading-[1.1] md:text-7xl">
+          <h1 className="mx-auto max-w-[26rem] break-words font-serif text-[22px] italic leading-snug tracking-tight text-gray-900 dark:text-white sm:max-w-[46rem] sm:text-[53px] sm:leading-[1.1] md:max-w-[52rem] md:text-[80px] md:leading-[1.08]">
             cuộc sống đời thực mỗi ngày.
           </h1>
         </Reveal>

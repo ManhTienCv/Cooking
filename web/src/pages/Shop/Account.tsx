@@ -661,11 +661,10 @@ export default function AccountPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab('info')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${
-                  activeTab === 'info'
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-stone-100/70 dark:hover:bg-slate-700/50'
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${activeTab === 'info'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-stone-100/70 dark:hover:bg-slate-700/50'
+                  }`}
               >
                 <User className="w-4 h-4" />
                 <span>Thông tin cá nhân</span>
@@ -674,17 +673,15 @@ export default function AccountPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab('addresses')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${
-                  activeTab === 'addresses'
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-stone-100/70 dark:hover:bg-slate-700/50'
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${activeTab === 'addresses'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-stone-100/70 dark:hover:bg-slate-700/50'
+                  }`}
               >
                 <MapPin className="w-4 h-4" />
                 <span className="flex-1">Sổ địa chỉ</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                  activeTab === 'addresses' ? 'bg-white/20 text-white dark:bg-slate-900/20 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                }`}>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeTab === 'addresses' ? 'bg-white/20 text-white dark:bg-slate-900/20 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                  }`}>
                   {addresses.length}
                 </span>
               </button>
@@ -692,11 +689,10 @@ export default function AccountPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab('security')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${
-                  activeTab === 'security'
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-stone-100/70 dark:hover:bg-slate-700/50'
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${activeTab === 'security'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-stone-100/70 dark:hover:bg-slate-700/50'
+                  }`}
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>Bảo mật & Đổi mật khẩu</span>
@@ -878,11 +874,10 @@ export default function AccountPage() {
                     {addresses.map((addr) => (
                       <div
                         key={addr.id}
-                        className={`p-5 rounded-2xl border transition-all ${
-                          addr.isDefault
-                            ? 'border-slate-900 bg-stone-50/60 dark:border-white dark:bg-slate-800 shadow-sm'
-                            : 'border-stone-200 dark:border-slate-700/80 bg-white dark:bg-slate-800/60 hover:border-slate-300'
-                        }`}
+                        className={`p-5 rounded-2xl border transition-all ${addr.isDefault
+                          ? 'border-slate-900 bg-stone-50/60 dark:border-white dark:bg-slate-800 shadow-sm'
+                          : 'border-stone-200 dark:border-slate-700/80 bg-white dark:bg-slate-800/60 hover:border-slate-300'
+                          }`}
                       >
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-2">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -1038,9 +1033,6 @@ export default function AccountPage() {
                       <Mail className="w-5 h-5 text-blue-600" />
                       Thay đổi Email đăng nhập & Nhận hóa đơn
                     </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Quy trình 2 bước bảo mật: Gửi mã OTP xác minh tới email mới trước khi kích hoạt
-                    </p>
                   </div>
 
                   {otpStep === 1 ? (
@@ -1189,22 +1181,20 @@ export default function AccountPage() {
                   <button
                     type="button"
                     onClick={() => setAddressForm({ ...addressForm, label: 'home' })}
-                    className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                      addressForm.label === 'home'
-                        ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-400'
-                    }`}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${addressForm.label === 'home'
+                      ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-400'
+                      }`}
                   >
                     <Home className="w-3.5 h-3.5" /> Nhà riêng
                   </button>
                   <button
                     type="button"
                     onClick={() => setAddressForm({ ...addressForm, label: 'office' })}
-                    className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                      addressForm.label === 'office'
-                        ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-400'
-                    }`}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${addressForm.label === 'office'
+                      ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-400'
+                      }`}
                   >
                     <Building className="w-3.5 h-3.5" /> Văn phòng
                   </button>

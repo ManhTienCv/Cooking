@@ -24,8 +24,8 @@ export default function UsersTab() {
     onConfirm: () => {}
   });
 
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
+  const loadUsers = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await apiJson<{ users: Record<string, unknown>[] }>('/api/admin/users');
       setUsers(data.users ?? []);
@@ -55,7 +55,7 @@ export default function UsersTab() {
         try {
           await apiJson(`/api/admin/users/${id}`, { method: 'DELETE' });
           toast.success('Đã xóa người dùng thành công!');
-          void loadUsers();
+          void loadUsers(true);
         } catch {
           toast.error('Lỗi khi xóa người dùng');
         }

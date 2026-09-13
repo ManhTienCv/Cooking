@@ -19,7 +19,7 @@ const CORE_VALUES = [
   },
   {
     icon: Award,
-    title: 'Bảo Hành 24 Tháng',
+    title: 'Bảo Hành 2 Tháng',
     desc: '100% chính hãng, hỗ trợ 1 đổi 1 trong 7 ngày nếu lỗi sản xuất',
   },
 ];

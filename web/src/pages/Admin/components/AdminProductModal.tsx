@@ -151,7 +151,7 @@ export default function AdminProductModal({
           { key: 'Thương hiệu', value: '' },
           { key: 'Chất liệu', value: '' },
           { key: 'Xuất xứ', value: '' },
-          { key: 'Bảo hành', value: '12 tháng' },
+          { key: 'Bảo hành', value: '30 ngày' },
         ]);
       }
       setNewGalleryUrl('');

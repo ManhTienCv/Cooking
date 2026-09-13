@@ -26,6 +26,8 @@ export default function ShopProducts() {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -79,7 +81,11 @@ export default function ShopProducts() {
 
   /* Fetch products */
   const fetchProducts = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedOnce) {
+      setLoading(true);
+    } else {
+      setIsFetching(true);
+    }
     try {
       const q = new URLSearchParams();
       if (search.trim()) q.set('q', search.trim());
@@ -99,8 +105,10 @@ export default function ShopProducts() {
       setTotal(0);
     } finally {
       setLoading(false);
+      setHasLoadedOnce(true);
+      setIsFetching(false);
     }
-  }, [search, category, sort, page]);
+  }, [search, category, sort, page, hasLoadedOnce]);
 
   useEffect(() => {
     const t = setTimeout(() => void fetchProducts(), 250);
@@ -310,7 +318,7 @@ export default function ShopProducts() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 transition-opacity duration-200 ${isFetching ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
             {products.map((p, i) => (
               <ProductCard
                 key={p.id}

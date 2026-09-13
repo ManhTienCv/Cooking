@@ -35,6 +35,7 @@ export default function Recipes() {
   const [recipes, setRecipes] = useState<RecipeListRow[]>([]);
   const [totalRecipes, setTotalRecipes] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   // Load Categories
   useEffect(() => {
@@ -59,7 +60,7 @@ export default function Recipes() {
 
   // Fetch Recipes
   const fetchRecipes = useCallback(async (hideLoading = false) => {
-    if (!hideLoading) setIsLoading(true);
+    if (!hasLoadedOnce && !hideLoading) setIsLoading(true);
     try {
       const q = new URLSearchParams();
       if (searchQuery.trim()) q.set('q', searchQuery.trim());
@@ -75,8 +76,9 @@ export default function Recipes() {
       setTotalRecipes(0);
     } finally {
       setIsLoading(false);
+      setHasLoadedOnce(true);
     }
-  }, [searchQuery, selectedCategory, currentPage]);
+  }, [searchQuery, selectedCategory, currentPage, hasLoadedOnce]);
 
   useEffect(() => {
     const t = window.setTimeout(() => fetchRecipes(), 350);

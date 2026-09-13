@@ -47,7 +47,7 @@ export default function KitchenCookFooter() {
                   <Award className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="text-gray-900 dark:text-white text-sm font-bold">Bảo Hành 24 Tháng</h4>
+                  <h4 className="text-gray-900 dark:text-white text-sm font-bold">Bảo Hành 2 Tháng</h4>
                   <p className="text-xs text-gray-500 dark:text-gray-400">Bảo hành chính hãng uy tín</p>
                 </div>
               </div>

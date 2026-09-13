@@ -24,8 +24,8 @@ export default function BlogsTab() {
     onConfirm: () => {}
   });
 
-  const loadBlogs = useCallback(async () => {
-    setLoading(true);
+  const loadBlogs = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await apiJson<{ blogs: Record<string, unknown>[] }>('/api/admin/blogs?status=all');
       setBlogs(data.blogs ?? []);
@@ -83,7 +83,7 @@ export default function BlogsTab() {
             toast.error('Lỗi khi cập nhật trạng thái');
           }
         }
-        void loadBlogs();
+        void loadBlogs(true);
       }
     });
   }, [loadBlogs]);

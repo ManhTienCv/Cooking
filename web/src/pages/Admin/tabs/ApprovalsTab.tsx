@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiJson } from '../../../lib/api';
 import toast from 'react-hot-toast';
 import AdminConfirmModal from '../components/AdminConfirmModal';
+import Pagination from '../../../components/ui/Pagination';
 
 export default function ApprovalsTab() {
   const [recipes, setRecipes] = useState<Record<string, unknown>[]>([]);
   const [blogs, setBlogs] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recipePage, setRecipePage] = useState(1);
+  const [blogPage, setBlogPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
@@ -24,8 +28,8 @@ export default function ApprovalsTab() {
     onConfirm: () => {}
   });
 
-  const loadApprovals = useCallback(async () => {
-    setLoading(true);
+  const loadApprovals = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [r, b] = await Promise.all([
         apiJson<{ recipes: Record<string, unknown>[] }>('/api/admin/recipes?status=pending'),
@@ -62,13 +66,40 @@ export default function ApprovalsTab() {
         try {
           await apiJson(`/api/admin/${type}/${id}/${action}`, { method: 'POST' });
           toast.success(`Đã ${isApprove ? 'duyệt' : 'từ chối'} thành công!`);
-          void loadApprovals();
+          if (type === 'recipes') {
+            setRecipes((prev) => prev.filter((r) => String(r.id) !== id));
+          } else {
+            setBlogs((prev) => prev.filter((b) => String(b.id) !== id));
+          }
+          void loadApprovals(true);
         } catch {
           toast.error('Có lỗi xảy ra, vui lòng thử lại.');
         }
       }
     });
   }, [loadApprovals]);
+
+  useEffect(() => {
+    if (recipePage > 1 && (recipePage - 1) * PAGE_SIZE >= recipes.length) {
+      setRecipePage(Math.max(1, Math.ceil(recipes.length / PAGE_SIZE)));
+    }
+  }, [recipes.length, recipePage]);
+
+  useEffect(() => {
+    if (blogPage > 1 && (blogPage - 1) * PAGE_SIZE >= blogs.length) {
+      setBlogPage(Math.max(1, Math.ceil(blogs.length / PAGE_SIZE)));
+    }
+  }, [blogs.length, blogPage]);
+
+  const paginatedRecipes = useMemo(() => {
+    const start = (recipePage - 1) * PAGE_SIZE;
+    return recipes.slice(start, start + PAGE_SIZE);
+  }, [recipes, recipePage]);
+
+  const paginatedBlogs = useMemo(() => {
+    const start = (blogPage - 1) * PAGE_SIZE;
+    return blogs.slice(start, start + PAGE_SIZE);
+  }, [blogs, blogPage]);
 
   if (loading) return <div className="p-12 text-center text-slate-500">Đang tải...</div>;
 
@@ -96,7 +127,7 @@ export default function ApprovalsTab() {
             {recipes.length === 0 ? (
               <div className="p-8 text-center text-slate-500">Không có công thức nào đang chờ.</div>
             ) : (
-              recipes.map((r) => (
+              paginatedRecipes.map((r) => (
                 <div key={String(r.id)} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                   <div className="min-w-0 flex-1">
                     <h4 className="font-bold text-slate-800 dark:text-slate-200 text-base truncate">{String(r.title)}</h4>
@@ -120,6 +151,26 @@ export default function ApprovalsTab() {
               ))
             )}
           </div>
+
+          {recipes.length > PAGE_SIZE && (
+            <div className="p-4 border-t border-slate-100 dark:border-slate-700/70 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/30">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Hiển thị <strong className="text-slate-700 dark:text-slate-200">{Math.min((recipePage - 1) * PAGE_SIZE + 1, recipes.length)}</strong> -{' '}
+                <strong className="text-slate-700 dark:text-slate-200">{Math.min(recipePage * PAGE_SIZE, recipes.length)}</strong> /{' '}
+                <strong className="text-slate-700 dark:text-slate-200">{recipes.length}</strong>
+              </p>
+              <div className="scale-90 origin-center sm:origin-right">
+                <Pagination
+                  currentPage={recipePage}
+                  totalItems={recipes.length}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={setRecipePage}
+                  autoScrollTop={false}
+                  activeClassName="bg-blue-600 text-white shadow-md border-blue-600 dark:bg-blue-600 dark:text-white"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Pending Blogs */}
@@ -134,7 +185,7 @@ export default function ApprovalsTab() {
             {blogs.length === 0 ? (
               <div className="p-8 text-center text-slate-500">Không có bài viết nào đang chờ.</div>
             ) : (
-              blogs.map((b) => (
+              paginatedBlogs.map((b) => (
                 <div key={String(b.id)} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                   <div className="min-w-0 flex-1">
                     <h4 className="font-bold text-slate-800 dark:text-slate-200 text-base truncate">{String(b.title)}</h4>
@@ -158,6 +209,26 @@ export default function ApprovalsTab() {
               ))
             )}
           </div>
+
+          {blogs.length > PAGE_SIZE && (
+            <div className="p-4 border-t border-slate-100 dark:border-slate-700/70 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/30">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Hiển thị <strong className="text-slate-700 dark:text-slate-200">{Math.min((blogPage - 1) * PAGE_SIZE + 1, blogs.length)}</strong> -{' '}
+                <strong className="text-slate-700 dark:text-slate-200">{Math.min(blogPage * PAGE_SIZE, blogs.length)}</strong> /{' '}
+                <strong className="text-slate-700 dark:text-slate-200">{blogs.length}</strong>
+              </p>
+              <div className="scale-90 origin-center sm:origin-right">
+                <Pagination
+                  currentPage={blogPage}
+                  totalItems={blogs.length}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={setBlogPage}
+                  autoScrollTop={false}
+                  activeClassName="bg-blue-600 text-white shadow-md border-blue-600 dark:bg-blue-600 dark:text-white"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

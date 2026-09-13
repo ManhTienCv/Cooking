@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ChefHat, Clock, Sparkles } from 'lucide-react';
+import { ArrowRight, ChefHat, Clock } from 'lucide-react';
 import { Reveal, RevealStaggerItem } from '../motion/ScrollReveal';
 import { Skeleton } from '../ui/Skeleton';
 import { apiJson } from '../../lib/api';
@@ -46,10 +46,6 @@ export default function FeaturedRecipes() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <Reveal className="mb-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div className="max-w-3xl">
-            <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/80 px-4 py-2 text-xs font-bold uppercase tracking-widest text-gray-600 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300">
-              <Sparkles className="h-4 w-4" />
-              Bếp chọn hôm nay
-            </span>
             <h2 className="text-3xl font-serif font-bold text-black dark:text-white sm:text-4xl md:text-5xl">
               Công thức nổi bật
             </h2>

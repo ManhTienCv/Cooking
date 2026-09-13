@@ -115,14 +115,14 @@ export default function Navbar() {
 
   return (
     <>
-      <nav id="navbar" ref={navRef} className="fixed w-full top-0 z-50 transition-all duration-300 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-sm border-b border-gray-200 dark:border-slate-800">
+      <nav id="navbar" ref={navRef} className="fixed w-full top-0 z-50 transition-all duration-300 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg shadow-sm border-b border-gray-200/80 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link to="/" onClick={() => scrollWindowToTop()} className="flex items-center space-x-2 group">
-              <div className="bg-black dark:bg-white p-2 rounded-full group-hover:scale-110 transition-transform duration-300">
+          <div className="flex justify-between items-center h-[74px]">
+            <Link to="/" onClick={() => scrollWindowToTop()} className="flex items-center space-x-2.5 group">
+              <div className="bg-black dark:bg-white p-2.5 rounded-full group-hover:scale-110 transition-transform duration-300 shadow-xs">
                 <ChefHat className="h-6 w-6 text-white dark:text-black" />
               </div>
-              <span id="brandText" className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">CookingBoy</span>
+              <span id="brandText" className="text-2xl font-black tracking-tight text-gray-900 dark:text-white transition-colors duration-300">CookingBoy</span>
             </Link>
             <div className="hidden md:block">
               <div className="flex items-center space-x-2">
@@ -133,7 +133,7 @@ export default function Navbar() {
                       key={item.path}
                       to={item.path} 
                       onClick={() => scrollWindowToTop()} 
-                      className={`relative px-4 py-2 text-sm transition-colors duration-300 rounded-full font-medium ${isActive ? 'text-white dark:text-black' : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800'}`}
+                      className={`relative px-4.5 py-2.5 text-[15px] transition-colors duration-300 rounded-full font-medium ${isActive ? 'text-white dark:text-black' : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800'}`}
                     >
                       {isActive && (
                         <motion.div
@@ -149,49 +149,49 @@ export default function Navbar() {
                 })}
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="hidden md:flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
+              <div className="hidden md:flex items-center space-x-2.5">
                 {me === null ? (
-                  <span className="inline-block w-40 h-9 rounded-full bg-gray-200 dark:bg-slate-800 animate-pulse" aria-hidden />
+                  <span className="inline-block w-44 h-10 rounded-full bg-gray-200 dark:bg-slate-800 animate-pulse" aria-hidden />
                 ) : me.authenticated ? (
                   <>
                     <Link
                       data-testid="nav-profile-link"
                       to="/profile"
                       onClick={() => scrollWindowToTop()}
-                      className="flex items-center gap-2 rounded-full pl-1 pr-3 py-1 bg-white/90 border border-gray-200 hover:bg-white transition-colors"
+                      className="flex items-center gap-2.5 rounded-full pl-1.5 pr-4 py-1.5 bg-white/90 border border-gray-200 hover:bg-white transition-colors shadow-2xs"
                       title={me.user.full_name}
                     >
                       {me.user.avatar_url ? (
-                        <img src={me.user.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+                        <img src={me.user.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
                       ) : (
-                        <span className="w-9 h-9 rounded-full bg-black text-white text-xs font-bold flex items-center justify-center">
+                        <span className="w-10 h-10 rounded-full bg-black text-white text-xs font-bold flex items-center justify-center">
                           {userInitials(me.user.full_name)}
                         </span>
                       )}
-                      <span className="text-sm font-medium text-gray-900 max-w-[8rem] truncate">{me.user.full_name}</span>
+                      <span className="text-[15px] font-medium text-gray-900 max-w-[8.5rem] truncate">{me.user.full_name}</span>
                     </Link>
                     <button
                       data-testid="nav-logout-button"
                       type="button"
                       onClick={() => void handleLogout()}
-                      className="btn btn-enhanced p-2 rounded-full text-sm bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 transition-all"
+                      className="btn btn-enhanced p-2.5 rounded-full text-sm bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 transition-all"
                       title="Đăng xuất"
                     >
                       <LogOut className="w-4 h-4" />
                     </button>
                   </>
                 ) : (
-                  <button data-testid="nav-login-button" onClick={openLogin} className="btn btn-enhanced px-4 py-2 rounded-full text-sm font-semibold bg-black text-white hover:bg-gray-800 transition-all duration-300">Đăng nhập</button>
+                  <button data-testid="nav-login-button" onClick={openLogin} className="btn btn-enhanced px-5 py-2.5 rounded-full text-[15px] font-semibold bg-black text-white hover:bg-gray-800 shadow-sm transition-all duration-300">Đăng nhập</button>
                 )}
               </div>
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="md:hidden p-2 rounded-full text-gray-800 dark:text-gray-200 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-all duration-300"
+                className="md:hidden p-2.5 rounded-full text-gray-800 dark:text-gray-200 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-all duration-300"
                 aria-label={isMenuOpen ? 'Đóng menu' : 'Mở menu'}
                 title={isMenuOpen ? 'Đóng menu' : 'Mở menu'}
               >
-                <Menu className="h-6 w-6" />
+                <Menu className="h-6.5 w-6.5" />
               </button>
             </div>
           </div>

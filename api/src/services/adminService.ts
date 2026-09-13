@@ -92,45 +92,64 @@ export async function resetAdminPassword(idRaw: unknown, newPasswordRaw: unknown
   return { success: true, message: 'Đặt lại mật khẩu quản trị viên thành công.' };
 }
 
-export async function createCategory(typeRaw: string, nameRaw: unknown) {
-  const type = typeRaw;
-  if (type !== 'recipe' && type !== 'blog') throw { status: 400, message: 'Loại danh mục không hợp lệ' };
-  const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
+export async function createCategory(typeRaw: string, data: any) {
+  const type = String(typeRaw ?? '').trim();
+  if (type !== 'recipe' && type !== 'blog' && type !== 'product') {
+    throw { status: 400, message: 'Loại danh mục không hợp lệ' };
+  }
   
-  const name = String(nameRaw ?? '').trim();
-  if (!name) throw { status: 400, message: 'Tên là bắt buộc' };
-  const slug = slugify(name);
-  if (!slug) throw { status: 422, message: 'Tên danh mục không hợp lệ.' };
+  const name = String(data?.name ?? '').trim();
+  if (!name) throw { status: 400, message: 'Tên danh mục là bắt buộc' };
+
+  const customSlug = String(data?.slug ?? '').trim();
+  const slug = customSlug ? slugify(customSlug) : slugify(name);
+  if (!slug) throw { status: 422, message: 'Tên hoặc slug danh mục không hợp lệ.' };
+
+  const description = data?.description ? String(data.description).trim() : undefined;
+  const icon = data?.icon ? String(data.icon).trim() : undefined;
   
-  const created = await adminRepo.createCategory(table, name, slug);
-  if (!created) throw { status: 409, message: 'Danh mục đã tồn tại.' };
+  const created = await adminRepo.createCategory(type, name, slug, description, icon);
+  if (!created) throw { status: 409, message: 'Danh mục hoặc đường dẫn (slug) đã tồn tại.' };
   return { success: true };
 }
 
-export async function updateCategory(typeRaw: string, idRaw: unknown, nameRaw: unknown) {
-  const type = typeRaw;
-  if (type !== 'recipe' && type !== 'blog') throw { status: 400, message: 'Loại danh mục không hợp lệ' };
-  const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
+export async function updateCategory(typeRaw: string, idRaw: unknown, data: any) {
+  const type = String(typeRaw ?? '').trim();
+  if (type !== 'recipe' && type !== 'blog' && type !== 'product') {
+    throw { status: 400, message: 'Loại danh mục không hợp lệ' };
+  }
   const id = Number(idRaw);
   if (!id) throw { status: 400, message: 'Mã danh mục không hợp lệ.' };
   
-  const name = String(nameRaw ?? '').trim();
-  if (!name) throw { status: 400, message: 'Name is required' };
-  const slug = slugify(name);
-  if (!slug) throw { status: 422, message: 'Tên danh mục không hợp lệ.' };
+  const name = String(data?.name ?? '').trim();
+  if (!name) throw { status: 400, message: 'Tên danh mục là bắt buộc' };
+
+  const customSlug = String(data?.slug ?? '').trim();
+  const slug = customSlug ? slugify(customSlug) : slugify(name);
+  if (!slug) throw { status: 422, message: 'Tên hoặc slug danh mục không hợp lệ.' };
+
+  const description = data?.description ? String(data.description).trim() : undefined;
+  const icon = data?.icon ? String(data.icon).trim() : undefined;
   
-  await adminRepo.updateCategory(table, id, name, slug);
+  await adminRepo.updateCategory(type, id, name, slug, description, icon);
   return { success: true };
 }
 
 export async function deleteCategory(typeRaw: string, idRaw: unknown) {
-  const type = typeRaw;
-  if (type !== 'recipe' && type !== 'blog') throw { status: 400, message: 'Loại danh mục không hợp lệ' };
-  const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
+  const type = String(typeRaw ?? '').trim();
+  if (type !== 'recipe' && type !== 'blog' && type !== 'product') {
+    throw { status: 400, message: 'Loại danh mục không hợp lệ' };
+  }
   const id = Number(idRaw);
   if (!id) throw { status: 400, message: 'Mã danh mục không hợp lệ.' };
+
+  const count = await adminRepo.countCategoryItems(type, id);
+  if (count > 0) {
+    const label = type === 'product' ? 'sản phẩm đồ bếp' : type === 'recipe' ? 'công thức nấu ăn' : 'bài viết cẩm nang';
+    throw { status: 400, message: `Không thể xóa danh mục đang có ${count} ${label} liên kết. Vui lòng chuyển các mục sang danh mục khác trước khi xóa.` };
+  }
   
-  await adminRepo.deleteCategory(table, id);
+  await adminRepo.deleteCategory(type, id);
   return { success: true };
 }
 

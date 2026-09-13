@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowRight, Sparkles, ChefHat } from 'lucide-react';
+import { ArrowRight, ChefHat } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -58,12 +58,8 @@ export default function Shop() {
         <section className="space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-stone-200/80 dark:border-slate-800 pb-4">
             <div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-100 dark:bg-slate-800 text-stone-800 dark:text-stone-300 border border-stone-200 dark:border-slate-700 text-xs font-bold uppercase tracking-wider mb-2">
-                <Sparkles className="w-3.5 h-3.5" />
-                Bộ Sưu Tập Tiêu Biểu
-              </span>
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                Sản Phẩm Đồ Bếp Được Yêu Thích
+                Sản Phẩm Được Yêu Thích
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">
                 Những sản phẩm nồi niêu, xoong chảo và phụ kiện bán chạy nhất tại KitchenCook

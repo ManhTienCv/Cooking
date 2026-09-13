@@ -134,23 +134,31 @@ adminRouter.delete('/comments/:id', requireAdmin, requireCsrf, asyncHandler(asyn
 }));
 
 adminRouter.get('/categories/:type', requireAdmin, asyncHandler(async (req, res) => {
-  const type = req.params.type;
-  if (type !== 'recipe' && type !== 'blog') {
-    res.status(400).json({ success: false });
+  const type = String(req.params.type ?? '').trim();
+  if (type !== 'recipe' && type !== 'blog' && type !== 'product') {
+    res.status(400).json({ success: false, message: 'Loại danh mục không hợp lệ' });
     return;
   }
-  const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
-  const categories = await adminRepo.getCategories(table);
-  res.json({ categories });
+  const categories = await adminRepo.getCategories(type);
+  const totalCategories = categories.length;
+  const totalItems = categories.reduce((sum: number, c: any) => sum + Number(c.item_count || 0), 0);
+  res.json({
+    categories,
+    stats: {
+      totalCategories,
+      totalItems,
+      activeRate: '100%'
+    }
+  });
 }));
 
 adminRouter.post('/categories/:type', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await adminService.createCategory(String(req.params.type ?? ''), req.body?.name);
+  const result = await adminService.createCategory(String(req.params.type ?? ''), req.body);
   res.json(result);
 }));
 
 adminRouter.put('/categories/:type/:id', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
-  const result = await adminService.updateCategory(String(req.params.type ?? ''), req.params.id, req.body?.name);
+  const result = await adminService.updateCategory(String(req.params.type ?? ''), req.params.id, req.body);
   res.json(result);
 }));
 

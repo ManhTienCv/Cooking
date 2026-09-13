@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChefHat, Home, ShoppingBag, Search, Package, User, LogOut, Sun, Moon } from 'lucide-react';
+import { ChefHat, Home, ShoppingBag, Search, Package, User, LogOut, Sun, Moon, Loader2, X, ArrowRight, TrendingUp } from 'lucide-react';
 import { useCart } from '../../contexts/CartContext';
 import { useTheme } from '../../hooks/useTheme';
 import { apiJson, apiFetch, resetCsrfCache } from '../../lib/api';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail, notifyAuthChanged } from '../../lib/authEvents';
 import KitchenCookAuthModal from './KitchenCookAuthModal';
 import toast from 'react-hot-toast';
+import type { Product } from '../../types/marketplace';
+
+const POPULAR_KEYWORDS = ['Nồi chiên không dầu', 'Chảo chống dính', 'Bộ dao làm bếp', 'Nồi áp suất'];
 
 interface MeState {
   authenticated: boolean;
@@ -25,7 +28,12 @@ export default function KitchenCookNavbar() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const [searchVal, setSearchVal] = useState(searchParams.get('search') || '');
+  const [searchVal, setSearchVal] = useState(searchParams.get('search') || searchParams.get('q') || '');
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement | null>(null);
+
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [me, setMe] = useState<MeState>({ authenticated: false });
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -53,6 +61,54 @@ export default function KitchenCookNavbar() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [showUserMenu]);
+
+  // Tự động đóng dropdown tìm kiếm khi bấm ra ngoài hoặc nhấn ESC
+  useEffect(() => {
+    if (!showSearchDropdown) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSearchDropdown(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowSearchDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showSearchDropdown]);
+
+  // Live autocomplete search với debounce (350ms)
+  useEffect(() => {
+    const trimmed = searchVal.trim();
+    if (trimmed.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const data = await apiJson<{ products: Product[]; total: number }>(
+          `/api/marketplace/products?q=${encodeURIComponent(trimmed)}&limit=5`
+        );
+        setSearchResults(data.products ?? []);
+      } catch {
+        // Bỏ qua lỗi live search
+      } finally {
+        setSearching(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [searchVal]);
 
   const refreshMe = useCallback(async () => {
     try {
@@ -82,6 +138,7 @@ export default function KitchenCookNavbar() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowSearchDropdown(false);
     const trimmed = searchVal.trim();
     if (trimmed) {
       navigate(`/shop/products?q=${encodeURIComponent(trimmed)}`);
@@ -155,15 +212,118 @@ export default function KitchenCookNavbar() {
 
             {/* Giữa: Thanh Tìm Kiếm Dạng Viên Thuốc */}
             <form onSubmit={handleSearchSubmit} className="flex-1 max-w-md lg:max-w-lg min-w-[200px] order-last lg:order-none w-full lg:w-auto">
-              <div className="relative">
+              <div className="relative" ref={searchContainerRef}>
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
                 <input
                   type="text"
                   value={searchVal}
-                  onChange={(e) => setSearchVal(e.target.value)}
+                  onChange={(e) => {
+                    setSearchVal(e.target.value);
+                    setShowSearchDropdown(true);
+                  }}
+                  onFocus={() => setShowSearchDropdown(true)}
                   placeholder="Tìm kiếm nồi niêu, xoong chảo, dao kéo..."
-                  className="w-full pl-11 pr-4 py-2.5 sm:py-3 text-sm bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-full focus:outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 dark:focus:border-white text-slate-900 dark:text-white placeholder-slate-400 shadow-xs"
+                  className="w-full pl-11 pr-10 py-2.5 sm:py-3 text-sm bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-full focus:outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 dark:focus:border-white text-slate-900 dark:text-white placeholder-slate-400 shadow-xs transition-all"
                 />
+
+                {/* Trailing Loader or Clear Button */}
+                {searching ? (
+                  <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-[#E8590C]" />
+                ) : searchVal ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchVal('');
+                      setSearchResults([]);
+                    }}
+                    title="Xóa tìm kiếm"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full hover:bg-stone-100 dark:hover:bg-slate-700 transition cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                ) : null}
+
+                {/* Suggestions Dropdown */}
+                {showSearchDropdown && (
+                  <div className="absolute z-50 left-0 right-0 top-[calc(100%+8px)] bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-2xl shadow-2xl border border-stone-200/90 dark:border-slate-700 overflow-hidden max-h-[380px] overflow-y-auto">
+                    {searchVal.trim().length >= 2 ? (
+                      <div>
+                        {searchResults.length > 0 ? (
+                          <div className="divide-y divide-stone-100 dark:divide-slate-700/60">
+                            <div className="px-4 py-2 bg-stone-50/70 dark:bg-slate-900/40 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                              <span>Gợi ý sản phẩm ({searchResults.length})</span>
+                              <span className="text-[9px] font-normal lowercase">Nhấn Enter để xem tất cả</span>
+                            </div>
+                            {searchResults.map((p) => (
+                              <Link
+                                key={p.id}
+                                to={`/shop/${p.slug}`}
+                                onClick={() => setShowSearchDropdown(false)}
+                                className="flex items-center gap-3 p-3 hover:bg-stone-50 dark:hover:bg-slate-700/50 transition-colors group cursor-pointer"
+                              >
+                                <img
+                                  src={p.image_url || 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=100&auto=format&fit=crop&q=60'}
+                                  alt={p.name}
+                                  className="w-10 h-10 rounded-xl object-cover bg-stone-100 dark:bg-slate-700 border border-stone-200/60 dark:border-slate-600 shrink-0"
+                                  loading="lazy"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-[#E8590C] transition-colors">
+                                    {p.name}
+                                  </p>
+                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                    {p.category_name || 'Đồ bếp chính hãng'}
+                                  </p>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <p className="text-xs font-bold text-[#E8590C]">
+                                    {Number(p.sale_price ?? p.price).toLocaleString('vi-VN')}đ
+                                  </p>
+                                </div>
+                              </Link>
+                            ))}
+                            <button
+                              type="submit"
+                              onClick={handleSearchSubmit}
+                              className="w-full py-2.5 px-4 text-center text-xs font-bold text-[#E8590C] hover:bg-stone-50 dark:hover:bg-slate-700/50 flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-t border-stone-100 dark:border-slate-700/60"
+                            >
+                              <span>Xem tất cả kết quả cho "{searchVal.trim()}"</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : !searching ? (
+                          <div className="p-5 text-center text-xs text-slate-500 dark:text-slate-400">
+                            Không tìm thấy sản phẩm nào khớp với "{searchVal.trim()}"
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      /* Khi ô tìm kiếm trống hoặc gõ ít hơn 2 ký tự: Hiển thị từ khóa nổi bật */
+                      <div className="p-4 space-y-2.5">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
+                          <TrendingUp className="w-3.5 h-3.5 text-[#E8590C]" />
+                          <span>Tìm kiếm phổ biến</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {POPULAR_KEYWORDS.map((kw) => (
+                            <button
+                              key={kw}
+                              type="button"
+                              onClick={() => {
+                                setSearchVal(kw);
+                                setShowSearchDropdown(false);
+                                navigate(`/shop/products?q=${encodeURIComponent(kw)}`);
+                              }}
+                              className="px-3 py-1.5 rounded-full text-xs font-medium bg-stone-100 dark:bg-slate-700/70 text-slate-700 dark:text-slate-200 hover:bg-[#E8590C]/10 hover:text-[#E8590C] dark:hover:bg-[#E8590C]/20 dark:hover:text-[#ff8843] transition-colors cursor-pointer border border-stone-200/60 dark:border-slate-600/60"
+                            >
+                              {kw}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </form>
 

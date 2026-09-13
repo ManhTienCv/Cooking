@@ -22,7 +22,6 @@ import {
   FileText,
   Sliders,
   Sparkles,
-  Zap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -74,7 +73,7 @@ export default function ProductDetail() {
         setReviews(d.reviews ?? []);
         setReviewTotal(d.total ?? 0);
       })
-      .catch(() => {});
+      .catch(() => { });
     apiJson<{ wishlisted: boolean }>(`/api/marketplace/wishlist/${product.id}`)
       .then((d) => setWishlisted(Boolean(d.wishlisted)))
       .catch(() => setWishlisted(false));
@@ -192,6 +191,12 @@ export default function ProductDetail() {
     product.category_name?.toUpperCase() ||
     'KITCHENCOOK OFFICIAL';
 
+  // Dynamic Warranty from specs (customizable per product, e.g. '30 ngày', '6 tháng')
+  const rawWarranty = (rawSpecs['Bảo hành'] as string) || (rawSpecs['warranty'] as string) || '30 ngày';
+  const warrantyBadgeText = rawWarranty.toLowerCase().startsWith('bảo hành')
+    ? rawWarranty
+    : `Bảo hành ${rawWarranty}`;
+
   // Teaser Description (first 2 sentences or clean short text)
   const teaserDesc = product.description
     ? product.description.split('\n')[0].slice(0, 220)
@@ -206,8 +211,8 @@ export default function ProductDetail() {
     product.rating > 0
       ? product.rating
       : totalReviewsCount > 0
-      ? reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviewsCount
-      : 5.0;
+        ? reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviewsCount
+        : 5.0;
 
   const starCounts = [5, 4, 3, 2, 1].map((s) => ({
     star: s,
@@ -284,11 +289,10 @@ export default function ProductDetail() {
                       key={i}
                       type="button"
                       onClick={() => setActiveImg(i)}
-                      className={`relative w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border-2 transition-all cursor-pointer ${
-                        activeImg === i
-                          ? 'border-amber-500 dark:border-amber-400 shadow-md ring-2 ring-amber-500/20'
-                          : 'border-gray-200 dark:border-slate-700 hover:border-gray-300 opacity-70 hover:opacity-100'
-                      }`}
+                      className={`relative w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border-2 transition-all cursor-pointer ${activeImg === i
+                        ? 'border-amber-500 dark:border-amber-400 shadow-md ring-2 ring-amber-500/20'
+                        : 'border-gray-200 dark:border-slate-700 hover:border-gray-300 opacity-70 hover:opacity-100'
+                        }`}
                     >
                       <img src={img} alt="" className="w-full h-full object-cover" />
                     </button>
@@ -328,9 +332,8 @@ export default function ProductDetail() {
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star
                         key={i}
-                        className={`w-4 h-4 ${
-                          i < Math.round(avgRating) ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-600'
-                        }`}
+                        className={`w-4 h-4 ${i < Math.round(avgRating) ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-600'
+                          }`}
                       />
                     ))}
                   </div>
@@ -438,11 +441,10 @@ export default function ProductDetail() {
                     <button
                       type="button"
                       onClick={handleToggleWishlist}
-                      className={`w-12 h-12 flex items-center justify-center rounded-2xl border transition-all cursor-pointer ${
-                        wishlisted
-                          ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
-                          : 'bg-white dark:bg-slate-800 text-gray-400 border-gray-200 dark:border-slate-700 hover:text-[#E8590C] hover:border-[#E8590C]/50'
-                      }`}
+                      className={`w-12 h-12 flex items-center justify-center rounded-2xl border transition-all cursor-pointer ${wishlisted
+                        ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
+                        : 'bg-white dark:bg-slate-800 text-gray-400 border-gray-200 dark:border-slate-700 hover:text-[#E8590C] hover:border-[#E8590C]/50'
+                        }`}
                       title={wishlisted ? 'Bỏ yêu thích' : 'Yêu thích'}
                     >
                       <Heart className={`w-5 h-5 ${wishlisted ? 'fill-current' : ''}`} />
@@ -454,9 +456,8 @@ export default function ProductDetail() {
                     type="button"
                     onClick={handleBuyNow}
                     disabled={addingCart || isOutOfStock}
-                    className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-[#E8590C] hover:bg-[#d44e08] active:scale-98 text-white font-black text-base shadow-lg shadow-[#E8590C]/25 hover:shadow-[#E8590C]/40 transition-all disabled:opacity-50 cursor-pointer"
+                    className="w-full inline-flex items-center justify-center px-6 py-4 rounded-2xl bg-[#E8590C] hover:bg-[#d44e08] active:scale-98 text-white font-black text-base shadow-lg shadow-[#E8590C]/25 hover:shadow-[#E8590C]/40 transition-all disabled:opacity-50 cursor-pointer"
                   >
-                    <Zap className="w-5 h-5 fill-current" />
                     Mua ngay
                   </button>
                 </div>
@@ -472,7 +473,7 @@ export default function ProductDetail() {
                   <div className="flex flex-col items-center gap-1.5 p-2 border-x border-gray-200/80 dark:border-slate-800">
                     <ShieldCheck className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     <span className="text-[11px] sm:text-xs font-semibold text-gray-600 dark:text-gray-300">
-                      Bảo hành 24 tháng
+                      {warrantyBadgeText}
                     </span>
                   </div>
                   <div className="flex flex-col items-center gap-1.5 p-2">
@@ -496,11 +497,10 @@ export default function ProductDetail() {
             <button
               type="button"
               onClick={() => setActiveTab('desc')}
-              className={`pb-4 text-sm sm:text-base font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${
-                activeTab === 'desc'
-                  ? 'text-[#E8590C] dark:text-[#f77b31]'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
+              className={`pb-4 text-sm sm:text-base font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${activeTab === 'desc'
+                ? 'text-[#E8590C] dark:text-[#f77b31]'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
             >
               <FileText className="w-4 h-4" />
               Mô Tả Sản Phẩm
@@ -515,11 +515,10 @@ export default function ProductDetail() {
             <button
               type="button"
               onClick={() => setActiveTab('specs')}
-              className={`pb-4 text-sm sm:text-base font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${
-                activeTab === 'specs'
-                  ? 'text-[#E8590C] dark:text-[#f77b31]'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
+              className={`pb-4 text-sm sm:text-base font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${activeTab === 'specs'
+                ? 'text-[#E8590C] dark:text-[#f77b31]'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
             >
               <Sliders className="w-4 h-4" />
               Thông Số Kỹ Thuật Chi Tiết
@@ -534,11 +533,10 @@ export default function ProductDetail() {
             <button
               type="button"
               onClick={() => setActiveTab('reviews')}
-              className={`pb-4 text-sm sm:text-base font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${
-                activeTab === 'reviews'
-                  ? 'text-[#E8590C] dark:text-[#f77b31]'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
+              className={`pb-4 text-sm sm:text-base font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${activeTab === 'reviews'
+                ? 'text-[#E8590C] dark:text-[#f77b31]'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
             >
               <MessageSquare className="w-4 h-4" />
               Đánh Giá Khách Hàng
@@ -599,11 +597,10 @@ export default function ProductDetail() {
                         {specsEntries.map(([k, v], idx) => (
                           <tr
                             key={k}
-                            className={`border-b last:border-0 border-gray-200 dark:border-slate-700 transition-colors ${
-                              idx % 2 === 0
-                                ? 'bg-gray-50/70 dark:bg-slate-900/30'
-                                : 'bg-white dark:bg-slate-800'
-                            }`}
+                            className={`border-b last:border-0 border-gray-200 dark:border-slate-700 transition-colors ${idx % 2 === 0
+                              ? 'bg-gray-50/70 dark:bg-slate-900/30'
+                              : 'bg-white dark:bg-slate-800'
+                              }`}
                           >
                             <td className="py-3.5 px-6 font-semibold text-gray-600 dark:text-gray-400 w-1/3">
                               {k}
@@ -696,11 +693,10 @@ export default function ProductDetail() {
                     key={tab.key}
                     type="button"
                     onClick={() => setReviewFilter(tab.key as typeof reviewFilter)}
-                    className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
-                      reviewFilter === tab.key
-                        ? 'bg-[#E8590C] text-white shadow-xs'
-                        : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-750'
-                    }`}
+                    className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${reviewFilter === tab.key
+                      ? 'bg-[#E8590C] text-white shadow-xs'
+                      : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-750'
+                      }`}
                   >
                     {tab.label}
                   </button>
@@ -753,9 +749,8 @@ export default function ProductDetail() {
                                   {Array.from({ length: 5 }).map((_, i) => (
                                     <Star
                                       key={i}
-                                      className={`w-3 h-3 ${
-                                        i < r.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300 dark:text-gray-600'
-                                      }`}
+                                      className={`w-3 h-3 ${i < r.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300 dark:text-gray-600'
+                                        }`}
                                     />
                                   ))}
                                 </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
   Search,
@@ -18,6 +19,7 @@ import { apiJson } from '../../../lib/api';
 import toast from 'react-hot-toast';
 import AdminConfirmModal from '../components/AdminConfirmModal';
 import AdminProductModal, { type AdminProductDetail } from '../components/AdminProductModal';
+import Pagination from '../../../components/ui/Pagination';
 
 interface AdminProduct {
   id: number;
@@ -68,6 +70,11 @@ export default function MarketProductsTab() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [sortBy, setSortBy] = useState('newest');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
+
+  // Cache theo từng status để chuyển tab tức thì 0ms, không nháy giật
+  const [statusCache, setStatusCache] = useState<Record<string, { products: AdminProduct[]; total: number }>>({});
 
   // Modal states
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -98,25 +105,47 @@ export default function MarketProductsTab() {
     }
   }, []);
 
-  const loadProducts = useCallback(async () => {
-    setLoading(true);
+  const loadProducts = useCallback(async (targetStatus: string = status) => {
+    const hasCache = !!statusCache[targetStatus];
+    if (!hasCache) {
+      setLoading(true);
+    }
     try {
       const d = await apiJson<{ products: AdminProduct[]; total: number }>(
-        `/api/admin/marketplace/products?status=${status}&limit=100`
+        `/api/admin/marketplace/products?status=${targetStatus}&limit=100`
       );
-      setProducts(d.products ?? []);
-      setTotal(d.total ?? 0);
+      const list = d.products ?? [];
+      const count = d.total ?? 0;
+      setProducts(list);
+      setTotal(count);
+      setStatusCache((prev) => ({
+        ...prev,
+        [targetStatus]: { products: list, total: count },
+      }));
     } catch {
-      toast.error('Không thể tải danh sách sản phẩm', { id: 'admin-market-products-load-error' });
+      if (!hasCache) {
+        toast.error('Không thể tải danh sách sản phẩm', { id: 'admin-market-products-load-error' });
+      }
     } finally {
       setLoading(false);
     }
-  }, [status]);
+  }, [status, statusCache]);
+
+  const handleStatusChange = (newStatus: string) => {
+    if (newStatus === status) return;
+    setStatus(newStatus);
+    if (statusCache[newStatus]) {
+      setProducts(statusCache[newStatus].products);
+      setTotal(statusCache[newStatus].total);
+      setLoading(false);
+    }
+    void loadProducts(newStatus);
+  };
 
   useEffect(() => {
-    void loadProducts();
+    void loadProducts(status);
     void loadStats();
-  }, [loadProducts, loadStats]);
+  }, [status]);
 
   const handleCreateProduct = () => {
     setEditingProduct(null);
@@ -218,6 +247,23 @@ export default function MarketProductsTab() {
     return result;
   }, [products, search, categoryFilter, sortBy]);
 
+  // Reset về trang 1 khi thay đổi điều kiện lọc / tìm kiếm / tab trạng thái
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, categoryFilter, sortBy, status]);
+
+  // Điều chỉnh trang nếu số lượng sản phẩm giảm
+  useEffect(() => {
+    if (currentPage > 1 && (currentPage - 1) * PAGE_SIZE >= filteredProducts.length) {
+      setCurrentPage(Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE)));
+    }
+  }, [filteredProducts.length, currentPage]);
+
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredProducts.slice(start, start + PAGE_SIZE);
+  }, [filteredProducts, currentPage]);
+
   return (
     <div className="space-y-6">
       {/* Header Section */}
@@ -309,21 +355,35 @@ export default function MarketProductsTab() {
       </div>
 
       {/* Status Tabs */}
-      <div className="flex flex-wrap items-center gap-2">
-        {STATUS_TABS.map((t) => (
-          <button
-            key={t.value}
-            onClick={() => setStatus(t.value)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
-              status === t.value
-                ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-        <span className="ml-auto self-center text-sm font-medium text-slate-500 dark:text-slate-400">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="inline-flex p-1.5 bg-slate-100 dark:bg-slate-800/90 rounded-2xl gap-1 border border-slate-200/60 dark:border-slate-700/80 shadow-2xs relative">
+          {STATUS_TABS.map((t) => {
+            const isActive = status === t.value;
+            return (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => handleStatusChange(t.value)}
+                className={`relative isolate px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors duration-200 border border-transparent cursor-pointer ${
+                  isActive
+                    ? 'text-blue-600 dark:text-blue-400'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="active-product-status-pill"
+                    className="absolute inset-0 rounded-xl bg-white dark:bg-slate-700 shadow-xs border border-slate-200/60 dark:border-slate-600"
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    style={{ zIndex: -1 }}
+                  />
+                )}
+                <span className="relative z-10">{t.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
           Hiển thị: <strong>{filteredProducts.length}</strong> / {total} sản phẩm
         </span>
       </div>
@@ -400,7 +460,7 @@ export default function MarketProductsTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                {filteredProducts.map((p) => {
+                {paginatedProducts.map((p) => {
                   const isDiscount = p.sale_price !== null && p.sale_price < p.price;
                   const discountPct = isDiscount
                     ? Math.round(((p.price - (p.sale_price || 0)) / p.price) * 100)
@@ -559,6 +619,26 @@ export default function MarketProductsTab() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {filteredProducts.length > PAGE_SIZE && (
+          <div className="p-5 border-t border-slate-100 dark:border-slate-700/70 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/30">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              Hiển thị <strong className="text-slate-700 dark:text-slate-200">{Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredProducts.length)}</strong> -{' '}
+              <strong className="text-slate-700 dark:text-slate-200">{Math.min(currentPage * PAGE_SIZE, filteredProducts.length)}</strong> trên tổng số{' '}
+              <strong className="text-slate-700 dark:text-slate-200">{filteredProducts.length}</strong> sản phẩm
+            </p>
+            <div className="scale-90 sm:scale-95 origin-center sm:origin-right">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredProducts.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={setCurrentPage}
+                autoScrollTop={false}
+                activeClassName="bg-blue-600 text-white shadow-md border-blue-600 dark:bg-blue-600 dark:text-white"
+              />
+            </div>
           </div>
         )}
       </div>

@@ -14,7 +14,25 @@ function slugify(text: string): string {
 
 export const adminRepo = {
   async getDashboardStats(): Promise<DashboardStats> {
-    const [admins, users, recipes, blogs, feedback, pendingRecipes, pendingBlogs] = await Promise.all([
+    const [
+      admins,
+      users,
+      recipes,
+      blogs,
+      feedback,
+      pendingRecipes,
+      pendingBlogs,
+      products,
+      orders,
+      revenue,
+      pendingOrders,
+      recipeCategories,
+      productCategories,
+      blogCategories,
+      ordersByStatus,
+      recentOrders,
+      topProducts,
+    ] = await Promise.all([
       pool.query('SELECT COUNT(*)::int AS total FROM quantrivien'),
       pool.query('SELECT COUNT(*)::int AS total FROM users'),
       pool.query('SELECT COUNT(*)::int AS total FROM recipes'),
@@ -22,6 +40,22 @@ export const adminRepo = {
       pool.query('SELECT COUNT(*)::int AS total FROM feedback'),
       pool.query("SELECT COUNT(*)::int AS total FROM recipes WHERE status = 'pending'"),
       pool.query("SELECT COUNT(*)::int AS total FROM blog_posts WHERE status = 'pending'"),
+      pool.query('SELECT COUNT(*)::int AS total FROM products'),
+      pool.query('SELECT COUNT(*)::int AS total FROM orders'),
+      pool.query("SELECT COALESCE(SUM(total_amount), 0)::bigint AS total FROM orders WHERE status != 'cancelled'"),
+      pool.query("SELECT COUNT(*)::int AS total FROM orders WHERE status IN ('pending', 'confirmed')"),
+      pool.query('SELECT COUNT(*)::int AS total FROM recipe_categories'),
+      pool.query('SELECT COUNT(*)::int AS total FROM product_categories'),
+      pool.query('SELECT COUNT(*)::int AS total FROM blog_categories'),
+      pool.query(
+        "SELECT status, COUNT(*)::int AS count, COALESCE(SUM(total_amount), 0)::bigint AS revenue FROM orders GROUP BY status"
+      ),
+      pool.query(
+        "SELECT id, order_code, shipping_name, total_amount, status, payment_method, payment_status, created_at FROM orders ORDER BY created_at DESC LIMIT 5"
+      ),
+      pool.query(
+        "SELECT p.id, p.name, p.price, p.stock, p.total_sold, p.image_url FROM products p ORDER BY p.total_sold DESC NULLS LAST LIMIT 5"
+      ),
     ]);
     return {
       admins: admins.rows[0]?.total ?? 0,
@@ -32,6 +66,36 @@ export const adminRepo = {
       pendingRecipes: pendingRecipes.rows[0]?.total ?? 0,
       pendingBlogs: pendingBlogs.rows[0]?.total ?? 0,
       pendingProducts: 0,
+      products: products.rows[0]?.total ?? 0,
+      orders: orders.rows[0]?.total ?? 0,
+      revenue: Number(revenue.rows[0]?.total ?? 0),
+      pendingOrders: pendingOrders.rows[0]?.total ?? 0,
+      recipeCategories: recipeCategories.rows[0]?.total ?? 0,
+      productCategories: productCategories.rows[0]?.total ?? 0,
+      blogCategories: blogCategories.rows[0]?.total ?? 0,
+      ordersByStatus: ordersByStatus.rows.map((r: any) => ({
+        status: String(r.status),
+        count: Number(r.count || 0),
+        revenue: Number(r.revenue || 0),
+      })),
+      recentOrders: recentOrders.rows.map((o: any) => ({
+        id: Number(o.id),
+        order_code: String(o.order_code || `DH-${o.id}`),
+        shipping_name: String(o.shipping_name || 'Khách vãng lai'),
+        total_amount: Number(o.total_amount || 0),
+        status: String(o.status || 'pending'),
+        payment_method: String(o.payment_method || 'cod'),
+        payment_status: String(o.payment_status || 'unpaid'),
+        created_at: String(o.created_at || new Date().toISOString()),
+      })),
+      topProducts: topProducts.rows.map((p: any) => ({
+        id: Number(p.id),
+        name: String(p.name || 'Sản phẩm đồ bếp'),
+        price: Number(p.price || 0),
+        stock: Number(p.stock || 0),
+        total_sold: Number(p.total_sold || 0),
+        image_url: String(p.image_url || ''),
+      })),
     };
   },
 
@@ -145,27 +209,100 @@ export const adminRepo = {
     await pool.query('DELETE FROM blog_comments WHERE id = $1', [id]);
   },
 
-  async getCategories(table: string) {
-    const r = await pool.query(`SELECT id, name FROM ${table} ORDER BY name ASC`);
-    return r.rows;
+  async getCategories(type: string) {
+    if (type === 'product') {
+      const r = await pool.query(`
+        SELECT pc.id, pc.name, pc.slug, pc.description, pc.icon, pc.created_at,
+               COUNT(p.id)::int AS item_count
+        FROM product_categories pc
+        LEFT JOIN products p ON p.category_id = pc.id AND p.status != 'deleted'
+        GROUP BY pc.id, pc.name, pc.slug, pc.description, pc.icon, pc.created_at
+        ORDER BY pc.sort_order ASC NULLS LAST, pc.id ASC
+      `);
+      return r.rows;
+    }
+    if (type === 'recipe') {
+      const r = await pool.query(`
+        SELECT rc.id, rc.name, rc.slug, rc.description, rc.created_at,
+               COUNT(r.id)::int AS item_count
+        FROM recipe_categories rc
+        LEFT JOIN recipes r ON r.category_id = rc.id
+        GROUP BY rc.id, rc.name, rc.slug, rc.description, rc.created_at
+        ORDER BY rc.id ASC
+      `);
+      return r.rows;
+    }
+    if (type === 'blog') {
+      const r = await pool.query(`
+        SELECT bc.id, bc.name, bc.slug, bc.description, bc.created_at,
+               COUNT(bp.id)::int AS item_count
+        FROM blog_categories bc
+        LEFT JOIN blog_posts bp ON bp.category_id = bc.id
+        GROUP BY bc.id, bc.name, bc.slug, bc.description, bc.created_at
+        ORDER BY bc.id ASC
+      `);
+      return r.rows;
+    }
+    return [];
   },
 
-  async createCategory(table: string, name: string, slug: string): Promise<boolean> {
+  async countCategoryItems(type: string, id: number): Promise<number> {
+    if (type === 'product') {
+      const r = await pool.query("SELECT COUNT(*)::int AS cnt FROM products WHERE category_id = $1 AND status != 'deleted'", [id]);
+      return Number(r.rows[0]?.cnt || 0);
+    }
+    if (type === 'recipe') {
+      const r = await pool.query('SELECT COUNT(*)::int AS cnt FROM recipes WHERE category_id = $1', [id]);
+      return Number(r.rows[0]?.cnt || 0);
+    }
+    if (type === 'blog') {
+      const r = await pool.query('SELECT COUNT(*)::int AS cnt FROM blog_posts WHERE category_id = $1', [id]);
+      return Number(r.rows[0]?.cnt || 0);
+    }
+    return 0;
+  },
+
+  async createCategory(type: string, name: string, slug: string, description?: string, icon?: string): Promise<boolean> {
+    if (type === 'product') {
+      const r = await pool.query(
+        `INSERT INTO product_categories (name, slug, description, icon, type)
+         VALUES ($1, $2, $3, $4, 'equipment')
+         ON CONFLICT (slug) DO NOTHING
+         RETURNING id`,
+        [name, slug, description || null, icon || 'CookingPot']
+      );
+      return r.rows.length > 0;
+    }
+    const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
     const r = await pool.query(
-      `INSERT INTO ${table} (name, slug)
-       VALUES ($1, $2)
+      `INSERT INTO ${table} (name, slug, description)
+       VALUES ($1, $2, $3)
        ON CONFLICT (slug) DO NOTHING
        RETURNING id`,
-      [name, slug]
+      [name, slug, description || null]
     );
     return r.rows.length > 0;
   },
 
-  async updateCategory(table: string, id: number, name: string, slug: string) {
-    await pool.query(`UPDATE ${table} SET name = $1, slug = $2 WHERE id = $3`, [name, slug, id]);
+  async updateCategory(type: string, id: number, name: string, slug: string, description?: string, icon?: string) {
+    if (type === 'product') {
+      await pool.query(
+        `UPDATE product_categories 
+         SET name = $1, slug = $2, description = $3, icon = COALESCE($4, icon) 
+         WHERE id = $5`,
+        [name, slug, description || null, icon || null, id]
+      );
+      return;
+    }
+    const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
+    await pool.query(
+      `UPDATE ${table} SET name = $1, slug = $2, description = $3 WHERE id = $4`,
+      [name, slug, description || null, id]
+    );
   },
 
-  async deleteCategory(table: string, id: number) {
+  async deleteCategory(type: string, id: number) {
+    const table = type === 'product' ? 'product_categories' : type === 'recipe' ? 'recipe_categories' : 'blog_categories';
     await pool.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
   },
 

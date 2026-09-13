@@ -63,18 +63,9 @@ export default function KitchenCookHero({
                 loading="eager"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" />
-              
+
               {/* Badge góc ảnh */}
               <div className="absolute bottom-5 left-5 right-5 text-white">
-                <span className="px-2.5 py-1 rounded-full bg-slate-900/90 backdrop-blur-md text-white border border-white/20 text-[11px] font-bold uppercase tracking-wider shadow">
-                  KitchenCook Selection
-                </span>
-                <p className="font-vietnam font-bold text-base sm:text-lg mt-1.5 drop-shadow">
-                  Nồi gang tráng men & Dao rèn thủ công
-                </p>
-                <p className="text-xs text-slate-200 drop-shadow">
-                  Thiết kế sang trọng, gia nhiệt đồng đều và giữ trọn dưỡng chất
-                </p>
               </div>
             </motion.div>
           </div>

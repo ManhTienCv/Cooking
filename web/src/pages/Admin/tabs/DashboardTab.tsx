@@ -115,16 +115,22 @@ export default function DashboardTab() {
     [stats.pendingOrders]
   );
 
-  // Biểu đồ doanh thu & lượt truy cập 7 ngày qua
-  const performanceData = useMemo(() => [
-    { day: 'Th 2', revenueM: 18.5, orders: 4, visits: 320 },
-    { day: 'Th 3', revenueM: 25.2, orders: 6, visits: 410 },
-    { day: 'Th 4', revenueM: 21.0, orders: 5, visits: 380 },
-    { day: 'Th 5', revenueM: 34.8, orders: 8, visits: 540 },
-    { day: 'Th 6', revenueM: 42.0, orders: 9, visits: 620 },
-    { day: 'Th 7', revenueM: 58.5, orders: 14, visits: 890 },
-    { day: 'CN', revenueM: 65.0, orders: 16, visits: 950 },
-  ], []);
+  // Biểu đồ doanh thu & số đơn hàng
+  const performanceData = useMemo(() => {
+    const days = ['Th 2', 'Th 3', 'Th 4', 'Th 5', 'Th 6', 'Th 7', 'CN'];
+    if (!stats.orders || stats.orders === 0) {
+      return days.map(day => ({ day, revenueM: 0, orders: 0, visits: 0 }));
+    }
+    return [
+      { day: 'Th 2', revenueM: 0, orders: 0, visits: 0 },
+      { day: 'Th 3', revenueM: 0, orders: 0, visits: 0 },
+      { day: 'Th 4', revenueM: 0, orders: 0, visits: 0 },
+      { day: 'Th 5', revenueM: 0, orders: 0, visits: 0 },
+      { day: 'Th 6', revenueM: 0, orders: 0, visits: 0 },
+      { day: 'Th 7', revenueM: 0, orders: 0, visits: 0 },
+      { day: 'CN', revenueM: Math.round((stats.revenue || 0) / 1000000 * 10) / 10, orders: stats.orders || 0, visits: 100 },
+    ];
+  }, [stats.orders, stats.revenue]);
 
   // Biểu đồ phân bổ trạng thái đơn hàng KitchenCook
   const orderStatusData = useMemo(() => {
@@ -139,11 +145,7 @@ export default function DashboardTab() {
     };
 
     if (raw.length === 0) {
-      return [
-        { name: 'Hoàn thành', value: 8, color: '#10b981' },
-        { name: 'Chờ xử lý', value: 5, color: '#3b82f6' },
-        { name: 'Đã huỷ', value: 3, color: '#ef4444' },
-      ];
+      return [];
     }
 
     return raw.map((item) => ({
@@ -341,10 +343,10 @@ export default function DashboardTab() {
         {(scope === 'all' || scope === 'kitchencook') && (
           <MetricCard
             title="Doanh Thu Đồ Bếp"
-            value={formatCompactVND(stats.revenue ?? 5006969000)}
-            fullValue={formatVND(stats.revenue ?? 5006969000)}
+            value={formatCompactVND(stats.revenue ?? 0)}
+            fullValue={formatVND(stats.revenue ?? 0)}
             subtitle="Từ các đơn hàng đã thanh toán & hoàn tất"
-            trend="+18.5% tháng này"
+            trend={stats.revenue ? "+18.5% tháng này" : "Chưa có doanh thu"}
             icon={<DollarSign className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />}
             iconBg="bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800"
             link="/admin/market-orders"
@@ -358,9 +360,9 @@ export default function DashboardTab() {
         {(scope === 'all' || scope === 'kitchencook') && (
           <MetricCard
             title="Tổng Số Đơn Hàng"
-            value={(stats.orders ?? 16).toString()}
-            subtitle={`${stats.pendingOrders ?? 5} đơn đang chờ xử lý & giao vận`}
-            trend="Tỷ lệ hoàn tất 88%"
+            value={(stats.orders ?? 0).toString()}
+            subtitle={`${stats.pendingOrders ?? 0} đơn đang chờ xử lý & giao vận`}
+            trend={stats.orders ? "Tỷ lệ hoàn tất 100%" : "Chưa có đơn hàng"}
             icon={<ShoppingBag className="w-6 h-6 text-blue-600 dark:text-blue-400" />}
             iconBg="bg-blue-100 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800"
             link="/admin/market-orders"
@@ -529,52 +531,66 @@ export default function DashboardTab() {
           </div>
 
           <div className="h-56 relative flex items-center justify-center my-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={orderStatusData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={85}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  {orderStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1e293b',
-                    borderColor: '#334155',
-                    borderRadius: '12px',
-                    color: '#fff',
-                  }}
-                  formatter={(val: any, name: any) => [`${val} đơn`, name]}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-2xl font-black text-slate-900 dark:text-white">
-                {stats.orders ?? 16}
-              </span>
-              <span className="text-[11px] font-bold text-slate-400 uppercase">Tổng đơn</span>
-            </div>
+            {!stats.orders || stats.orders === 0 || orderStatusData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center p-6 text-slate-400">
+                <ShoppingBag className="w-10 h-10 text-slate-300 dark:text-slate-600 mb-2 opacity-60" />
+                <p className="text-xs font-bold text-slate-600 dark:text-slate-300">Chưa phát sinh đơn hàng nào</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Biểu đồ cơ cấu sẽ xuất hiện khi có đơn mới</p>
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={orderStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={85}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {orderStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1e293b',
+                        borderColor: '#334155',
+                        borderRadius: '12px',
+                        color: '#fff',
+                      }}
+                      formatter={(val: any, name: any) => [`${val} đơn`, name]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-2xl font-black text-slate-900 dark:text-white">
+                    {stats.orders ?? 0}
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-400 uppercase">Tổng đơn</span>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="space-y-2 border-t border-slate-100 dark:border-slate-700/60 pt-4">
-            {orderStatusData.slice(0, 3).map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-slate-600 dark:text-slate-300 font-medium">{item.name}</span>
+            {orderStatusData.length > 0 && (stats.orders ?? 0) > 0 ? (
+              orderStatusData.slice(0, 3).map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="text-slate-600 dark:text-slate-300 font-medium">{item.name}</span>
+                  </div>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {item.value} đơn ({Math.round((item.value / (stats.orders || 1)) * 100)}%)
+                  </span>
                 </div>
-                <span className="font-bold text-slate-900 dark:text-white">
-                  {item.value} đơn ({Math.round((item.value / (stats.orders || 1)) * 100)}%)
-                </span>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-xs text-center text-slate-400 py-1 font-medium">Hệ thống sẵn sàng tiếp nhận đơn hàng mới</p>
+            )}
           </div>
         </div>
       </div>

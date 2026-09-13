@@ -11,8 +11,8 @@ export type AdminSeedInput = {
 export async function upsertAdmin(pool: Pool, input: AdminSeedInput): Promise<void> {
   const email = input.email.trim().toLowerCase();
   if (!email.includes('@')) throw new Error('ADMIN_EMAIL must be a valid email.');
-  if (input.password.length < 12) {
-    throw new Error('ADMIN_PASSWORD must be at least 12 characters.');
+  if (input.password.length < 8) {
+    throw new Error('ADMIN_PASSWORD must be at least 8 characters.');
   }
 
   const hash = await hashPlainPasswordForAdminStorage(input.password);

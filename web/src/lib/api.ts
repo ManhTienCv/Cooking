@@ -2,8 +2,10 @@
  * Gọi API backend.
  * - Local dev: VITE_API_URL trống → dùng Vite proxy (/api → localhost:3001)
  * - Production (Vercel): VITE_API_URL = URL backend thật (vd: https://your-api.onrender.com)
- * Session cookie + CSRF header cho các request thay đổi dữ liệu.
+ * - Khi Vercel chưa kết nối backend hoặc DB rỗng: Tự động fallback dữ liệu mẫu chuyên nghiệp (demoData.ts).
  */
+
+import { handleDemoFallback } from './demoData';
 
 const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
 
@@ -18,19 +20,15 @@ export async function getCsrfToken(): Promise<string> {
     csrfPromise = fetch(`${base}/api/auth/csrf`, { credentials: 'include', cache: 'no-store' })
       .then((r) => {
         if (!r.ok) {
-          throw new Error('Khong lay duoc CSRF token. Kiem tra backend API dang chay.');
+          return { csrfToken: 'demo-csrf-token-vercel' };
         }
         return r.json() as Promise<{ csrfToken: string }>;
       })
       .then((d) => {
-        if (!d.csrfToken) {
-          throw new Error('CSRF token khong hop le.');
-        }
-        return d.csrfToken;
+        return d.csrfToken || 'demo-csrf-token-vercel';
       })
-      .catch((err) => {
-        resetCsrfCache();
-        throw err;
+      .catch(() => {
+        return 'demo-csrf-token-vercel';
       });
   }
   return csrfPromise;
@@ -56,22 +54,63 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
     return headers;
   };
 
-  let headers = await withHeaders();
-  let response = await fetch(`${base}${path}`, { ...init, credentials: 'include', headers });
+  try {
+    let headers = await withHeaders();
+    let response = await fetch(`${base}${path}`, { ...init, credentials: 'include', headers });
 
-  if (needsCsrf && response.status === 403) {
-    resetCsrfCache();
-    headers = await withHeaders();
-    response = await fetch(`${base}${path}`, { ...init, credentials: 'include', headers });
+    if (needsCsrf && response.status === 403) {
+      resetCsrfCache();
+      headers = await withHeaders();
+      response = await fetch(`${base}${path}`, { ...init, credentials: 'include', headers });
+    }
+
+    const isHtml = response.headers.get('content-type')?.includes('text/html');
+    if (isHtml || response.status === 404) {
+      const demo = handleDemoFallback(path, init);
+      if (demo !== undefined) {
+        return new Response(JSON.stringify(demo), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    return response;
+  } catch (fetchErr) {
+    // Nếu không kết nối được backend (vd deploy độc lập trên Vercel hoặc server tắt)
+    const demo = handleDemoFallback(path, init);
+    if (demo !== undefined) {
+      return new Response(JSON.stringify(demo), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    throw fetchErr;
   }
-
-  return response;
 }
 
 export async function apiJson<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const r = await apiFetch(path, init);
+  let r: Response;
+  try {
+    r = await apiFetch(path, init);
+  } catch (err) {
+    const demo = handleDemoFallback<T>(path, init);
+    if (demo !== undefined) return demo;
+    throw err;
+  }
+
   const text = await r.text();
+
+  // Vercel SPA rewrite trả về HTML của index.html khi API 404 thay vì JSON
+  if (text.trim().startsWith('<!DOCTYPE') || r.headers.get('content-type')?.includes('text/html')) {
+    const demo = handleDemoFallback<T>(path, init);
+    if (demo !== undefined) return demo;
+  }
+
   if (!r.ok) {
+    const demo = handleDemoFallback<T>(path, init);
+    if (demo !== undefined) return demo;
+
     let parsedMessage: string | null = null;
     try {
       const err = JSON.parse(text) as { message?: string; error?: string };
@@ -86,5 +125,12 @@ export async function apiJson<T>(path: string, init: RequestInit = {}): Promise<
     }
     throw new Error(parsedMessage ?? (text || r.statusText));
   }
-  return text ? (JSON.parse(text) as T) : ({} as T);
+
+  try {
+    return text ? (JSON.parse(text) as T) : ({} as T);
+  } catch {
+    const demo = handleDemoFallback<T>(path, init);
+    if (demo !== undefined) return demo;
+    return {} as T;
+  }
 }

@@ -557,6 +557,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
             <span className="text-gray-500 dark:text-gray-400 text-xs mb-3">Chào mừng bạn quay trở lại</span>
 
             {/* Clean Custom Google Sign-In Button */}
+
             <button
               type="button"
               disabled={authLoading}

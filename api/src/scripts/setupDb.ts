@@ -136,7 +136,7 @@ async function main(): Promise<void> {
 
         await seedDevData(
           pool,
-          { adminEmail, adminPassword: adminPassword || 'Admin@Cook123456', adminName },
+          { adminEmail, adminPassword: adminPassword || '123456678', adminName },
           { force },
         );
       }

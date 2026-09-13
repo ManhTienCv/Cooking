@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Phone, User, CreditCard, Package, CheckCircle, Star, MessageCircle, Truck, Calendar, AlertTriangle, Clock, Camera, X, Video } from 'lucide-react';
+import { MapPin, Phone, User, CreditCard, Package, CheckCircle, Star, MessageCircle, Truck, Calendar, AlertTriangle, Clock, Camera, X, Video, Building2, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
@@ -216,6 +216,14 @@ export default function OrderDetail() {
     }
   };
 
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success(`Đã sao chép ${label}!`);
+    }).catch(() => {
+      toast.error('Không thể sao chép');
+    });
+  };
+
   useEffect(() => {
     if (!order || !canReview) return;
     let active = true;
@@ -373,6 +381,38 @@ export default function OrderDetail() {
                     Đơn hàng được ưu tiên đóng gói và bàn giao ngay cho shipper công nghệ. Thời gian giao hàng dự kiến trong <strong>60 - 90 phút</strong>.
                   </p>
                 </div>
+              </div>
+            </div>
+          </Reveal>
+        )}
+
+        {/* Banner thông báo chờ thanh toán VietQR nếu chưa thanh toán */}
+        {!isPaid && !isCancelled && order.payment_method === 'bank_transfer' && (
+          <Reveal y={12}>
+            <div className="rounded-2xl border border-blue-200 bg-blue-50/80 dark:border-blue-900/40 dark:bg-blue-950/30 p-4 md:p-5 shadow-sm">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-md shrink-0">
+                    🏦
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm md:text-base text-blue-950 dark:text-blue-100">
+                      Đơn hàng đã tạo thành công — Vui lòng quét mã VietQR để thanh toán
+                    </h3>
+                    <p className="text-xs text-blue-800/80 dark:text-blue-300 mt-0.5">
+                      Vui lòng mở ứng dụng ngân hàng và chuyển khoản theo mã VietQR để đơn hàng được chuẩn bị và giao sớm nhất.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    document.getElementById('vietqr-payment-box')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="shrink-0 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-sm"
+                >
+                  Xem mã QR ngay ↓
+                </button>
               </div>
             </div>
           </Reveal>
@@ -677,12 +717,12 @@ export default function OrderDetail() {
                     <span>Hình thức thanh toán</span>
                     <span>
                       {order.payment_method === 'cod'
-                        ? 'Thanh toán khi nhận hàng'
+                        ? 'Thanh toán khi nhận hàng (COD)'
                         : order.payment_method === 'momo'
                         ? 'Ví điện tử MoMo'
                         : order.payment_method === 'cookpay'
                         ? 'Ví Cook'
-                        : 'Chuyển khoản ngân hàng'}
+                        : 'Chuyển khoản ngân hàng (VietQR)'}
                     </span>
                   </div>
                   <div className="flex justify-between items-center border-t border-gray-50 dark:border-slate-800/50 pt-2">
@@ -700,6 +740,109 @@ export default function OrderDetail() {
                       >
                         {momoLoading ? 'Đang kết nối MoMo...' : '💳 Thanh toán ngay bằng Ví MoMo'}
                       </button>
+                    </div>
+                  )}
+
+                  {!isPaid && !isCancelled && order.payment_method === 'bank_transfer' && (
+                    <div id="vietqr-payment-box" className="mt-5 pt-5 border-t border-blue-100 dark:border-blue-900/40 scroll-mt-24">
+                      <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-5 dark:border-blue-900/40 dark:bg-blue-950/20 space-y-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                              <Building2 className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-sm text-blue-950 dark:text-blue-200">
+                                Chuyển khoản VietQR 24/7 (Miễn phí)
+                              </h4>
+                              <p className="text-xs text-blue-800/80 dark:text-blue-300">
+                                Mở app ngân hàng bất kỳ để quét mã QR thanh toán tức thì
+                              </p>
+                            </div>
+                          </div>
+                          <span className="shrink-0 px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 text-xs font-bold uppercase">
+                            Napas 247
+                          </span>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-4 items-center bg-white dark:bg-slate-800/90 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                          {/* QR Code */}
+                          <div className="flex flex-col items-center justify-center text-center p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
+                            <img
+                              src={`https://img.vietqr.io/image/MB-888868689999-compact2.png?amount=${Math.round(Number(order.total_amount) || 0)}&addInfo=${encodeURIComponent(`KC${order.order_code || order.id}`)}&accountName=KITCHENCOOK%20STORE`}
+                              alt="VietQR Chuyển khoản"
+                              className="w-52 max-w-full h-auto object-contain rounded-lg"
+                              loading="lazy"
+                            />
+                            <p className="text-[11px] font-semibold text-gray-500 mt-2">
+                              Quét bằng App Ngân hàng bất kỳ hoặc MoMo, ZaloPay
+                            </p>
+                          </div>
+
+                          {/* Bank details with copy */}
+                          <div className="space-y-2.5 text-xs">
+                            <div>
+                              <span className="text-gray-500 dark:text-slate-400 block mb-0.5">Ngân hàng thụ hưởng:</span>
+                              <span className="font-bold text-blue-900 dark:text-blue-200 text-sm">
+                                MB Bank (Ngân hàng TMCP Quân Đội)
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="text-gray-500 dark:text-slate-400 block mb-0.5">Số tài khoản:</span>
+                              <div className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 px-3 py-2 rounded-lg font-mono font-bold text-gray-900 dark:text-white">
+                                <span>8888 6868 9999</span>
+                                <button
+                                  type="button"
+                                  onClick={() => copyToClipboard('888868689999', 'Số tài khoản')}
+                                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-sans font-medium flex items-center gap-1 text-[11px]"
+                                >
+                                  <Copy className="w-3.5 h-3.5" /> Sao chép
+                                </button>
+                              </div>
+                            </div>
+
+                            <div>
+                              <span className="text-gray-500 dark:text-slate-400 block mb-0.5">Tên chủ tài khoản:</span>
+                              <span className="font-bold text-gray-900 dark:text-white uppercase">
+                                KITCHENCOOK STORE
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="text-gray-500 dark:text-slate-400 block mb-0.5">Số tiền chuyển khoản:</span>
+                              <div className="flex items-center justify-between gap-2 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 rounded-lg font-bold text-amber-600 dark:text-amber-400">
+                                <span>{formatPrice(order.total_amount)}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => copyToClipboard(String(Math.round(Number(order.total_amount) || 0)), 'Số tiền')}
+                                  className="text-amber-700 hover:text-amber-800 dark:text-amber-300 font-sans font-medium flex items-center gap-1 text-[11px]"
+                                >
+                                  <Copy className="w-3.5 h-3.5" /> Sao chép
+                                </button>
+                              </div>
+                            </div>
+
+                            <div>
+                              <span className="text-gray-500 dark:text-slate-400 block mb-0.5">Nội dung chuyển khoản (bắt buộc):</span>
+                              <div className="flex items-center justify-between gap-2 bg-blue-50/80 dark:bg-blue-900/30 px-3 py-2 rounded-lg font-mono font-bold text-blue-700 dark:text-blue-300">
+                                <span>KC{order.order_code || order.id}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => copyToClipboard(`KC${order.order_code || order.id}`, 'Nội dung chuyển khoản')}
+                                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-sans font-medium flex items-center gap-1 text-[11px]"
+                                >
+                                  <Copy className="w-3.5 h-3.5" /> Sao chép
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] text-gray-500 dark:text-slate-400 italic text-center sm:text-left">
+                          💡 Hệ thống sẽ tự động xác nhận đơn hàng sau khi nhận được chuyển khoản (thường trong 1-3 phút).
+                        </p>
+                      </div>
                     </div>
                   )}
                 </>

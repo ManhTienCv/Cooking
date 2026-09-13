@@ -55,7 +55,12 @@ export default function AdminSidebar({
 
   const handleLogout = async () => {
     if (window.confirm('Bạn có chắc chắn muốn đăng xuất không?')) {
-      await apiJson('/api/admin/logout', { method: 'POST' });
+      localStorage.removeItem('demo_admin_logged_in');
+      try {
+        await apiJson('/api/admin/logout', { method: 'POST' });
+      } catch {
+        // ignore if offline
+      }
       window.location.replace('/admin/login');
     }
   };

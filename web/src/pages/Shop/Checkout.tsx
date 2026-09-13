@@ -1,14 +1,14 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Building2, CreditCard, MapPin, Phone, User, FileText, ArrowLeft, CheckCircle, Clock, Truck } from 'lucide-react';
+import { CreditCard, MapPin, Phone, User, FileText, ArrowLeft, CheckCircle, Clock, Truck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useCart } from '../../contexts/CartContext';
 import { apiJson } from '../../lib/api';
 import { Reveal } from '../../components/motion/ScrollReveal';
 import { scrollWindowToTop } from '../../lib/scroll';
-import { loadProfilePreferences, type LinkedBankAccount, type SavedAddress } from '../../lib/profilePreferences';
+import { loadProfilePreferences, type SavedAddress } from '../../lib/profilePreferences';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../../lib/authEvents';
 import { useCheckoutTimer } from '../../hooks/useCheckoutTimer';
 import { MapAddressModal, type SelectedMapAddress } from '../../components/common/MapAddressModal';
@@ -54,9 +54,7 @@ export default function Checkout() {
 
   const [submitting, setSubmitting] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
-  const [linkedBanks, setLinkedBanks] = useState<LinkedBankAccount[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState('');
-  const [selectedBankId, setSelectedBankId] = useState('');
 
   // GHN & Map states
   const [shippingFee, setShippingFee] = useState(0);
@@ -84,7 +82,6 @@ export default function Checkout() {
       const prefs = loadProfilePreferences(me.user?.email);
 
       setSavedAddresses(prefs.addresses);
-      setLinkedBanks(prefs.banks);
 
       const defaultAddress = prefs.addresses.find((item) => item.isDefault) ?? prefs.addresses[0];
       if (defaultAddress) {
@@ -98,9 +95,6 @@ export default function Checkout() {
       } else if (me.user?.full_name) {
         setForm((f) => ({ ...f, shipping_name: f.shipping_name || me.user?.full_name || '' }));
       }
-
-      const defaultBank = prefs.banks.find((item) => item.isDefault) ?? prefs.banks[0];
-      if (defaultBank) setSelectedBankId(defaultBank.id);
     } catch {
       // ignore
     }
@@ -108,14 +102,12 @@ export default function Checkout() {
 
   useEffect(() => {
     void loadMe();
-    
+
     const onAuthChange = (event: Event) => {
       const detail = getAuthChangeDetail(event);
       if (detail.authenticated === false) {
         setSavedAddresses([]);
-        setLinkedBanks([]);
         setSelectedAddressId('');
-        setSelectedBankId('');
         return;
       }
       void loadMe();
@@ -183,10 +175,6 @@ export default function Checkout() {
     const phoneVal = form.shipping_phone.trim();
     if (!/^[0-9]{10}$/.test(phoneVal)) {
       toast.error('Số điện thoại phải bao gồm đúng 10 chữ số và không chứa ký tự khác.');
-      return;
-    }
-    if (form.payment_method === 'bank_transfer' && linkedBanks.length > 0 && !selectedBankId) {
-      toast.error('Vui lòng chọn tài khoản ngân hàng liên kết');
       return;
     }
 
@@ -273,19 +261,17 @@ export default function Checkout() {
         {/* 20-Minute Order Holding Countdown */}
         <Reveal y={12}>
           <div
-            className={`mb-8 rounded-2xl border p-4 sm:p-5 transition-all flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm ${
-              timerIsUrgent
-                ? 'border-red-300 bg-red-50/90 dark:border-red-900/60 dark:bg-red-950/30 text-red-900 dark:text-red-200'
-                : 'border-amber-200/90 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/20 text-amber-950 dark:text-amber-200'
-            }`}
+            className={`mb-8 rounded-2xl border p-4 sm:p-5 transition-all flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm ${timerIsUrgent
+              ? 'border-red-300 bg-red-50/90 dark:border-red-900/60 dark:bg-red-950/30 text-red-900 dark:text-red-200'
+              : 'border-amber-200/90 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/20 text-amber-950 dark:text-amber-200'
+              }`}
           >
             <div className="flex items-center gap-3.5 w-full sm:w-auto">
               <div
-                className={`p-2.5 rounded-xl shrink-0 ${
-                  timerIsUrgent
-                    ? 'bg-red-200 dark:bg-red-900/60 text-red-700 dark:text-red-300 animate-pulse'
-                    : 'bg-amber-200/80 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300'
-                }`}
+                className={`p-2.5 rounded-xl shrink-0 ${timerIsUrgent
+                  ? 'bg-red-200 dark:bg-red-900/60 text-red-700 dark:text-red-300 animate-pulse'
+                  : 'bg-amber-200/80 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300'
+                  }`}
               >
                 <Clock className="w-5 h-5" />
               </div>
@@ -304,9 +290,8 @@ export default function Checkout() {
             <div className="w-full sm:w-44 space-y-1">
               <div className="w-full h-2.5 bg-gray-200/80 dark:bg-slate-700 rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-1000 rounded-full ${
-                    timerIsUrgent ? 'bg-red-500' : 'bg-amber-500'
-                  }`}
+                  className={`h-full transition-all duration-1000 rounded-full ${timerIsUrgent ? 'bg-red-500' : 'bg-amber-500'
+                    }`}
                   style={{ width: `${timerPercentage}%` }}
                 />
               </div>
@@ -358,11 +343,10 @@ export default function Checkout() {
                           key={address.id}
                           type="button"
                           onClick={() => selectAddress(address)}
-                          className={`w-full rounded-xl border p-4 text-left transition-all ${
-                            selectedAddressId === address.id
-                              ? 'border-slate-900 bg-stone-50/80 dark:border-white dark:bg-slate-700/50 shadow-sm'
-                              : 'border-gray-200 hover:border-gray-300 dark:border-slate-700'
-                          }`}
+                          className={`w-full rounded-xl border p-4 text-left transition-all ${selectedAddressId === address.id
+                            ? 'border-slate-900 bg-stone-50/80 dark:border-white dark:bg-slate-700/50 shadow-sm'
+                            : 'border-gray-200 hover:border-gray-300 dark:border-slate-700'
+                            }`}
                         >
                           <span className="block text-sm font-bold text-gray-900 dark:text-white">
                             {address.name} <span className="font-normal text-gray-400">| {address.phone}</span>
@@ -400,11 +384,10 @@ export default function Checkout() {
                       value={form.shipping_phone}
                       onChange={(e) => setForm((f) => ({ ...f, shipping_phone: e.target.value }))}
                       placeholder="0912345678"
-                      className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all ${
-                        isCheckoutPhoneInvalid
-                          ? 'border-red-500 dark:border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 bg-white dark:bg-slate-800 text-black dark:text-white'
-                          : 'border-gray-200 dark:border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 bg-white dark:bg-slate-800 text-black dark:text-white'
-                      }`}
+                      className={`w-full px-4 py-3 border rounded-xl focus:outline-none transition-all ${isCheckoutPhoneInvalid
+                        ? 'border-red-500 dark:border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 bg-white dark:bg-slate-800 text-black dark:text-white'
+                        : 'border-gray-200 dark:border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 bg-white dark:bg-slate-800 text-black dark:text-white'
+                        }`}
                     />
                     {isCheckoutPhoneInvalid && (
                       <p className="mt-1 text-xs text-red-500 font-semibold">
@@ -483,104 +466,58 @@ export default function Checkout() {
                 </h3>
                 <div className="space-y-3">
                   {[
-                    { value: 'momo', label: 'Ví MoMo (Cổng MoMo Sandbox)', emoji: '👛', badge: 'Khuyên dùng' },
-                    { value: 'cod', label: 'Thanh toán khi nhận hàng (COD)', emoji: '💰' },
-                    { value: 'bank_transfer', label: 'Chuyển khoản ngân hàng', emoji: '🏦' },
+                    {
+                      value: 'momo',
+                      label: 'Ví MoMo / ATM / Thẻ quốc tế',
+                      desc: 'Chuyển tiếp đến cổng thanh toán MoMo an toàn sau khi xác nhận đặt hàng',
+                      emoji: '📱',
+                      badge: 'MoMo Gateway',
+                    },
+                    {
+                      value: 'bank_transfer',
+                      label: 'Chuyển khoản ngân hàng (VietQR 24/7)',
+                      desc: 'Chuyển tiếp đến trang nhận mã QR và cú pháp thanh toán tức thì sau khi tạo đơn',
+                      emoji: '🏦',
+                      badge: 'VietQR 24/7',
+                    },
+                    {
+                      value: 'cod',
+                      label: 'Thanh toán khi nhận hàng (COD)',
+                      desc: 'Thanh toán bằng tiền mặt trực tiếp cho nhân viên giao hàng khi nhận kiện hàng',
+                      emoji: '💵',
+                      badge: 'Tiền mặt',
+                    },
                   ].map((pm) => (
                     <label
                       key={pm.value}
-                      className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
+                      className={`flex items-start justify-between p-4 rounded-xl border cursor-pointer transition-all ${
                         form.payment_method === pm.value
-                          ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-500'
-                          : 'border-gray-200 dark:border-slate-700 hover:border-gray-300'
+                          ? 'border-amber-400 bg-amber-50/70 dark:bg-amber-900/10 dark:border-amber-500 shadow-sm ring-1 ring-amber-400/30'
+                          : 'border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-start gap-3.5">
                         <input
                           type="radio"
                           name="payment"
                           value={pm.value}
                           checked={form.payment_method === pm.value}
                           onChange={set('payment_method')}
-                          className="accent-amber-500"
+                          className="accent-amber-500 mt-1"
                         />
-                        <span className="text-xl">{pm.emoji}</span>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">{pm.label}</span>
+                        <span className="text-2xl shrink-0 select-none">{pm.emoji}</span>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 dark:text-white">{pm.label}</p>
+                          <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 leading-relaxed">{pm.desc}</p>
+                        </div>
                       </div>
                       {pm.badge && (
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300">
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 dark:bg-slate-700 dark:text-slate-300 shrink-0 ml-2">
                           {pm.badge}
                         </span>
                       )}
                     </label>
                   ))}
-
-                  {form.payment_method === 'momo' && (
-                    <div className="rounded-xl border border-pink-200 bg-pink-50/70 p-4 dark:border-pink-900/40 dark:bg-pink-900/10 space-y-2.5">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-pink-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-sm">
-                          MoMo
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-pink-900 dark:text-pink-200">Cổng thanh toán MoMo All-In-One (Sandbox)</p>
-                          <p className="text-xs text-pink-800 dark:text-pink-300 mt-1 leading-relaxed">
-                            Hỗ trợ thanh toán đa năng: <strong>Quét mã MoMo QR</strong>, <strong>Thẻ ATM nội địa (Napas)</strong> hoặc <strong>Thẻ Visa/Mastercard</strong>.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="bg-white/90 dark:bg-slate-800/80 rounded-lg p-2.5 border border-pink-100 dark:border-pink-900/30 text-[11px] text-gray-700 dark:text-gray-300">
-                        <p className="font-semibold text-pink-700 dark:text-pink-300 mb-1">💳 Thẻ ATM Test thử nghiệm (NCB):</p>
-                        <div className="grid grid-cols-2 gap-1 font-mono text-[11px]">
-                          <span>Số thẻ: <strong>9704198526191432198</strong></span>
-                          <span>Tên: <strong>NGUYEN VAN A</strong></span>
-                          <span>Ngày: <strong>07/15</strong></span>
-                          <span>OTP: <strong>000000</strong></span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {form.payment_method === 'bank_transfer' && (
-                    <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-900/10">
-                      <div className="mb-3 flex items-center gap-2 text-sm font-bold text-blue-700 dark:text-blue-300">
-                        <Building2 className="h-4 w-4" /> Ngân hàng liên kết
-                      </div>
-                      {linkedBanks.length === 0 ? (
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm text-gray-600 dark:text-slate-300">Bạn chưa liên kết tài khoản ngân hàng.</p>
-                          <Link to="/profile?tab=settings&settings=banks" className="shrink-0 text-sm font-semibold text-blue-600 hover:underline">
-                            Thêm trong hồ sơ
-                          </Link>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {linkedBanks.map((bank) => (
-                            <label
-                              key={bank.id}
-                              className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-all ${
-                                selectedBankId === bank.id
-                                    ? 'border-blue-400 bg-white dark:border-blue-500 dark:bg-slate-800'
-                                    : 'border-transparent bg-white/70 dark:bg-slate-800/60'
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name="linked_bank"
-                                checked={selectedBankId === bank.id}
-                                onChange={() => setSelectedBankId(bank.id)}
-                                className="accent-blue-500"
-                              />
-                              <div className="min-w-0">
-                                <p className="text-sm font-bold text-gray-900 dark:text-white">{bank.bankName}</p>
-                                <p className="text-xs text-gray-500 dark:text-slate-400">
-                                  {bank.accountName} · **** {bank.accountNumber.replace(/\s+/g, '').slice(-4)}
-                                </p>
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
             </Reveal>
@@ -644,7 +581,13 @@ export default function Checkout() {
                 className="mt-5 w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold text-base hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 transition-all shadow-lg"
               >
                 <CheckCircle className="w-5 h-5" />
-                {submitting ? 'Đang đặt hàng...' : 'Xác nhận đặt hàng'}
+                {submitting
+                  ? 'Đang xử lý đơn hàng...'
+                  : form.payment_method === 'momo'
+                  ? 'Tiếp tục thanh toán MoMo'
+                  : form.payment_method === 'bank_transfer'
+                  ? 'Đặt hàng & Nhận mã VietQR'
+                  : 'Xác nhận đặt hàng (COD)'}
               </button>
 
               <Link to="/cart" onClick={scrollWindowToTop} className="block text-center mt-3 text-sm text-gray-500 hover:text-amber-600 transition-colors">

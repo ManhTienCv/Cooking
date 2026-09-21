@@ -45,6 +45,17 @@ export default function AdminLayout() {
     void checkAuth();
   }, [navigate]);
 
+  useEffect(() => {
+    const handleCountSet = (e: Event) => {
+      const ce = e as CustomEvent<{ count: number }>;
+      if (typeof ce.detail?.count === 'number') {
+        setStats((prev) => ({ ...prev, pending: Math.max(0, ce.detail.count) }));
+      }
+    };
+    window.addEventListener('admin_pending_count_set', handleCountSet);
+    return () => window.removeEventListener('admin_pending_count_set', handleCountSet);
+  }, []);
+
   if (loading) {
     return (
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white dark:bg-slate-900 transition-colors duration-300">

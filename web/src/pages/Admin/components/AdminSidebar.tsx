@@ -45,7 +45,7 @@ export default function AdminSidebar({
   // Hỗ trợ phím tắt Ctrl + B hoặc Cmd + B để đóng mở nhanh
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+      if ((e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === 'b') {
         e.preventDefault();
         setIsCollapsed((prev) => !prev);
       }

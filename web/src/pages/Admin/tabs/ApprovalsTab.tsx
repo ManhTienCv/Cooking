@@ -41,6 +41,13 @@ export default function ApprovalsTab() {
       if (bRes.status === 'fulfilled') {
         setBlogs(bRes.value.blogs ?? []);
       }
+      const recipeCount = rRes.status === 'fulfilled' ? (rRes.value.recipes?.length ?? 0) : 0;
+      const blogCount = bRes.status === 'fulfilled' ? (bRes.value.blogs?.length ?? 0) : 0;
+      window.dispatchEvent(
+        new CustomEvent('admin_pending_count_set', {
+          detail: { count: recipeCount + blogCount },
+        })
+      );
     } catch (err) {
       console.error('Error loading approvals:', err);
     } finally {
@@ -67,21 +74,49 @@ export default function ApprovalsTab() {
         </span>
       ),
       onConfirm: async () => {
+        let removedItem: Record<string, unknown> | undefined;
+
+        // Cập nhật Optimistic tức thì (0ms) giúp số trên đỉnh và huy hiệu sidebar tắt ngay lập tức
+        if (type === 'recipes') {
+          setRecipes((prev) => {
+            removedItem = prev.find((r) => String(r.id) === id);
+            const next = prev.filter((r) => String(r.id) !== id);
+            window.dispatchEvent(
+              new CustomEvent('admin_pending_count_set', {
+                detail: { count: next.length + blogs.length },
+              })
+            );
+            return next;
+          });
+        } else {
+          setBlogs((prev) => {
+            removedItem = prev.find((b) => String(b.id) === id);
+            const next = prev.filter((b) => String(b.id) !== id);
+            window.dispatchEvent(
+              new CustomEvent('admin_pending_count_set', {
+                detail: { count: recipes.length + next.length },
+              })
+            );
+            return next;
+          });
+        }
+
         try {
           await apiJson(`/api/admin/${type}/${id}/${action}`, { method: 'POST' });
           toast.success(`Đã ${isApprove ? 'duyệt' : 'từ chối'} thành công!`);
-          if (type === 'recipes') {
-            setRecipes((prev) => prev.filter((r) => String(r.id) !== id));
-          } else {
-            setBlogs((prev) => prev.filter((b) => String(b.id) !== id));
-          }
           void loadApprovals(true);
         } catch {
           toast.error('Có lỗi xảy ra, vui lòng thử lại.');
+          if (type === 'recipes' && removedItem) {
+            setRecipes((prev) => [removedItem!, ...prev]);
+          } else if (type === 'blogs' && removedItem) {
+            setBlogs((prev) => [removedItem!, ...prev]);
+          }
+          void loadApprovals(true);
         }
       }
     });
-  }, [loadApprovals]);
+  }, [blogs.length, loadApprovals, recipes.length]);
 
   useEffect(() => {
     if (recipePage > 1 && (recipePage - 1) * PAGE_SIZE >= recipes.length) {

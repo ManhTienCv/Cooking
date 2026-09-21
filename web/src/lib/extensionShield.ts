@@ -27,7 +27,9 @@ function isExtensionSource(source: string): boolean {
     s.includes('1password') ||
     s.includes('immersivetranslate') ||
     s.includes('saladict') ||
-    s.includes('istriggerkey')
+    s.includes('istriggerkey') ||
+    s.includes('immersive translate') ||
+    s.includes('refreshactivecampaigntags')
   );
 }
 
@@ -115,6 +117,31 @@ export function initExtensionShield(): void {
       document.addEventListener('keydown', sanitizeKeyEvent, true);
       document.addEventListener('keyup', sanitizeKeyEvent, true);
       document.addEventListener('keypress', sanitizeKeyEvent, true);
+    }
+
+    if (typeof console !== 'undefined' && console.error) {
+      const origConsoleError = console.error;
+      console.error = function (...args: unknown[]) {
+        try {
+          const text = args
+            .map((a) =>
+              typeof a === 'string'
+                ? a
+                : a instanceof Error
+                ? `${a.message} ${a.stack}`
+                : typeof a === 'object' && a !== null
+                ? JSON.stringify(a)
+                : String(a ?? '')
+            )
+            .join(' ');
+          if (isExtensionSource(text)) {
+            return;
+          }
+        } catch {
+          /* ignore */
+        }
+        return origConsoleError.apply(console, args);
+      };
     }
   } catch {
     // Không làm ảnh hưởng môi trường nếu prototype bị freeze

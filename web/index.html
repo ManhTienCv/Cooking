@@ -1,10 +1,12 @@
 <!doctype html>
-<html lang="vi">
+<html lang="vi" translate="no" class="notranslate">
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="google" content="notranslate" />
+    <meta name="immersive-translate-opt-out" content="true" />
     <meta name="description" content="Khám phá Ẩm thực Việt Nam - Hướng dẫn nấu ăn chi tiết" />
     <title>CookingBoy - Trang chủ | Khám phá Ẩm thực Việt Nam</title>
     
@@ -98,6 +100,34 @@
           document.addEventListener('keyup', sanitizeEvent, true);
           document.addEventListener('keypress', sanitizeEvent, true);
 
+          if (typeof console !== 'undefined' && console.error) {
+            var origConsoleError = console.error;
+            console.error = function() {
+              try {
+                var argsStr = '';
+                for (var i = 0; i < arguments.length; i++) {
+                  var arg = arguments[i];
+                  if (typeof arg === 'string') {
+                    argsStr += ' ' + arg;
+                  } else if (arg && arg.message) {
+                    argsStr += ' ' + arg.message;
+                  } else if (arg && arg.stack) {
+                    argsStr += ' ' + arg.stack;
+                  }
+                }
+                var s = argsStr.toLowerCase();
+                if (s.indexOf('immersive translate') !== -1 ||
+                    s.indexOf('immersivetranslate') !== -1 ||
+                    s.indexOf('content_main.js') !== -1 ||
+                    s.indexOf('chrome-extension://') !== -1 ||
+                    s.indexOf('refreshactivecampaigntags') !== -1) {
+                  return;
+                }
+              } catch (_) {}
+              return origConsoleError.apply(console, arguments);
+            };
+          }
+
           window.addEventListener('error', function(e) {
             var src = (e.filename || '') + ' ' + (e.error && e.error.stack ? e.error.stack : '') + ' ' + (e.message || '');
             src = src.toLowerCase();
@@ -105,7 +135,10 @@
                 src.indexOf('moz-extension://') !== -1 || 
                 src.indexOf('content_main.js') !== -1 || 
                 src.indexOf('content-script') !== -1 ||
-                src.indexOf('istriggerkey') !== -1) {
+                src.indexOf('istriggerkey') !== -1 ||
+                src.indexOf('immersivetranslate') !== -1 ||
+                src.indexOf('immersive translate') !== -1 ||
+                src.indexOf('refreshactivecampaigntags') !== -1) {
               if (e.preventDefault) e.preventDefault();
               if (e.stopImmediatePropagation) e.stopImmediatePropagation();
               return true;

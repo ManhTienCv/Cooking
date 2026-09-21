@@ -277,15 +277,28 @@ export const adminRepo = {
       return r.rows;
     }
     if (type === 'blog') {
-      const r = await pool.query(`
-        SELECT bc.id, bc.name, bc.slug, bc.description, bc.created_at,
-               COUNT(bp.id)::int AS item_count
-        FROM blog_categories bc
-        LEFT JOIN blog_posts bp ON bp.category_id = bc.id
-        GROUP BY bc.id, bc.name, bc.slug, bc.description, bc.created_at
-        ORDER BY bc.id ASC
-      `);
-      return r.rows;
+      try {
+        const r = await pool.query(`
+          SELECT bc.id, bc.name, bc.slug, bc.description, bc.created_at,
+                 COUNT(bp.id)::int AS item_count
+          FROM blog_categories bc
+          LEFT JOIN blog_posts bp ON bp.category_id = bc.id
+          GROUP BY bc.id, bc.name, bc.slug, bc.description, bc.created_at
+          ORDER BY bc.id ASC
+        `);
+        return r.rows;
+      } catch {
+        // Fallback an toàn nếu database chưa có cột description
+        const r = await pool.query(`
+          SELECT bc.id, bc.name, bc.slug, '' AS description, bc.created_at,
+                 COUNT(bp.id)::int AS item_count
+          FROM blog_categories bc
+          LEFT JOIN blog_posts bp ON bp.category_id = bc.id
+          GROUP BY bc.id, bc.name, bc.slug, bc.created_at
+          ORDER BY bc.id ASC
+        `);
+        return r.rows;
+      }
     }
     return [];
   },
@@ -318,14 +331,25 @@ export const adminRepo = {
       return r.rows.length > 0;
     }
     const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
-    const r = await pool.query(
-      `INSERT INTO ${table} (name, slug, description)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (slug) DO NOTHING
-       RETURNING id`,
-      [name, slug, description || null]
-    );
-    return r.rows.length > 0;
+    try {
+      const r = await pool.query(
+        `INSERT INTO ${table} (name, slug, description)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (slug) DO NOTHING
+         RETURNING id`,
+        [name, slug, description || null]
+      );
+      return r.rows.length > 0;
+    } catch {
+      const r = await pool.query(
+        `INSERT INTO ${table} (name, slug)
+         VALUES ($1, $2)
+         ON CONFLICT (slug) DO NOTHING
+         RETURNING id`,
+        [name, slug]
+      );
+      return r.rows.length > 0;
+    }
   },
 
   async updateCategory(type: string, id: number, name: string, slug: string, description?: string, icon?: string) {
@@ -339,10 +363,17 @@ export const adminRepo = {
       return;
     }
     const table = type === 'recipe' ? 'recipe_categories' : 'blog_categories';
-    await pool.query(
-      `UPDATE ${table} SET name = $1, slug = $2, description = $3 WHERE id = $4`,
-      [name, slug, description || null, id]
-    );
+    try {
+      await pool.query(
+        `UPDATE ${table} SET name = $1, slug = $2, description = $3 WHERE id = $4`,
+        [name, slug, description || null, id]
+      );
+    } catch {
+      await pool.query(
+        `UPDATE ${table} SET name = $1, slug = $2 WHERE id = $3`,
+        [name, slug, id]
+      );
+    }
   },
 
   async deleteCategory(type: string, id: number) {

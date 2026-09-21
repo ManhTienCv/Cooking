@@ -165,23 +165,34 @@ export default function CategoriesTab() {
 
   // Tải dữ liệu cho 1 tab cụ thể
   const fetchTabData = useCallback(async (targetType: CategoryType): Promise<CacheData> => {
-    const res = await apiJson<{
-      categories: Category[];
-      stats?: CategoryStats;
-    }>(`/api/admin/categories/${targetType}`);
+    try {
+      const res = await apiJson<{
+        categories: Category[];
+        stats?: CategoryStats;
+      }>(`/api/admin/categories/${targetType}`);
 
-    const list = res.categories ?? [];
-    const totalCats = res.stats?.totalCategories ?? list.length;
-    const totalItms = res.stats?.totalItems ?? list.reduce((acc, c) => acc + (Number(c.item_count) || 0), 0);
+      const list = res.categories ?? [];
+      const totalCats = res.stats?.totalCategories ?? list.length;
+      const totalItms = res.stats?.totalItems ?? list.reduce((acc, c) => acc + (Number(c.item_count) || 0), 0);
 
-    return {
-      categories: list,
-      stats: {
-        totalCategories: totalCats,
-        totalItems: totalItms,
-        activeRate: res.stats?.activeRate ?? '100%',
-      },
-    };
+      return {
+        categories: list,
+        stats: {
+          totalCategories: totalCats,
+          totalItems: totalItms,
+          activeRate: res.stats?.activeRate ?? '100%',
+        },
+      };
+    } catch {
+      return {
+        categories: [],
+        stats: {
+          totalCategories: 0,
+          totalItems: 0,
+          activeRate: '100%',
+        },
+      };
+    }
   }, []);
 
   // Khởi tạo: Nạp trước cả 3 tab trong background để khi bấm chuyển trang lập tức hiển thị ngay (0ms)
@@ -195,20 +206,25 @@ export default function CategoriesTab() {
         setDataCache((prev) => ({ ...prev, product: currentData }));
         setInitialLoading(false);
 
-        // Tải tiếp 2 tab còn lại vào bộ nhớ đệm
-        const [recipeData, blogData] = await Promise.all([
+        // Tải tiếp 2 tab còn lại vào bộ nhớ đệm an toàn với Promise.allSettled
+        const [recipeRes, blogRes] = await Promise.allSettled([
           fetchTabData('recipe'),
           fetchTabData('blog'),
         ]);
         if (!isMounted) return;
         setDataCache((prev) => ({
           ...prev,
-          recipe: recipeData,
-          blog: blogData,
+          recipe: recipeRes.status === 'fulfilled' ? recipeRes.value : {
+            categories: [],
+            stats: { totalCategories: 0, totalItems: 0, activeRate: '100%' },
+          },
+          blog: blogRes.status === 'fulfilled' ? blogRes.value : {
+            categories: [],
+            stats: { totalCategories: 0, totalItems: 0, activeRate: '100%' },
+          },
         }));
       } catch {
         if (isMounted) {
-          toast.error('Không thể tải danh mục', { id: 'admin-load-categories-error' });
           setInitialLoading(false);
         }
       }

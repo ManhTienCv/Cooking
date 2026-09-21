@@ -900,6 +900,14 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
     } as unknown as T;
   }
 
+  if (path.startsWith('/api/admin/chat')) {
+    return {
+      success: true,
+      conversations: [],
+      messages: [],
+    } as unknown as T;
+  }
+
   // 8. Auth CSRF & Profile
   if (path === '/api/auth/csrf') {
     return { csrfToken: 'demo-csrf-token-vercel' } as unknown as T;

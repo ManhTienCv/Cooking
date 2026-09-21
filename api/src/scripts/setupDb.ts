@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 import { env } from '../env.js';
 import { applyPendingMigrations, ensureMigrationTable } from './db/migrations.js';
 import { seedDevData } from './db/seedDev.js';
+import { upsertAdmin } from './db/createAdmin.js';
 
 function parseArgs(argv: string[]): {
   force: boolean;
@@ -126,6 +127,18 @@ async function main(): Promise<void> {
 
       if (process.env.NODE_ENV === 'production') {
         console.log('[db:setup] Bỏ qua chèn dữ liệu mẫu (Seed) vì đang ở môi trường Production.');
+        const adminEmail = (process.env.ADMIN_EMAIL ?? 'admin@cook.local').trim().toLowerCase();
+        const adminPassword = process.env.ADMIN_PASSWORD;
+        if (!adminPassword) {
+           console.warn('[db:setup] CẢNH BÁO: ADMIN_PASSWORD không được cấu hình. Sử dụng mật khẩu mặc định.');
+        }
+        const adminName = process.env.ADMIN_NAME?.trim() || 'Super Admin';
+        await upsertAdmin(pool, {
+          email: adminEmail,
+          password: adminPassword || '123456678',
+          fullName: adminName,
+        });
+        console.log(`[db:setup] Đã đảm bảo tài khoản quản trị viên: ${adminEmail}`);
       } else {
         const adminEmail = (process.env.ADMIN_EMAIL ?? 'admin@cook.local').trim().toLowerCase();
         const adminPassword = process.env.ADMIN_PASSWORD;

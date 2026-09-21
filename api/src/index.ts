@@ -8,6 +8,8 @@ import helmet from 'helmet';
 import { env } from './env.js';
 import { pool } from './db/pool.js';
 
+import { hashPlainPasswordForAdminStorage } from './lib/adminPassword.js';
+
 // Ensure database enums and chat structure are fully updated
 void (async () => {
   try {
@@ -109,6 +111,47 @@ void (async () => {
   } catch (err) {
     console.error("[db] Chat migration failed:", err);
   }
+
+  try {
+    console.log("[db] Ensuring default admin account in quantrivien...");
+    const adminEmail = (process.env.ADMIN_EMAIL || 'admin@cook.local').toLowerCase().trim();
+    const adminPassword = process.env.ADMIN_PASSWORD || '123456678';
+    const adminName = process.env.ADMIN_NAME?.trim() || 'Quản trị viên Hệ thống';
+    const hash = await hashPlainPasswordForAdminStorage(adminPassword);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS quantrivien (
+        "MaAD" SERIAL PRIMARY KEY,
+        "HoTen" VARCHAR(100) NOT NULL,
+        "SDT" VARCHAR(20),
+        "Email" VARCHAR(150) NOT NULL,
+        "MatKhau" VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_quantrivien_email ON quantrivien(LOWER("Email"));
+    `);
+
+    const adminCheck = await pool.query(
+      'SELECT "MaAD" FROM quantrivien WHERE LOWER("Email") = LOWER($1)',
+      [adminEmail]
+    );
+
+    if ((adminCheck.rowCount ?? 0) === 0) {
+      await pool.query(
+        `INSERT INTO quantrivien ("HoTen", "Email", "MatKhau") VALUES ($1, $2, $3)`,
+        [adminName, adminEmail, hash]
+      );
+      console.log(`[db] Created default admin account: ${adminEmail}`);
+    } else {
+      await pool.query(
+        `UPDATE quantrivien SET "MatKhau" = $1 WHERE LOWER("Email") = LOWER($2)`,
+        [hash, adminEmail]
+      );
+      console.log(`[db] Verified and updated password for admin account: ${adminEmail}`);
+    }
+  } catch (err) {
+    console.error("[db] Failed to ensure default admin in quantrivien:", err);
+  }
 })();
 
 import { ensureCsrfToken } from './middleware/csrf.js';
@@ -174,10 +217,19 @@ app.use(
   })
 );
 
-
 app.use(
   cors({
-    origin: env.corsOrigins,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (env.corsOrigins.includes(origin)) return callback(null, true);
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+      if (/^https:\/\/([a-zA-Z0-9_-]+\.)*vercel\.app$/.test(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
   })
 );

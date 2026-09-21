@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChefHat, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -13,7 +13,11 @@ export default function AdminLogin() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-
+  useEffect(() => {
+    if (localStorage.getItem('demo_admin_logged_in') === 'true') {
+      navigate('/admin/dashboard', { replace: true });
+    }
+  }, [navigate]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -35,7 +39,7 @@ export default function AdminLogin() {
           resetCsrfCache();
           localStorage.setItem('demo_admin_logged_in', 'true');
           toast.success('Đăng nhập Quản trị viên thành công!');
-          navigate('/admin');
+          navigate('/admin/dashboard', { replace: true });
           return;
         }
 
@@ -52,13 +56,13 @@ export default function AdminLogin() {
       }
       resetCsrfCache();
       localStorage.setItem('demo_admin_logged_in', 'true');
-      navigate('/admin');
+      navigate('/admin/dashboard', { replace: true });
     } catch (err) {
       if (email.trim().toLowerCase() === 'admin@cook.local' && (password === '123456678' || password === '12345678')) {
         resetCsrfCache();
         localStorage.setItem('demo_admin_logged_in', 'true');
         toast.success('Đăng nhập Quản trị viên thành công!');
-        navigate('/admin');
+        navigate('/admin/dashboard', { replace: true });
         return;
       }
       setError(err instanceof Error ? err.message : 'Email hoặc mật khẩu không chính xác.');

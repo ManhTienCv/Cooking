@@ -1,4 +1,5 @@
-import React, { lazy, Suspense, useLayoutEffect } from 'react';
+import React, { Suspense, useLayoutEffect } from 'react';
+import { safeLazy as lazy } from './lib/safeLazy';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';

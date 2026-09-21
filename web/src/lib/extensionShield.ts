@@ -74,13 +74,43 @@ export function initExtensionShield(): void {
     // Không làm ảnh hưởng môi trường nếu prototype bị freeze
   }
 
-  // 2. Chặn lỗi unhandled từ browser extension
+  const reloadOnChunkError = () => {
+    try {
+      const lastReload = sessionStorage.getItem('app_chunk_reload');
+      const now = Date.now();
+      if (!lastReload || now - parseInt(lastReload, 10) > 15000) {
+        sessionStorage.setItem('app_chunk_reload', String(now));
+        window.location.reload();
+      }
+    } catch {
+      window.location.reload();
+    }
+  };
+
+  // 2. Tự động reload khi gặp sự cố preload chunk của Vite do vừa deploy bản mới
+  window.addEventListener('vite:preloadError', (event) => {
+    event.preventDefault?.();
+    reloadOnChunkError();
+  });
+
+  // 3. Chặn lỗi unhandled từ browser extension và tự động phục hồi chunk lỗi
   window.addEventListener(
     'error',
     (event: ErrorEvent) => {
       const filename = event.filename || '';
       const stack = event.error?.stack || '';
       const message = event.message || '';
+
+      if (
+        message.includes('Failed to fetch dynamically imported module') ||
+        message.includes('Importing a module script failed') ||
+        message.includes('error loading dynamically imported module') ||
+        message.includes('Strict MIME type checking is enforced')
+      ) {
+        event.preventDefault?.();
+        reloadOnChunkError();
+        return true;
+      }
 
       if (isExtensionSource(filename) || isExtensionSource(stack) || isExtensionSource(message)) {
         event.preventDefault?.();
@@ -99,13 +129,22 @@ export function initExtensionShield(): void {
     true
   );
 
-  // 3. Chặn unhandled promise rejection từ browser extension
+  // 4. Chặn unhandled promise rejection từ browser extension hoặc dynamic import
   window.addEventListener(
     'unhandledrejection',
     (event: PromiseRejectionEvent) => {
       const reason = event.reason;
       const stack = (reason && typeof reason === 'object' && 'stack' in reason ? String(reason.stack) : '') || String(reason || '');
       const message = (reason && typeof reason === 'object' && 'message' in reason ? String(reason.message) : '') || '';
+
+      if (
+        message.includes('Failed to fetch dynamically imported module') ||
+        stack.includes('Failed to fetch dynamically imported module')
+      ) {
+        event.preventDefault?.();
+        reloadOnChunkError();
+        return;
+      }
 
       if (isExtensionSource(stack) || isExtensionSource(message)) {
         event.preventDefault?.();

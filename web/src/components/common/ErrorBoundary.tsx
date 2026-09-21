@@ -10,6 +10,7 @@ interface State {
   hasError: boolean;
   error: Error | null;
   isExtensionError: boolean;
+  isChunkError: boolean;
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
@@ -17,11 +18,19 @@ export default class ErrorBoundary extends Component<Props, State> {
     hasError: false,
     error: null,
     isExtensionError: false,
+    isChunkError: false,
   };
 
   public static getDerivedStateFromError(error: Error): State {
     const msg = error?.message || '';
     const stack = error?.stack || '';
+
+    // Kiểm tra xem lỗi có phải do stale chunk sau khi deploy bản mới trên Vercel
+    const isChunkLoadFailed =
+      msg.includes('Failed to fetch dynamically imported module') ||
+      msg.includes('Importing a module script failed') ||
+      msg.includes('error loading dynamically imported module') ||
+      msg.includes('Strict MIME type checking is enforced');
 
     // Kiểm tra xem lỗi có phải do tiện ích dịch tự động (Google Translate) hoặc extension can thiệp DOM
     const isDOMNodeMismatch =
@@ -36,10 +45,26 @@ export default class ErrorBoundary extends Component<Props, State> {
       hasError: true,
       error,
       isExtensionError: isDOMNodeMismatch,
+      isChunkError: isChunkLoadFailed,
     };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    if (this.state.isChunkError) {
+      try {
+        const lastReload = sessionStorage.getItem('app_chunk_reload');
+        const now = Date.now();
+        if (!lastReload || now - parseInt(lastReload, 10) > 15000) {
+          sessionStorage.setItem('app_chunk_reload', String(now));
+          window.location.reload();
+          return;
+        }
+      } catch {
+        window.location.reload();
+        return;
+      }
+    }
+
     // Nếu là lỗi do extension làm xáo trộn DOM, bỏ qua log cảnh báo đỏ
     if (this.state.isExtensionError) {
       console.warn('[ExtensionShield] Bắt và cách ly lỗi can thiệp DOM từ tiện ích mở rộng:', error.message);
@@ -53,6 +78,7 @@ export default class ErrorBoundary extends Component<Props, State> {
       hasError: false,
       error: null,
       isExtensionError: false,
+      isChunkError: false,
     });
   };
 
@@ -64,6 +90,32 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;
+      }
+
+      if (this.state.isChunkError) {
+        return (
+          <div className="min-h-[350px] flex items-center justify-center p-6 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 m-4">
+            <div className="max-w-md text-center">
+              <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto mb-4 animate-pulse">
+                <RotateCcw className="w-6 h-6 animate-spin" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">
+                Hệ thống vừa có bản cập nhật mới
+              </h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+                Một bản nâng cấp vừa được phát hành trên máy chủ. Vui lòng bấm nút bên dưới để tải giao diện mới nhất.
+              </p>
+              <button
+                type="button"
+                onClick={this.handleReload}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors flex items-center gap-2 mx-auto shadow-sm"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Cập nhật và tải lại ngay
+              </button>
+            </div>
+          </div>
+        );
       }
 
       return (

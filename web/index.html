@@ -109,10 +109,9 @@
                   var arg = arguments[i];
                   if (typeof arg === 'string') {
                     argsStr += ' ' + arg;
-                  } else if (arg && arg.message) {
-                    argsStr += ' ' + arg.message;
-                  } else if (arg && arg.stack) {
-                    argsStr += ' ' + arg.stack;
+                  } else if (arg) {
+                    if (arg.message) argsStr += ' ' + arg.message;
+                    if (arg.stack) argsStr += ' ' + arg.stack;
                   }
                 }
                 var s = argsStr.toLowerCase();

@@ -35,33 +35,19 @@ export default function AdminLogin() {
         captchaRequired?: boolean;
       };
       if (!r.ok) {
-        if (email.trim().toLowerCase() === 'admin@cook.local' && (password === '123456678' || password === '12345678')) {
-          resetCsrfCache();
-          localStorage.setItem('demo_admin_logged_in', 'true');
-          toast.success('Đăng nhập Quản trị viên thành công!');
-          navigate('/admin/dashboard', { replace: true });
-          return;
-        }
-
-        if (data.captchaRequired) {
-          if (!hasRecaptchaSiteKey()) {
-            setError('Server requires reCAPTCHA. Add VITE_RECAPTCHA_SITE_KEY to web/.env and restart Vite.');
-          } else {
-            setError(data.message ?? 'Email hoặc mật khẩu không chính xác.');
-          }
-        } else {
-          setError(data.message ?? 'Email hoặc mật khẩu không chính xác.');
-        }
+        setError(data.message ?? 'Email hoặc mật khẩu không chính xác.');
         return;
       }
       resetCsrfCache();
       localStorage.setItem('demo_admin_logged_in', 'true');
+      toast.success('Đăng nhập Quản trị viên thành công!');
       navigate('/admin/dashboard', { replace: true });
     } catch (err) {
+      // Fallback cho chế độ offline không kết nối backend
       if (email.trim().toLowerCase() === 'admin@cook.local' && (password === '123456678' || password === '12345678')) {
         resetCsrfCache();
         localStorage.setItem('demo_admin_logged_in', 'true');
-        toast.success('Đăng nhập Quản trị viên thành công!');
+        toast.success('Đăng nhập Quản trị viên thành công (Chế độ xem trước)!');
         navigate('/admin/dashboard', { replace: true });
         return;
       }

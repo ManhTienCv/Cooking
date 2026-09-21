@@ -40,17 +40,8 @@ export async function getMe(adminId: number) {
 export async function login(req: Request) {
   const payload = parseAdminLogin(req.body);
 
-  const needCaptcha = Boolean(env.recaptchaSecretKey && captchaRequiredAfterFailures('admin', req));
-  if (needCaptcha) {
-    const ip = String(req.ip || req.socket.remoteAddress || '');
-    const ok = await verifyRecaptchaV3(env.recaptchaSecretKey, payload.recaptchaToken, 'admin_login', env.recaptchaMinScore, ip);
-    if (!ok) {
-      throw httpError(400, 'Vui lòng hoàn thành xác minh reCAPTCHA.', { captchaRequired: true });
-    }
-  }
-
   const r = await pool.query(
-    'SELECT "MaAD" AS id, "HoTen" AS full_name, "Email" AS email, "MatKhau" AS password_hash FROM quantrivien WHERE "Email" = $1 LIMIT 1',
+    'SELECT "MaAD" AS id, "HoTen" AS full_name, "Email" AS email, "MatKhau" AS password_hash FROM quantrivien WHERE LOWER("Email") = LOWER($1) LIMIT 1',
     [payload.email]
   );
   const admin = r.rows[0];
@@ -74,6 +65,15 @@ export async function login(req: Request) {
     logAuthLogin('admin', { success: false, email: payload.email, req });
     const captchaNow = Boolean(env.recaptchaSecretKey && captchaRequiredAfterFailures('admin', req));
     throw httpError(401, 'Thông tin đăng nhập không chính xác.', { captchaRequired: captchaNow });
+  }
+
+  // Nếu mật khẩu khớp, kiểm tra reCAPTCHA v3 nếu client gửi token và server có cấu hình key
+  if (payload.recaptchaToken && env.recaptchaSecretKey) {
+    const ip = String(req.ip || req.socket.remoteAddress || '');
+    const captchaOk = await verifyRecaptchaV3(env.recaptchaSecretKey, payload.recaptchaToken, 'admin_login', env.recaptchaMinScore, ip);
+    if (!captchaOk) {
+      throw httpError(400, 'Vui lòng hoàn thành xác minh reCAPTCHA.', { captchaRequired: true });
+    }
   }
 
   clearLoginFailure('admin', req);

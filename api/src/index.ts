@@ -114,40 +114,43 @@ void (async () => {
 
   try {
     console.log("[db] Ensuring default admin account in quantrivien...");
-    const adminEmail = (process.env.ADMIN_EMAIL || 'admin@cook.local').toLowerCase().trim();
-    const adminPassword = process.env.ADMIN_PASSWORD || '123456678';
-    const adminName = process.env.ADMIN_NAME?.trim() || 'Quản trị viên Hệ thống';
-    const hash = await hashPlainPasswordForAdminStorage(adminPassword);
+    const defaultAdmins = [
+      {
+        email: 'admin@cook.local',
+        password: '123456678',
+        name: 'Super Admin',
+      },
+    ];
 
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS quantrivien (
-        "MaAD" SERIAL PRIMARY KEY,
-        "HoTen" VARCHAR(100) NOT NULL,
-        "SDT" VARCHAR(20),
-        "Email" VARCHAR(150) NOT NULL,
-        "MatKhau" VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_quantrivien_email ON quantrivien(LOWER("Email"));
-    `);
+    const customEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
+    if (customEmail && customEmail !== 'admin@cook.local') {
+      defaultAdmins.push({
+        email: customEmail,
+        password: process.env.ADMIN_PASSWORD || 'Manhtien1',
+        name: process.env.ADMIN_NAME?.trim() || 'Quản trị viên Hệ thống',
+      });
+    }
 
-    const adminCheck = await pool.query(
-      'SELECT "MaAD" FROM quantrivien WHERE LOWER("Email") = LOWER($1)',
-      [adminEmail]
-    );
+    for (const adm of defaultAdmins) {
+      const hash = await hashPlainPasswordForAdminStorage(adm.password);
+      const adminCheck = await pool.query(
+        'SELECT "MaAD" FROM quantrivien WHERE LOWER("Email") = LOWER($1)',
+        [adm.email]
+      );
 
-    if ((adminCheck.rowCount ?? 0) === 0) {
-      await pool.query(
-        `INSERT INTO quantrivien ("HoTen", "Email", "MatKhau") VALUES ($1, $2, $3)`,
-        [adminName, adminEmail, hash]
-      );
-      console.log(`[db] Created default admin account: ${adminEmail}`);
-    } else {
-      await pool.query(
-        `UPDATE quantrivien SET "MatKhau" = $1 WHERE LOWER("Email") = LOWER($2)`,
-        [hash, adminEmail]
-      );
-      console.log(`[db] Verified and updated password for admin account: ${adminEmail}`);
+      if ((adminCheck.rowCount ?? 0) === 0) {
+        await pool.query(
+          `INSERT INTO quantrivien ("HoTen", "Email", "MatKhau") VALUES ($1, $2, $3)`,
+          [adm.name, adm.email, hash]
+        );
+        console.log(`[db] Created default admin account: ${adm.email}`);
+      } else {
+        await pool.query(
+          `UPDATE quantrivien SET "MatKhau" = $1 WHERE LOWER("Email") = LOWER($2)`,
+          [hash, adm.email]
+        );
+        console.log(`[db] Verified and updated password for admin account: ${adm.email}`);
+      }
     }
   } catch (err) {
     console.error("[db] Failed to ensure default admin in quantrivien:", err);

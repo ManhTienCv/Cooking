@@ -7,7 +7,8 @@
 
 import { handleDemoFallback } from './demoData';
 
-const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
+export const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
+const base = API_BASE;
 
 let csrfPromise: Promise<string> | null = null;
 

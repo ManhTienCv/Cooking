@@ -31,6 +31,25 @@
     <script>
       (function() {
         try {
+          function sanitizeEvent(e) {
+            if (!e) return;
+            if (typeof e.key === 'undefined' || e.key === null) {
+              try {
+                Object.defineProperty(e, 'key', { value: '', writable: true, configurable: true });
+              } catch (_) {}
+            }
+            if (typeof e.code === 'undefined' || e.code === null) {
+              try {
+                Object.defineProperty(e, 'code', { value: '', writable: true, configurable: true });
+              } catch (_) {}
+            }
+            if (e.target && typeof e.target.tagName === 'undefined') {
+              try {
+                Object.defineProperty(e.target, 'tagName', { value: '', writable: true, configurable: true });
+              } catch (_) {}
+            }
+          }
+
           if (typeof KeyboardEvent !== 'undefined' && KeyboardEvent.prototype) {
             var kProp = Object.getOwnPropertyDescriptor(KeyboardEvent.prototype, 'key');
             if (kProp && kProp.get) {
@@ -46,14 +65,47 @@
                 enumerable: true
               });
             }
+            var cProp = Object.getOwnPropertyDescriptor(KeyboardEvent.prototype, 'code');
+            if (cProp && cProp.get) {
+              var origCode = cProp.get;
+              Object.defineProperty(KeyboardEvent.prototype, 'code', {
+                get: function() {
+                  try {
+                    var v = origCode.call(this);
+                    return typeof v === 'string' ? v : '';
+                  } catch (e) { return ''; }
+                },
+                configurable: true,
+                enumerable: true
+              });
+            }
           }
+
+          if (typeof EventTarget !== 'undefined' && EventTarget.prototype && EventTarget.prototype.dispatchEvent) {
+            var origDispatch = EventTarget.prototype.dispatchEvent;
+            EventTarget.prototype.dispatchEvent = function(evt) {
+              if (evt && (evt.type === 'keydown' || evt.type === 'keyup' || evt.type === 'keypress')) {
+                sanitizeEvent(evt);
+              }
+              return origDispatch.apply(this, arguments);
+            };
+          }
+
+          window.addEventListener('keydown', sanitizeEvent, true);
+          window.addEventListener('keyup', sanitizeEvent, true);
+          window.addEventListener('keypress', sanitizeEvent, true);
+          document.addEventListener('keydown', sanitizeEvent, true);
+          document.addEventListener('keyup', sanitizeEvent, true);
+          document.addEventListener('keypress', sanitizeEvent, true);
+
           window.addEventListener('error', function(e) {
             var src = (e.filename || '') + ' ' + (e.error && e.error.stack ? e.error.stack : '') + ' ' + (e.message || '');
             src = src.toLowerCase();
             if (src.indexOf('chrome-extension://') !== -1 || 
                 src.indexOf('moz-extension://') !== -1 || 
                 src.indexOf('content_main.js') !== -1 || 
-                src.indexOf('content-script') !== -1) {
+                src.indexOf('content-script') !== -1 ||
+                src.indexOf('istriggerkey') !== -1) {
               if (e.preventDefault) e.preventDefault();
               if (e.stopImmediatePropagation) e.stopImmediatePropagation();
               return true;

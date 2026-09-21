@@ -26,8 +26,35 @@ function isExtensionSource(source: string): boolean {
     s.includes('lastpass') ||
     s.includes('1password') ||
     s.includes('immersivetranslate') ||
-    s.includes('saladict')
+    s.includes('saladict') ||
+    s.includes('istriggerkey')
   );
+}
+
+function sanitizeKeyEvent(e: Event): void {
+  if (!e) return;
+  const keyEvt = e as KeyboardEvent;
+  if (typeof keyEvt.key === 'undefined' || keyEvt.key === null) {
+    try {
+      Object.defineProperty(keyEvt, 'key', { value: '', writable: true, configurable: true });
+    } catch {
+      /* ignore */
+    }
+  }
+  if (typeof keyEvt.code === 'undefined' || keyEvt.code === null) {
+    try {
+      Object.defineProperty(keyEvt, 'code', { value: '', writable: true, configurable: true });
+    } catch {
+      /* ignore */
+    }
+  }
+  if (e.target && typeof (e.target as unknown as { tagName?: unknown }).tagName === 'undefined') {
+    try {
+      Object.defineProperty(e.target, 'tagName', { value: '', writable: true, configurable: true });
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 export function initExtensionShield(): void {
@@ -69,6 +96,25 @@ export function initExtensionShield(): void {
           enumerable: true,
         });
       }
+    }
+
+    if (typeof EventTarget !== 'undefined' && EventTarget.prototype && EventTarget.prototype.dispatchEvent) {
+      const origDispatch = EventTarget.prototype.dispatchEvent;
+      EventTarget.prototype.dispatchEvent = function (evt: Event) {
+        if (evt && (evt.type === 'keydown' || evt.type === 'keyup' || evt.type === 'keypress')) {
+          sanitizeKeyEvent(evt);
+        }
+        return origDispatch.apply(this, [evt]);
+      };
+    }
+
+    window.addEventListener('keydown', sanitizeKeyEvent, true);
+    window.addEventListener('keyup', sanitizeKeyEvent, true);
+    window.addEventListener('keypress', sanitizeKeyEvent, true);
+    if (typeof document !== 'undefined') {
+      document.addEventListener('keydown', sanitizeKeyEvent, true);
+      document.addEventListener('keyup', sanitizeKeyEvent, true);
+      document.addEventListener('keypress', sanitizeKeyEvent, true);
     }
   } catch {
     // Không làm ảnh hưởng môi trường nếu prototype bị freeze

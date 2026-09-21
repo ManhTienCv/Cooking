@@ -94,8 +94,12 @@ marketplaceRouter.get('/products/:id/related', asyncHandler(async (req, res) => 
  * Auth Required: Cart
  * ================================================================ */
 
-marketplaceRouter.get('/cart', requireAuth, asyncHandler(async (req, res) => {
-  const result = await marketplaceService.getCart(req.session.userId!);
+marketplaceRouter.get('/cart', asyncHandler(async (req, res) => {
+  if (!req.session?.userId) {
+    res.json({ success: true, items: [], count: 0, total: 0 });
+    return;
+  }
+  const result = await marketplaceService.getCart(req.session.userId);
   res.json({ success: true, ...result });
 }));
 

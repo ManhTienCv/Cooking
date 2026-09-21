@@ -8,7 +8,7 @@ import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
 
 import type { Order, OrderItem } from '../types/marketplace';
-import { apiJson } from '../lib/api';
+import { apiJson, API_BASE } from '../lib/api';
 import { AUTH_CHANGE_EVENT, getAuthChangeDetail } from '../lib/authEvents';
 import PageBackBar from '../components/ui/PageBackBar';
 
@@ -303,8 +303,12 @@ export default function Messages() {
 
   useEffect(() => {
     if (!me?.authenticated) return;
+    const streamUrl = `${API_BASE}/api/messages/stream`;
+    const es = new EventSource(streamUrl, { withCredentials: true });
 
-    const es = new EventSource('/api/messages/stream', { withCredentials: true });
+    es.onerror = () => {
+      es.close();
+    };
 
     const onMessage = (event: MessageEvent) => {
       try {

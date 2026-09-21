@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Maximize2, ShieldCheck } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { apiJson, apiFetch } from '../../lib/api';
+import { apiJson, apiFetch, API_BASE } from '../../lib/api';
 import { AUTH_CHANGE_EVENT } from '../../lib/authEvents';
 
 type ChatMessage = {
@@ -123,7 +123,13 @@ export default function FloatingChatWidget() {
   useEffect(() => {
     if (!me) return;
 
-    const es = new EventSource('/api/messages/stream', { withCredentials: true });
+    const streamUrl = `${API_BASE}/api/messages/stream`;
+    const es = new EventSource(streamUrl, { withCredentials: true });
+
+    es.onerror = () => {
+      // Đóng EventSource nếu endpoint chưa sẵn sàng để tránh browser retry spam
+      es.close();
+    };
 
     es.addEventListener('message', (event) => {
       try {

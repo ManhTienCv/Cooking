@@ -469,7 +469,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
     <div className={`blackwhite-auth-overlay ${isOpen ? 'show' : ''}`} onClick={handleOverlayClick}>
       <div
         data-testid="auth-modal-container"
-        className={`blackwhite-container ${isActive ? 'active' : ''} bg-white dark:bg-slate-900 overflow-hidden relative`}
+        className={`blackwhite-container notranslate ${isActive ? 'active' : ''} bg-white dark:bg-slate-900 overflow-hidden relative`}
+        translate="no"
       >
         {/* Registration Form */}
         <div
@@ -508,24 +509,36 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
             <input
               name="full_name"
               type="text"
+              autoComplete="name"
               placeholder="Họ và tên"
               required
               minLength={3}
+              spellCheck={false}
+              data-gramm="false"
+              data-enable-grammarly="false"
               className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2.5 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
             />
             <input
               name="email"
               type="email"
+              autoComplete="email"
               placeholder="Email"
               required
+              spellCheck={false}
+              data-gramm="false"
+              data-enable-grammarly="false"
               className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2.5 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
             />
             <input
               name="password"
               type="password"
+              autoComplete="new-password"
               placeholder="Mật khẩu (ít nhất 8 ký tự, có số & hoa)"
               required
               minLength={8}
+              spellCheck={false}
+              data-gramm="false"
+              data-enable-grammarly="false"
               className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
             />
 
@@ -586,16 +599,24 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
               data-testid="auth-login-email"
               name="email"
               type="email"
+              autoComplete="email"
               placeholder="Email"
               required
+              spellCheck={false}
+              data-gramm="false"
+              data-enable-grammarly="false"
               className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2.5 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
             />
             <input
               data-testid="auth-login-password"
               name="password"
               type="password"
+              autoComplete="current-password"
               placeholder="Mật khẩu"
               required
+              spellCheck={false}
+              data-gramm="false"
+              data-enable-grammarly="false"
               className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-2.5 mb-2 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
             />
 
@@ -643,8 +664,12 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                 <input
                   name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="Email đã đăng ký"
                   required
+                  spellCheck={false}
+                  data-gramm="false"
+                  data-enable-grammarly="false"
                   className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-3 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
                 />
                 <button
@@ -721,9 +746,13 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialSignUp = 
                 <input
                   name="new_password"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="Mật khẩu mới (≥8 ký tự)"
                   required
                   minLength={8}
+                  spellCheck={false}
+                  data-gramm="false"
+                  data-enable-grammarly="false"
                   className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg w-full p-3 mb-6 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium text-black dark:text-white"
                 />
                 <button

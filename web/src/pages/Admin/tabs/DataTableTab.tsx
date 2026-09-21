@@ -84,6 +84,7 @@ export default function DataTableTab({ title, rows, columns, actions, pageSize =
               pageSize={pageSize}
               onPageChange={setCurrentPage}
               autoScrollTop={false}
+              className=""
               activeClassName="bg-blue-600 text-white shadow-md border-blue-600 dark:bg-blue-600 dark:text-white"
             />
           </div>

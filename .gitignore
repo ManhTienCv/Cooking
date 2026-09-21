@@ -109,3 +109,4 @@ web/public/uploads/
 list_users.ts
 reset_password.ts
 scratch/
+text*.md

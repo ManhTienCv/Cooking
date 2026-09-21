@@ -1,6 +1,7 @@
 import React from 'react';
 import KitchenCookNavbar from './KitchenCookNavbar';
 import KitchenCookFooter from './KitchenCookFooter';
+import FloatingChatWidget from '../chat/FloatingChatWidget';
 
 interface KitchenCookLayoutProps {
   children: React.ReactNode;
@@ -19,6 +20,9 @@ export default function KitchenCookLayout({ children }: KitchenCookLayoutProps) 
 
       {/* 3. Footer độc lập phong cách đồ bếp Châu Âu */}
       <KitchenCookFooter />
+
+      {/* 4. Live Chat CSKH nổi góc phải */}
+      <FloatingChatWidget />
     </div>
   );
 }

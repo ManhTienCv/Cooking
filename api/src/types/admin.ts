@@ -39,4 +39,9 @@ export interface DashboardStats {
     total_sold: number;
     image_url: string;
   }>;
+  paymentMethods?: Array<{
+    method: string;
+    count: number;
+    revenue: number;
+  }>;
 }

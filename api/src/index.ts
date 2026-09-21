@@ -122,6 +122,7 @@ import { marketplaceRouter } from './routes/marketplace.js';
 import { messagesRouter } from './routes/messages.js';
 import { usersRouter } from './routes/users.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { runOrderLifecycleJobs } from './services/marketplaceService.js';
 
 const app = express();
 
@@ -230,4 +231,10 @@ console.info(
 
 app.listen(env.port, () => {
   console.log(`cookapp-server listening on http://localhost:${env.port}`);
+  
+  // Chạy background job kiểm tra đơn hết hạn thanh toán (Auto-release kho) và auto-confirm COD mỗi 2 phút
+  void runOrderLifecycleJobs();
+  setInterval(() => {
+    void runOrderLifecycleJobs();
+  }, 2 * 60 * 1000);
 });

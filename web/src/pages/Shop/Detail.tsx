@@ -29,7 +29,7 @@ import { apiJson, apiFetch } from '../../lib/api';
 import { useCart } from '../../contexts/CartContext';
 import { Reveal } from '../../components/motion/ScrollReveal';
 import AiRecommendations from '../../components/shop/AiRecommendations';
-import type { Product, ProductReview } from '../../types/marketplace';
+import type { Product, ProductReview, ProductVariant } from '../../types/marketplace';
 
 function formatPrice(n: number) {
   return Number(n || 0).toLocaleString('vi-VN') + 'đ';
@@ -41,6 +41,7 @@ export default function ProductDetail() {
   const { addItem } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [reviewTotal, setReviewTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -58,6 +59,11 @@ export default function ProductDetail() {
     apiJson<{ product: Product }>(`/api/marketplace/products/${slug}`)
       .then((d) => {
         setProduct(d.product);
+        if (d.product.variants && d.product.variants.length > 0) {
+          setSelectedVariant(d.product.variants[0]);
+        } else {
+          setSelectedVariant(null);
+        }
         setQty(1);
         setActiveImg(0);
       })
@@ -79,17 +85,22 @@ export default function ProductDetail() {
       .catch(() => setWishlisted(false));
   }, [product]);
 
+  const activePrice = selectedVariant ? Number(selectedVariant.price) : (product ? Number(product.price) : 0);
+  const activeSalePrice = selectedVariant ? (selectedVariant.sale_price ? Number(selectedVariant.sale_price) : null) : (product?.sale_price ? Number(product.sale_price) : null);
+  const activeStock = selectedVariant ? selectedVariant.stock : (product ? product.stock : 0);
+
   // Handle Add to Cart
   const handleAddToCart = async () => {
     if (!product) return;
-    if (product.stock <= 0) {
-      toast.error('Sản phẩm hiện đã hết hàng.');
+    if (activeStock <= 0) {
+      toast.error('Sản phẩm hoặc phân loại đã chọn hiện đã hết hàng.');
       return;
     }
     setAddingCart(true);
     try {
-      await addItem(product.id, qty);
-      toast.success(`Đã thêm ${qty} ${product.unit || 'sản phẩm'} vào giỏ!`);
+      await addItem(product.id, qty, selectedVariant?.id);
+      const label = selectedVariant ? selectedVariant.variant_name : (product.unit || 'sản phẩm');
+      toast.success(`Đã thêm ${qty} ${label} vào giỏ!`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Lỗi thêm giỏ hàng');
     } finally {
@@ -100,13 +111,13 @@ export default function ProductDetail() {
   // Handle Buy Now (Add to cart & go straight to Checkout)
   const handleBuyNow = async () => {
     if (!product) return;
-    if (product.stock <= 0) {
-      toast.error('Sản phẩm hiện đã hết hàng.');
+    if (activeStock <= 0) {
+      toast.error('Sản phẩm hoặc phân loại đã chọn hiện đã hết hàng.');
       return;
     }
     setAddingCart(true);
     try {
-      await addItem(product.id, qty);
+      await addItem(product.id, qty, selectedVariant?.id);
       navigate('/checkout');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Lỗi thêm giỏ hàng');
@@ -167,10 +178,10 @@ export default function ProductDetail() {
     );
   }
 
-  const hasDiscount = product.sale_price != null && product.sale_price < product.price;
-  const finalPrice = hasDiscount ? product.sale_price! : product.price;
+  const hasDiscount = activeSalePrice != null && activeSalePrice < activePrice;
+  const finalPrice = hasDiscount ? activeSalePrice! : activePrice;
   const discountPercent = hasDiscount
-    ? Math.round(((product.price - product.sale_price!) / product.price) * 100)
+    ? Math.round(((activePrice - activeSalePrice!) / activePrice) * 100)
     : null;
 
   const allImages = product.image_url ? [product.image_url, ...product.images] : product.images;
@@ -203,7 +214,7 @@ export default function ProductDetail() {
     : 'Dụng cụ và thiết bị nhà bếp chính hãng KitchenCook, chất lượng cao cấp, thiết kế hiện đại tiện lợi cho mọi bữa ăn gia đình.';
 
   // Stock status
-  const isOutOfStock = product.stock <= 0;
+  const isOutOfStock = activeStock <= 0;
 
   // Review statistics calculation
   const totalReviewsCount = reviews.length;
@@ -372,7 +383,7 @@ export default function ProductDetail() {
                   {!isOutOfStock ? (
                     <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      Còn hàng trong kho ({product.stock} {product.unit || 'sản phẩm'} sẵn sàng giao)
+                      Còn hàng trong kho ({activeStock} {product.unit || 'sản phẩm'} sẵn sàng giao)
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/60">
@@ -399,6 +410,48 @@ export default function ProductDetail() {
                   </div>
                 )}
 
+                {/* Product Variants Selector */}
+                {product.variants && product.variants.length > 0 && (
+                  <div className="pt-3 pb-1 border-t border-gray-100 dark:border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                        Phân loại / Kích thước:
+                      </span>
+                      {selectedVariant && (
+                        <span className="text-xs text-[#E8590C] font-semibold">
+                          {selectedVariant.variant_name}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2.5">
+                      {product.variants.map((v) => {
+                        const isSelected = selectedVariant?.id === v.id;
+                        const vPrice = v.sale_price ?? v.price;
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedVariant(v);
+                              setQty(1);
+                            }}
+                            className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer flex items-center gap-2 ${
+                              isSelected
+                                ? 'border-[#E8590C] bg-orange-50/80 dark:bg-orange-950/40 text-[#E8590C] dark:text-[#ff7e33] shadow-xs ring-1 ring-[#E8590C]'
+                                : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-slate-600'
+                            }`}
+                          >
+                            <span>{v.variant_name}</span>
+                            <span className={`text-[11px] font-normal ${isSelected ? 'text-[#E8590C]' : 'text-gray-400'}`}>
+                              ({formatPrice(Number(vPrice))})
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Dual Action Buttons (Quantity + Add to Cart + Buy Now) */}
                 <div className="pt-3 space-y-3">
                   {/* Row 1: Quantity + Add to Cart + Wishlist */}
@@ -418,8 +471,8 @@ export default function ProductDetail() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => setQty(Math.min(product.stock, qty + 1))}
-                        disabled={qty >= product.stock || isOutOfStock}
+                        onClick={() => setQty(Math.min(activeStock, qty + 1))}
+                        disabled={qty >= activeStock || isOutOfStock}
                         className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
                       >
                         <Plus className="w-4 h-4" />

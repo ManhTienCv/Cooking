@@ -15,7 +15,8 @@ import {
   QrCode,
   Banknote,
   Clock,
-  Image as ImageIcon
+  Image as ImageIcon,
+  CheckCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiJson, apiFetch } from '../../lib/api';
@@ -401,7 +402,8 @@ export default function Orders() {
               const code = getOrderCode(order);
               const items = order.items || [];
               const isPending = order.status === 'pending';
-              const isShipping = ['confirmed', 'preparing', 'shipping'].includes(order.status);
+              const canCancel = ['pending', 'confirmed', 'preparing'].includes(order.status);
+              const isShipping = ['shipping'].includes(order.status);
               const isDelivered = ['delivered', 'completed'].includes(order.status);
               const isCancelled = order.status === 'cancelled';
               const canMoMoRepay = isPending && order.payment_method === 'momo' && order.payment_status === 'unpaid';
@@ -557,11 +559,29 @@ export default function Orders() {
                         </div>
                       ))}
 
-                      {/* Cancelled Reason Note */}
-                      {isCancelled && (order.cancel_reason || order.cancelled_reason) && (
-                        <div className="p-3 rounded-2xl bg-red-50/60 dark:bg-red-950/20 text-xs text-red-700 dark:text-red-300 flex items-start gap-2 border border-red-100 dark:border-red-900/30">
-                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                          <span>Lý do hủy: {order.cancel_reason || order.cancelled_reason}</span>
+                      {/* Cancelled / Refund Note */}
+                      {isCancelled && (
+                        <div className={`p-3 rounded-2xl text-xs flex items-start gap-2 border ${
+                          order.payment_status === 'refunded'
+                            ? 'bg-emerald-50/60 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/40'
+                            : 'bg-red-50/60 dark:bg-red-950/20 text-red-700 dark:text-red-300 border-red-100 dark:border-red-900/30'
+                        }`}>
+                          {order.payment_status === 'refunded' ? (
+                            <>
+                              <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                              <div className="space-y-0.5">
+                                <p className="font-bold">Đã hoàn tiền thành công ({formatPrice(order.total_amount)})</p>
+                                {order.refund_transaction_code && (
+                                  <p className="font-mono text-[11px]">Mã đối soát: <strong>{order.refund_transaction_code}</strong></p>
+                                )}
+                              </div>
+                            </>
+                          ) : (order.cancel_reason || order.cancelled_reason) ? (
+                            <>
+                              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                              <span>Lý do hủy: {order.cancel_reason || order.cancelled_reason}</span>
+                            </>
+                          ) : null}
                         </div>
                       )}
                     </div>
@@ -599,7 +619,7 @@ export default function Orders() {
                         )}
 
                         {/* Cancel order button */}
-                        {isPending && (
+                        {canCancel && (
                           <button
                             type="button"
                             onClick={() => openCancelModal(order)}

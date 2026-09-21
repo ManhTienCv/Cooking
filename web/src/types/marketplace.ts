@@ -9,6 +9,17 @@ export interface ProductCategory {
   sort_order: number;
 }
 
+export interface ProductVariant {
+  id: number;
+  product_id: number;
+  sku: string;
+  variant_name: string;
+  price: number;
+  sale_price: number | null;
+  stock: number;
+  image_url: string | null;
+}
+
 export interface Product {
   id: number;
   seller_id: number;
@@ -32,6 +43,7 @@ export interface Product {
   recipe_id: number | null;
   status: string;
   created_at: string;
+  variants?: ProductVariant[];
   /* joined */
   seller_name: string;
   seller_avatar: string | null;
@@ -43,6 +55,8 @@ export interface Product {
 export interface CartItem {
   id: number;
   product_id: number;
+  variant_id?: number | null;
+  variant_name?: string | null;
   quantity: number;
   product_name: string;
   product_image: string | null;
@@ -66,6 +80,10 @@ export interface Order {
   note: string | null;
   cancel_reason?: string | null;
   cancelled_reason?: string | null;
+  refund_reason?: string | null;
+  refunded_at?: string | null;
+  refund_transaction_code?: string | null;
+  refund_note?: string | null;
   created_at: string;
   updated_at: string;
   items?: OrderItem[];
@@ -87,6 +105,8 @@ export interface OrderItem {
   id: number;
   order_id: number;
   product_id: number;
+  variant_id?: number | null;
+  variant_name?: string | null;
   seller_id: number;
   product_name: string;
   product_slug?: string | null;

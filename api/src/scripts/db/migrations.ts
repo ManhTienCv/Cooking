@@ -28,6 +28,8 @@ export const MIGRATION_FILES = [
   'migration_google_auth.sql',
   'migration_payment_transactions_and_order_code.sql',
   'migration_kitchencook_direct_store.sql',
+  'migration_variants_and_inventory.sql',
+  'migration_refund_audit.sql',
 ] as const;
 
 export type MigrationName = (typeof MIGRATION_FILES)[number];

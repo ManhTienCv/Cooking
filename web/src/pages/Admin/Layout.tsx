@@ -12,13 +12,22 @@ export default function AdminLayout() {
 
   useEffect(() => {
     const checkAuth = async () => {
+      const isDemoAdmin = localStorage.getItem('demo_admin_logged_in') === 'true';
       try {
         const me = await apiJson<{ authenticated: boolean }>('/api/admin/me');
-        if (!me.authenticated) {
+        if (!me.authenticated && !isDemoAdmin) {
           navigate('/admin/login');
           return;
         }
-        // Fetch dashboard to get pending stats
+      } catch {
+        if (!isDemoAdmin) {
+          navigate('/admin/login');
+          return;
+        }
+      }
+
+      // Tải số liệu thống kê phụ trợ (nếu lỗi mạng cũng không được văng phiên đăng nhập admin)
+      try {
         const [d] = await Promise.all([
           apiJson<Record<string, number>>('/api/admin/dashboard'),
         ]);
@@ -26,7 +35,7 @@ export default function AdminLayout() {
           pending: (d.pendingRecipes ?? 0) + (d.pendingBlogs ?? 0),
         });
       } catch {
-        navigate('/admin/login');
+        // Giữ phiên đăng nhập, stats mặc định là 0
       } finally {
         setLoading(false);
       }

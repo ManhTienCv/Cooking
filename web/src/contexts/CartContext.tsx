@@ -10,7 +10,7 @@ interface CartCtx {
   total: number;
   loading: boolean;
   refresh: () => Promise<void>;
-  addItem: (productId: number, quantity?: number) => Promise<void>;
+  addItem: (productId: number, quantity?: number, variantId?: number | null) => Promise<void>;
   updateItem: (itemId: number, quantity: number) => Promise<void>;
   removeItem: (itemId: number) => Promise<void>;
   clearAll: () => Promise<void>;
@@ -66,12 +66,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(AUTH_CHANGE_EVENT, handler);
   }, [refresh]);
 
-  const addItem = useCallback(async (productId: number, quantity = 1) => {
+  const addItem = useCallback(async (productId: number, quantity = 1, variantId?: number | null) => {
     setLoading(true);
     try {
       await apiJson('/api/marketplace/cart', {
         method: 'POST',
-        body: JSON.stringify({ product_id: productId, quantity }),
+        body: JSON.stringify({ product_id: productId, quantity, variant_id: variantId || undefined }),
       });
       await refresh();
     } finally {

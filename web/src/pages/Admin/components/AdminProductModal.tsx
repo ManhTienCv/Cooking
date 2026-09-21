@@ -31,7 +31,7 @@ export interface AdminProductDetail {
   unit: string;
   image_url: string;
   images: string[];
-  specs: Record<string, any>;
+  specs: Record<string, unknown>;
   description: string;
   is_featured: boolean;
   is_available: boolean;
@@ -282,7 +282,7 @@ export default function AdminProductModal({
     setSubmitting(true);
     try {
       // Build specs object
-      const finalSpecs: Record<string, any> = {};
+      const finalSpecs: Record<string, unknown> = {};
       specList.forEach((s) => {
         if (s.key.trim() && s.value.trim()) {
           finalSpecs[s.key.trim()] = s.value.trim();
@@ -325,8 +325,8 @@ export default function AdminProductModal({
 
       onSuccess();
       onClose();
-    } catch (err: any) {
-      toast.error(err?.message || 'Có lỗi xảy ra khi lưu sản phẩm.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu sản phẩm.');
     } finally {
       setSubmitting(false);
     }

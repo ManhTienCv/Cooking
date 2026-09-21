@@ -9,7 +9,7 @@ interface CancelOrderModalProps {
   open: boolean;
   orderId: number | null;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (refundPending?: boolean) => void;
   role: 'buyer' | 'seller';
 }
 
@@ -52,7 +52,7 @@ export default function CancelOrderModal({ open, orderId, onClose, onSuccess, ro
         ? JSON.stringify({ status: 'cancelled', reason: finalReason })
         : JSON.stringify({ reason: finalReason });
 
-      const data = await apiJson<{ success?: boolean; message?: string }>(url, {
+      const data = await apiJson<{ success?: boolean; refund_pending?: boolean; message?: string }>(url, {
         method,
         body,
       });
@@ -61,8 +61,8 @@ export default function CancelOrderModal({ open, orderId, onClose, onSuccess, ro
         throw new Error(data.message || 'Không thể hủy đơn hàng');
       }
 
-      toast.success('Đã hủy đơn hàng thành công');
-      onSuccess();
+      toast.success(data.message || 'Đã hủy đơn hàng thành công');
+      onSuccess(data.refund_pending);
       onClose();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Có lỗi xảy ra khi hủy đơn');

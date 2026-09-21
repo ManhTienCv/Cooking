@@ -79,19 +79,16 @@ export default function BlogDetail() {
     if (!id) return;
     setIsLoading(true);
 
-    // Fetch auth status immediately regardless of mock or real post
+    // Fetch auth status
     try {
       const me = await apiJson<{ authenticated: boolean; user?: { id: number } }>('/api/auth/me');
       setIsAuthenticated(Boolean(me.authenticated));
       if (me.authenticated && me.user) {
         setCurrentUserId(me.user.id);
       }
-      if (!me.authenticated) { setIsLoading(false); return; }
     } catch {
       setIsAuthenticated(false);
       setCurrentUserId(null);
-      setIsLoading(false);
-      return;
     }
 
     try {
@@ -143,9 +140,6 @@ export default function BlogDetail() {
     setLikeAnimating(true);
     setTimeout(() => setLikeAnimating(false), 400);
 
-    // Skip API for mock posts
-    if (Number(id) < 0) return;
-
     try {
       const data = await apiJson<{ liked: boolean; total: number }>(`/api/blog/posts/${id}/like`, { method: 'POST' });
       setIsLiked(data.liked);
@@ -162,20 +156,6 @@ export default function BlogDetail() {
     e.preventDefault();
     if (!commentText.trim() || commentLoading) return;
     if (!isAuthenticated) { setIsAuthOpen(true); return; }
-
-    // Mock post handling
-    if (Number(id) < 0) {
-      const newComment: Comment = {
-        id: Date.now(),
-        content: commentText,
-        created_at: new Date().toISOString(),
-        full_name: 'Báº¡n',
-        avatar_url: null,
-      };
-      setComments(prev => [newComment, ...prev]);
-      setCommentText('');
-      return;
-    }
 
     setCommentLoading(true);
     try {

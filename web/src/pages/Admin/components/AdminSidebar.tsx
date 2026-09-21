@@ -14,6 +14,7 @@ import {
   FolderTree,
   ShoppingBag,
   ClipboardList,
+  Headphones,
   PanelLeftClose,
   PanelLeftOpen,
   type LucideIcon,
@@ -233,6 +234,7 @@ export default function AdminSidebar({
         )}
         {renderNavItem('/admin/market-products', ShoppingBag, 'Đồ bếp & Quản lý kho')}
         {renderNavItem('/admin/market-orders', ClipboardList, 'Đơn hàng')}
+        {renderNavItem('/admin/messages', Headphones, 'Tin nhắn CSKH')}
         {renderNavItem('/admin/categories', FolderTree, 'Danh mục sản phẩm')}
       </nav>
 

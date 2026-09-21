@@ -1,9 +1,9 @@
 import { pool } from '../db/pool.js';
 import type { ChatConversation, ChatConversationSummary, ChatMessage, MessageSenderRole } from '../types/messages.js';
 
-export async function getUserById(userId: number): Promise<{ id: number } | null> {
-  const { rows } = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
-  return (rows[0] as { id: number }) ?? null;
+export async function getUserById(userId: number): Promise<{ id: number; role?: string } | null> {
+  const { rows } = await pool.query('SELECT id, role FROM users WHERE id = $1', [userId]);
+  return (rows[0] as { id: number; role?: string }) ?? null;
 }
 
 export async function isSellerChatEnabled(sellerId: number): Promise<boolean> {

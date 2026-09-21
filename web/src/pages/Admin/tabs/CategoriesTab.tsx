@@ -208,7 +208,7 @@ export default function CategoriesTab() {
         }));
       } catch {
         if (isMounted) {
-          toast.error('Không thể tải danh mục');
+          toast.error('Không thể tải danh mục', { id: 'admin-load-categories-error' });
           setInitialLoading(false);
         }
       }

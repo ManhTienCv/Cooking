@@ -9,6 +9,7 @@ interface PaginationProps {
   autoScrollTop?: boolean;
   scrollBehavior?: ScrollBehavior;
   activeClassName?: string;
+  className?: string;
 }
 
 function getPageItems(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
@@ -35,6 +36,7 @@ export default function Pagination({
   autoScrollTop = true,
   scrollBehavior = 'smooth',
   activeClassName,
+  className,
 }: PaginationProps) {
   const totalPages = Math.ceil(totalItems / pageSize);
 
@@ -58,7 +60,7 @@ export default function Pagination({
   const defaultActiveClass = 'bg-black text-white shadow-sm dark:bg-white dark:text-slate-950';
 
   return (
-    <nav className="mt-10 flex flex-wrap items-center justify-center gap-2" aria-label="Phân trang">
+    <nav className={`flex flex-wrap items-center justify-center gap-1.5 ${className ?? 'mt-10'}`} aria-label="Phân trang">
       <button
         type="button"
         className={buttonClass}

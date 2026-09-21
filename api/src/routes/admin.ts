@@ -6,10 +6,12 @@ import { adminRepo } from '../repos/adminRepo.js';
 import * as adminService from '../services/adminService.js';
 import * as marketplaceRepo from '../repos/marketplaceRepo.js';
 import * as marketplaceService from '../services/marketplaceService.js';
+import * as messagesRepo from '../repos/messagesRepo.js';
 import { pool } from '../db/pool.js';
 import { httpError } from '../lib/httpError.js';
 import * as ghnService from '../services/ghnService.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { emitToUsers } from '../lib/messageStream.js';
 
 export const adminRouter = Router();
 
@@ -258,6 +260,16 @@ adminRouter.put('/marketplace/orders/:id/status', requireAdmin, requireCsrf, asy
   res.json(result);
 }));
 
+// POST /api/admin/marketplace/orders/:id/refund-confirm — Admin duyệt hoàn tiền & hoàn kho
+adminRouter.post('/marketplace/orders/:id/refund-confirm', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
+  const { transaction_code, note } = req.body ?? {};
+  const result = await marketplaceService.adminConfirmRefund(req.params.id, {
+    transactionCode: transaction_code,
+    note
+  });
+  res.json(result);
+}));
+
 // POST /api/admin/marketplace/orders/:id/ghn-create — Admin (Chủ cửa hàng) 1-Click tạo vận đơn GHN Express
 adminRouter.post('/marketplace/orders/:id/ghn-create', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
   const orderId = Number(req.params.id);
@@ -325,4 +337,59 @@ adminRouter.post('/marketplace/orders/:id/ghn-create', requireAdmin, requireCsrf
     order_code: ghnResult.order_code,
     expected_delivery_time: ghnResult.expected_delivery_time,
   });
+}));
+
+// ─── Admin Chat CSKH ──────────────────────────────────────────────
+adminRouter.get('/chat/conversations', requireAdmin, asyncHandler(async (_req, res) => {
+  const { rows } = await pool.query(
+    `SELECT c.id, c.buyer_id, c.seller_id, c.created_at, c.updated_at,
+        ub.full_name AS buyer_name, ub.avatar_url AS buyer_avatar_url, ub.email AS buyer_email,
+        us.full_name AS seller_name, us.avatar_url AS seller_avatar_url,
+        lm.message AS last_message, lm.sender_id AS last_message_sender_id, lm.created_at AS last_message_at,
+        (SELECT COUNT(*)::int FROM chat_messages cm WHERE cm.conversation_id = c.id) AS message_count
+     FROM chat_conversations c
+     JOIN users ub ON ub.id = c.buyer_id
+     JOIN users us ON us.id = c.seller_id
+     LEFT JOIN LATERAL (
+       SELECT message, sender_id, created_at FROM chat_messages
+       WHERE conversation_id = c.id ORDER BY created_at DESC, id DESC LIMIT 1
+     ) lm ON TRUE
+     ORDER BY COALESCE(lm.created_at, c.updated_at) DESC`
+  );
+  res.json({ success: true, conversations: rows });
+}));
+
+adminRouter.get('/chat/conversations/:id/messages', requireAdmin, asyncHandler(async (req, res) => {
+  const conversationId = Number(req.params.id);
+  if (!conversationId) throw httpError(400, 'ID cuộc trò chuyện không hợp lệ.');
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  const messages = await messagesRepo.getMessages(conversationId, limit, offset);
+  res.json({ success: true, messages, limit, offset });
+}));
+
+adminRouter.post('/chat/conversations/:id/messages', requireAdmin, requireCsrf, asyncHandler(async (req, res) => {
+  const conversationId = Number(req.params.id);
+  if (!conversationId) throw httpError(400, 'ID cuộc trò chuyện không hợp lệ.');
+  const messageText = String(req.body?.message ?? '').trim();
+  if (!messageText) throw httpError(422, 'Tin nhắn trống.');
+  if (messageText.length > 2000) throw httpError(422, 'Tin nhắn quá dài (tối đa 2000 ký tự).');
+
+  const conversation = await messagesRepo.getConversationById(conversationId);
+  if (!conversation) throw httpError(404, 'Cuộc trò chuyện không tồn tại.');
+
+  // Admin replies as seller role
+  const senderId = conversation.seller_id;
+  const message = await messagesRepo.createMessage(conversationId, senderId, 'seller', messageText);
+  emitToUsers([conversation.buyer_id, conversation.seller_id], 'message', { conversationId, message });
+  res.json({ success: true, message });
+}));
+
+adminRouter.post('/chat/conversations/:id/read', requireAdmin, asyncHandler(async (req, res) => {
+  const conversationId = Number(req.params.id);
+  if (!conversationId) throw httpError(400, 'ID cuộc trò chuyện không hợp lệ.');
+  const conversation = await messagesRepo.getConversationById(conversationId);
+  if (!conversation) throw httpError(404, 'Cuộc trò chuyện không tồn tại.');
+  await messagesRepo.markConversationRead(conversationId, conversation.seller_id);
+  res.json({ success: true });
 }));

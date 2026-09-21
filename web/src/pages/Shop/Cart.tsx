@@ -209,6 +209,11 @@ export default function Cart() {
                               <Link to={`/shop/${item.product_id}`} onClick={scrollWindowToTop} className="font-semibold text-sm text-gray-900 dark:text-white line-clamp-2 hover:text-amber-600 transition-colors">
                                 {item.product_name}
                               </Link>
+                              {item.variant_name && (
+                                <div className="inline-block mt-0.5 px-2 py-0.5 bg-gray-100 dark:bg-slate-700/70 text-gray-600 dark:text-gray-300 rounded text-[11px] font-medium">
+                                  Phân loại: {item.variant_name}
+                                </div>
+                              )}
                               <p className="text-red-600 dark:text-red-400 font-bold mt-1">{formatPrice(price)}<span className="text-xs text-gray-400 dark:text-gray-500 font-normal ml-1">/ {item.product_unit}</span></p>
 
                               <div className="flex items-center justify-between mt-2">

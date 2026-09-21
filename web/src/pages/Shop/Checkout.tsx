@@ -542,6 +542,9 @@ export default function Checkout() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-gray-900 dark:text-white font-medium line-clamp-1">{item.product_name}</p>
+                        {item.variant_name && (
+                          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium truncate">{item.variant_name}</p>
+                        )}
                         <p className="text-xs text-gray-400">x{item.quantity}</p>
                       </div>
                       <span className="text-xs font-bold text-gray-900 dark:text-white whitespace-nowrap">{formatPrice(price * item.quantity)}</span>

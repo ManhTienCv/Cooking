@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import FloatingChatWidget from './chat/FloatingChatWidget';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -29,6 +30,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-grow pt-[74px] min-h-0 bg-gradient-to-b from-blue-50/50 via-white/40 to-indigo-50/50 dark:from-slate-900 dark:via-slate-800/80 dark:to-slate-900">
         {children}
       </main>
+      <FloatingChatWidget />
       {!shouldHideFooter && <Footer />}
     </div>
   );

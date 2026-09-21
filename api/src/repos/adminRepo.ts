@@ -30,6 +30,7 @@ export const adminRepo = {
       productCategories,
       blogCategories,
       ordersByStatus,
+      paymentMethods,
       recentOrders,
       topProducts,
     ] = await Promise.all([
@@ -49,6 +50,9 @@ export const adminRepo = {
       pool.query('SELECT COUNT(*)::int AS total FROM blog_categories'),
       pool.query(
         "SELECT status, COUNT(*)::int AS count, COALESCE(SUM(total_amount), 0)::bigint AS revenue FROM orders GROUP BY status"
+      ),
+      pool.query(
+        "SELECT payment_method, COUNT(*)::int AS count, COALESCE(SUM(total_amount), 0)::bigint AS revenue FROM orders GROUP BY payment_method"
       ),
       pool.query(
         "SELECT id, order_code, shipping_name, total_amount, status, payment_method, payment_status, created_at FROM orders ORDER BY created_at DESC LIMIT 5"
@@ -78,9 +82,14 @@ export const adminRepo = {
         count: Number(r.count || 0),
         revenue: Number(r.revenue || 0),
       })),
+      paymentMethods: paymentMethods.rows.map((r: any) => ({
+        method: String(r.payment_method || 'cod'),
+        count: Number(r.count || 0),
+        revenue: Number(r.revenue || 0),
+      })),
       recentOrders: recentOrders.rows.map((o: any) => ({
         id: Number(o.id),
-        order_code: String(o.order_code || `DH-${o.id}`),
+        order_code: String(o.order_code || `KC-${o.id}`),
         shipping_name: String(o.shipping_name || 'Khách vãng lai'),
         total_amount: Number(o.total_amount || 0),
         status: String(o.status || 'pending'),
@@ -112,10 +121,45 @@ export const adminRepo = {
   },
 
   async getUsers() {
-    const r = await pool.query(
-      'SELECT id, full_name, email, avatar_url, created_at FROM users ORDER BY created_at DESC LIMIT 200'
-    );
-    return r.rows;
+    const [admins, customers] = await Promise.all([
+      pool.query(
+        'SELECT "MaAD" AS id, "HoTen" AS full_name, "Email" AS email, NULL AS avatar_url, \'admin\' AS role, created_at, 0::int AS total_orders, 0::bigint AS total_spent FROM quantrivien ORDER BY "MaAD" ASC'
+      ),
+      pool.query(
+        `SELECT u.id, u.full_name, u.email, u.avatar_url, 'customer' AS role, u.created_at,
+                COUNT(o.id)::int AS total_orders,
+                COALESCE(SUM(CASE WHEN o.status != 'cancelled' THEN o.total_amount ELSE 0 END), 0)::bigint AS total_spent
+         FROM users u
+         LEFT JOIN orders o ON o.buyer_id = u.id
+         GROUP BY u.id
+         ORDER BY u.created_at DESC
+         LIMIT 200`
+      ),
+    ]);
+
+    const adminList = admins.rows.map((a: any) => ({
+      id: Number(a.id),
+      full_name: String(a.full_name || 'Quản trị viên'),
+      email: String(a.email || ''),
+      avatar_url: null,
+      role: 'admin' as const,
+      created_at: a.created_at ? new Date(a.created_at).toISOString() : new Date().toISOString(),
+      total_orders: 0,
+      total_spent: 0,
+    }));
+
+    const customerList = customers.rows.map((c: any) => ({
+      id: Number(c.id),
+      full_name: String(c.full_name || 'Khách hàng'),
+      email: String(c.email || ''),
+      avatar_url: c.avatar_url || null,
+      role: 'customer' as const,
+      created_at: c.created_at ? new Date(c.created_at).toISOString() : new Date().toISOString(),
+      total_orders: Number(c.total_orders || 0),
+      total_spent: Number(c.total_spent || 0),
+    }));
+
+    return [...adminList, ...customerList];
   },
 
   async deleteUser(id: number) {
@@ -130,13 +174,13 @@ export const adminRepo = {
       where = 'WHERE r.status = $1';
     }
     const r = await pool.query(
-      `SELECT r.id, r.title, r.status, r.created_at, c.name AS category_name, u.full_name AS author_name
+      `SELECT r.id, r.title, r.status, r.created_at, r.image_url, r.cooking_time, r.difficulty, r.views, c.name AS category_name, u.full_name AS author_name, u.email AS author_email
        FROM recipes r
        LEFT JOIN recipe_categories c ON r.category_id = c.id
        LEFT JOIN users u ON r.author_id = u.id
        ${where}
        ORDER BY r.created_at DESC
-       LIMIT 300`,
+       LIMIT 500`,
       params
     );
     return r.rows;
@@ -158,13 +202,13 @@ export const adminRepo = {
       where = 'WHERE p.status = $1';
     }
     const r = await pool.query(
-      `SELECT p.id, p.title, p.status, p.created_at, c.name AS category_name, u.full_name AS author_name
+      `SELECT p.id, p.title, p.status, p.created_at, p.image_url, p.views, p.likes, c.name AS category_name, u.full_name AS author_name, u.email AS author_email
        FROM blog_posts p
        LEFT JOIN blog_categories c ON p.category_id = c.id
        LEFT JOIN users u ON p.author_id = u.id
        ${where}
        ORDER BY p.created_at DESC
-       LIMIT 300`,
+       LIMIT 500`,
       params
     );
     return r.rows;

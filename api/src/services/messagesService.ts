@@ -44,8 +44,26 @@ export async function startConversation(userId: number, body: Record<string, unk
     sellerId = product.seller_id;
   }
 
-  if (!sellerId) throw { status: 400, message: 'Thiếu thông tin cửa hàng.' };
-  if (sellerId === buyerId) throw { status: 400, message: 'Không thể nhắn tin cho chính mình.' };
+  if (!sellerId) {
+    const { pool } = await import('../db/pool.js');
+    const adminRes = await pool.query<{ id: number; role: string }>(
+      "SELECT id, role FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1"
+    );
+    if (adminRes.rows[0]) {
+      sellerId = adminRes.rows[0].id;
+    }
+  }
+
+  if (!sellerId) throw { status: 400, message: 'Thiếu thông tin cửa hàng hoặc nhân viên hỗ trợ.' };
+
+  if (sellerId === buyerId) {
+    let conversation = await messagesRepo.getConversationForBuyerSeller(buyerId, sellerId, null);
+    if (!conversation) {
+      conversation = await messagesRepo.createConversation(buyerId, sellerId, null, null);
+    }
+    const summary = await messagesRepo.getConversationSummaryById(conversation.id, userId);
+    return { conversation: summary ?? conversation };
+  }
 
   const seller = await messagesRepo.getUserById(sellerId);
   if (!seller) throw { status: 404, message: 'Cửa hàng không tồn tại.' };
@@ -53,7 +71,7 @@ export async function startConversation(userId: number, body: Record<string, unk
   // Always use/create general conversation (Shopee-style)
   let conversation = await messagesRepo.getConversationForBuyerSeller(buyerId, sellerId, null);
   if (!conversation) {
-    const chatEnabled = await messagesRepo.isSellerChatEnabled(sellerId);
+    const chatEnabled = seller.role === 'admin' ? true : await messagesRepo.isSellerChatEnabled(sellerId);
     if (!chatEnabled) throw { status: 403, message: 'Cửa hàng hiện chưa mở chat với khách hàng.' };
     conversation = await messagesRepo.createConversation(buyerId, sellerId, null, null);
   }

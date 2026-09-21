@@ -2,6 +2,8 @@ import { pool } from '../db/pool.js';
 import type {
   ProductCategory,
   Product,
+  ProductVariant,
+  InventoryMovement,
   ProductWithSeller,
   CartItem,
   Order,
@@ -232,6 +234,15 @@ export async function searchProducts(
   };
 }
 
+// Lấy danh sách các biến thể của sản phẩm
+export async function getProductVariants(productId: number): Promise<ProductVariant[]> {
+  const { rows } = await pool.query(
+    `SELECT * FROM product_variants WHERE product_id = $1 ORDER BY id ASC`,
+    [productId]
+  );
+  return rows as ProductVariant[];
+}
+
 // Lấy chi tiết thông tin sản phẩm dựa trên đường dẫn slug thân thiện
 export async function getProductBySlug(slug: string): Promise<ProductWithSeller | null> {
   const { rows } = await pool.query(
@@ -246,7 +257,12 @@ export async function getProductBySlug(slug: string): Promise<ProductWithSeller 
      WHERE p.slug = $1`,
     [slug]
   );
-  return (rows[0] as ProductWithSeller) ?? null;
+  if (rows[0]) {
+    const prod = rows[0] as ProductWithSeller;
+    prod.variants = await getProductVariants(prod.id);
+    return prod;
+  }
+  return null;
 }
 
 // Lấy chi tiết thông tin sản phẩm dựa trên mã ID sản phẩm
@@ -263,7 +279,12 @@ export async function getProductById(id: number): Promise<ProductWithSeller | nu
      WHERE p.id = $1`,
     [id]
   );
-  return (rows[0] as ProductWithSeller) ?? null;
+  if (rows[0]) {
+    const prod = rows[0] as ProductWithSeller;
+    prod.variants = await getProductVariants(prod.id);
+    return prod;
+  }
+  return null;
 }
 
 // Lấy danh sách sản phẩm nổi bật
@@ -393,12 +414,16 @@ export async function getProductsBySeller(
 export async function getCartItems(userId: number): Promise<CartItem[]> {
   const { rows } = await pool.query(
     `SELECT ci.*,
+        COALESCE(pv.variant_name, '') AS variant_name,
+        COALESCE(pv.price, p.price) AS product_price,
+        COALESCE(pv.sale_price, p.sale_price) AS product_sale_price,
+        COALESCE(pv.stock, p.stock) AS product_stock,
         p.name AS product_name, p.image_url AS product_image,
-        p.price AS product_price, p.sale_price AS product_sale_price,
-        p.stock AS product_stock, p.unit AS product_unit,
+        p.unit AS product_unit,
         p.seller_id, sp.store_name
      FROM cart_items ci
      JOIN products p ON p.id = ci.product_id
+     LEFT JOIN product_variants pv ON pv.id = ci.variant_id
      LEFT JOIN seller_profiles sp ON p.seller_id = sp.user_id
      WHERE ci.user_id = $1
      ORDER BY ci.created_at DESC`,
@@ -408,13 +433,33 @@ export async function getCartItems(userId: number): Promise<CartItem[]> {
 }
 
 // Thêm mặt hàng mới hoặc tăng số lượng của mặt hàng trong giỏ hàng
-export async function addCartItem(userId: number, productId: number, quantity: number): Promise<number> {
+export async function addCartItem(
+  userId: number,
+  productId: number,
+  quantity: number,
+  variantId?: number | null
+): Promise<number> {
+  const vid = variantId || null;
+  const existing = await pool.query(
+    `SELECT id, quantity FROM cart_items 
+     WHERE user_id = $1 AND product_id = $2 
+       AND ((variant_id IS NULL AND $3::int IS NULL) OR variant_id = $3::int)
+     LIMIT 1`,
+    [userId, productId, vid]
+  );
+  if (existing.rows.length > 0) {
+    const newQty = Number(existing.rows[0].quantity) + quantity;
+    await pool.query(
+      'UPDATE cart_items SET quantity = $1 WHERE id = $2',
+      [newQty, existing.rows[0].id]
+    );
+    return Number(existing.rows[0].id);
+  }
   const { rows } = await pool.query(
-    `INSERT INTO cart_items (user_id, product_id, quantity)
-     VALUES ($1, $2, $3)
-     ON CONFLICT (user_id, product_id) DO UPDATE SET quantity = cart_items.quantity + EXCLUDED.quantity
+    `INSERT INTO cart_items (user_id, product_id, quantity, variant_id)
+     VALUES ($1, $2, $3, $4)
      RETURNING id`,
-    [userId, productId, quantity]
+    [userId, productId, quantity, vid]
   );
   return Number(rows[0]?.id ?? 0);
 }
@@ -471,20 +516,48 @@ export async function createOrder(
     delivery_type?: string;
     ref_recipe_id?: number | null;
   },
-  items: { product_id: number; seller_id: number; product_name: string; product_image: string | null; quantity: number; unit_price: number; subtotal: number }[],
+  items: {
+    product_id: number;
+    variant_id?: number | null;
+    variant_name?: string | null;
+    seller_id: number;
+    product_name: string;
+    product_image: string | null;
+    quantity: number;
+    unit_price: number;
+    subtotal: number;
+  }[],
   cartItemIds?: number[] | null
 ): Promise<number> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // Kiểm tra tồn kho & trừ stock (Optimistic lock)
+    // Tạo mã đơn hàng độc nhất chuẩn thương hiệu KitchenCook: KC-XXXXXX
+    const randomSuffix = Math.floor(100000 + Math.random() * 900000);
+    const orderCode = `KC-${randomSuffix}`;
+
+    // Kiểm tra tồn kho & trừ stock an toàn (hỗ trợ cả biến thể lẫn sản phẩm cha)
     for (const item of items) {
+      if (item.variant_id) {
+        const vRes = await client.query(
+          `UPDATE product_variants 
+           SET stock = stock - $1, updated_at = NOW()
+           WHERE id = $2 AND stock >= $1 
+           RETURNING id`,
+          [item.quantity, item.variant_id]
+        );
+        if (vRes.rows.length === 0) {
+          throw { status: 400, message: `Biến thể "${item.variant_name || item.product_name}" đã hết hàng hoặc không đủ số lượng.` };
+        }
+      }
+
       const { rows } = await client.query(
         `UPDATE products 
          SET stock = stock - $1, 
              total_sold = total_sold + $1,
-             is_available = CASE WHEN (stock - $1) <= 0 THEN FALSE ELSE is_available END
+             is_available = CASE WHEN (stock - $1) <= 0 THEN FALSE ELSE is_available END,
+             updated_at = NOW()
          WHERE id = $2 AND stock >= $1 
          RETURNING id`,
         [item.quantity, item.product_id]
@@ -492,15 +565,18 @@ export async function createOrder(
       if (rows.length === 0) {
         throw { status: 400, message: `Sản phẩm "${item.product_name}" đã hết hàng hoặc không đủ số lượng.` };
       }
+
+      // Ghi nhật ký biến động kho (Inventory Movements)
+      await client.query(
+        `INSERT INTO inventory_movements (product_id, variant_id, type, quantity_delta, reason)
+         VALUES ($1, $2, 'order_deduct', -$3, $4)`,
+        [item.product_id, item.variant_id || null, item.quantity, `Tạo đơn hàng ${orderCode}`]
+      );
     }
 
     const isInstant = shipping.delivery_type === 'instant_1h';
     const estimatedDelivery = isInstant ? new Date(Date.now() + 90 * 60 * 1000) : null;
     const carrierName = isInstant ? 'Hỏa Tốc 1-2H (Shipper nội thành)' : null;
-
-    // Tạo mã đơn hàng độc nhất định dạng CAM-XXXXXX
-    const randomSuffix = Math.floor(100000 + Math.random() * 900000);
-    const orderCode = `CAM-${randomSuffix}`;
 
     // Tạo order
     const orderResult = await client.query(
@@ -535,17 +611,28 @@ export async function createOrder(
     if (isInstant) {
       await client.query(
         `INSERT INTO order_transit_logs (order_id, status, current_location, description)
-         VALUES ($1, 'picked_up', 'Cửa hàng', 'Đơn hỏa tốc đã tiếp nhận thành công. Đang điều phối shipper giao hàng trong 1-2 giờ.')`,
+         VALUES ($1, 'picked_up', 'Cửa hàng KitchenCook', 'Đơn hỏa tốc đã tiếp nhận thành công. Đang điều phối shipper giao hàng trong 1-2 giờ.')`,
         [orderId]
       );
     }
 
-    // Tạo order items
+    // Tạo order items kèm biến thể
     for (const item of items) {
       await client.query(
-        `INSERT INTO order_items (order_id, product_id, seller_id, product_name, product_image, quantity, unit_price, subtotal)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [orderId, item.product_id, item.seller_id, item.product_name, item.product_image, item.quantity, item.unit_price, item.subtotal]
+        `INSERT INTO order_items (order_id, product_id, variant_id, variant_name, seller_id, product_name, product_image, quantity, unit_price, subtotal)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          orderId,
+          item.product_id,
+          item.variant_id || null,
+          item.variant_name || null,
+          item.seller_id,
+          item.product_name,
+          item.product_image,
+          item.quantity,
+          item.unit_price,
+          item.subtotal
+        ]
       );
     }
 
@@ -670,16 +757,27 @@ export async function updateOrderStatus(orderId: number, status: string, reason?
 }
 
 /**
- * Tự động hoàn kho sản phẩm khi hủy đơn hàng
+ * Tự động hoàn kho sản phẩm (và biến thể) khi hủy đơn hàng
  */
 export async function restockOrderItems(orderId: number): Promise<void> {
   try {
-    const { rows: items } = await pool.query<{ product_id: number; quantity: number }>(
-      'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
+    const { rows: items } = await pool.query<{ product_id: number; variant_id: number | null; quantity: number }>(
+      'SELECT product_id, variant_id, quantity FROM order_items WHERE order_id = $1',
       [orderId]
     );
     for (const item of items) {
       if (item.product_id && item.quantity > 0) {
+        // Hoàn kho biến thể nếu có
+        if (item.variant_id) {
+          await pool.query(
+            `UPDATE product_variants 
+             SET stock = stock + $1, updated_at = NOW()
+             WHERE id = $2`,
+            [item.quantity, item.variant_id]
+          );
+        }
+
+        // Hoàn kho sản phẩm chính
         await pool.query(
           `UPDATE products 
            SET stock = stock + $1, 
@@ -689,11 +787,98 @@ export async function restockOrderItems(orderId: number): Promise<void> {
            WHERE id = $2`,
           [item.quantity, item.product_id]
         );
+
+        // Ghi nhật ký biến động kho
+        await pool.query(
+          `INSERT INTO inventory_movements (product_id, variant_id, type, quantity_delta, reason, order_id)
+           VALUES ($1, $2, 'order_restock', $3, $4, $5)`,
+          [item.product_id, item.variant_id || null, item.quantity, `Hoàn kho khi hủy/hoàn tiền đơn #${orderId}`, orderId]
+        );
       }
     }
     console.info(`[Restock] Hoàn kho thành công cho ${items.length} mặt hàng của đơn #${orderId}`);
   } catch (err) {
     console.error(`[Restock] Lỗi hoàn kho cho đơn #${orderId}:`, err);
+  }
+}
+
+/**
+ * Khách yêu cầu hoàn tiền cho đơn đã thanh toán online (chuyển sang refund_pending)
+ */
+export async function requestOrderRefund(orderId: number, reason: string): Promise<boolean> {
+  const { rowCount } = await pool.query(
+    `UPDATE orders 
+     SET status = 'refund_pending', 
+         refund_reason = $2, 
+         cancel_reason = $2,
+         updated_at = NOW() 
+     WHERE id = $1 AND status NOT IN ('delivering', 'delivered', 'completed', 'cancelled')`,
+    [orderId, reason]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+/**
+ * Admin duyệt hoàn tiền: đổi trạng thái sang cancelled, payment_status sang refunded, lưu mã đối soát & ghi chú, tự động hoàn kho
+ */
+export async function confirmOrderRefund(
+  orderId: number,
+  refundTransCode?: string | null,
+  refundNote?: string | null
+): Promise<boolean> {
+  const { rowCount } = await pool.query(
+    `UPDATE orders 
+     SET status = 'cancelled', 
+         payment_status = 'refunded', 
+         refund_transaction_code = COALESCE($2, refund_transaction_code),
+         refund_note = COALESCE($3, refund_note),
+         refunded_at = NOW(), 
+         updated_at = NOW() 
+     WHERE id = $1 AND status = 'refund_pending'`,
+    [orderId, refundTransCode || null, refundNote || null]
+  );
+  if ((rowCount ?? 0) > 0) {
+    await restockOrderItems(orderId);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Tự động hủy và hoàn kho các đơn hàng thanh toán online (MoMo, Bank transfer, v.v.)
+ * bị bỏ dở quá hạn (mặc định 15 phút)
+ */
+export async function cancelAndRestockExpiredOrders(timeoutMinutes = 15): Promise<number> {
+  try {
+    const { rows } = await pool.query<{ id: number }>(
+      `SELECT id FROM orders 
+       WHERE status = 'pending'
+         AND payment_method IN ('momo', 'bank_transfer')
+         AND (payment_status IS NULL OR payment_status != 'paid')
+         AND created_at <= CURRENT_TIMESTAMP - ($1 || ' minutes')::INTERVAL`,
+      [timeoutMinutes]
+    );
+
+    let cancelledCount = 0;
+    for (const row of rows) {
+      const { rowCount } = await pool.query(
+        `UPDATE orders 
+         SET status = 'cancelled', 
+             cancel_reason = 'Quá thời hạn thanh toán online (' || $2 || ' phút)', 
+             updated_at = NOW() 
+         WHERE id = $1 AND status = 'pending'`,
+        [row.id, timeoutMinutes]
+      );
+      if ((rowCount ?? 0) > 0) {
+        await restockOrderItems(row.id);
+        cancelledCount++;
+        console.info(`[Stock-Auto-Release] Đã tự động hủy và hoàn kho đơn #${row.id} do hết hạn thanh toán online.`);
+      }
+    }
+    return cancelledCount;
+  } catch (err) {
+    console.error('[Stock-Auto-Release] Lỗi quét đơn hết hạn thanh toán:', err);
+    return 0;
   }
 }
 

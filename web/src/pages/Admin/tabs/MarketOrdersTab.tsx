@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { Search, X, Truck, ExternalLink, RefreshCw, Package } from 'lucide-react';
 import { apiJson } from '../../../lib/api';
 import toast from 'react-hot-toast';
@@ -19,6 +19,10 @@ interface AdminOrder {
   tracking_code?: string;
   ghn_order_code?: string;
   shipping_partner?: string;
+  refund_reason?: string;
+  refunded_at?: string;
+  refund_transaction_code?: string;
+  refund_note?: string;
 }
 
 const ORDER_STATUSES = [
@@ -28,6 +32,7 @@ const ORDER_STATUSES = [
   { value: 'shipping', label: 'Đang giao (GHN)', color: 'text-orange-700 bg-orange-50 border-orange-200' },
   { value: 'delivered', label: 'Đã giao', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
   { value: 'completed', label: 'Hoàn tất', color: 'text-green-700 bg-green-50 border-green-200' },
+  { value: 'refund_pending', label: 'Yêu cầu hoàn tiền', color: 'text-amber-800 bg-amber-100 border-amber-300' },
   { value: 'cancelled', label: 'Đã hủy (Hoàn kho)', color: 'text-red-700 bg-red-50 border-red-200' },
 ];
 
@@ -39,7 +44,7 @@ export default function MarketOrdersTab() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const hasLoadedOnceRef = useRef(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [dispatchingId, setDispatchingId] = useState<number | null>(null);
@@ -47,7 +52,7 @@ export default function MarketOrdersTab() {
   const PAGE_SIZE = 10;
 
   const loadOrders = useCallback(async () => {
-    if (!hasLoadedOnce) {
+    if (!hasLoadedOnceRef.current) {
       setLoading(true);
     }
     try {
@@ -57,12 +62,12 @@ export default function MarketOrdersTab() {
       setOrders(d.orders ?? []);
       setTotal(d.total ?? 0);
     } catch {
-      toast.error('Không thể tải danh sách đơn hàng');
+      toast.error('Không thể tải danh sách đơn hàng', { id: 'admin-orders-load-error' });
     } finally {
       setLoading(false);
-      setHasLoadedOnce(true);
+      hasLoadedOnceRef.current = true;
     }
-  }, [statusFilter, hasLoadedOnce]);
+  }, [statusFilter]);
 
   useEffect(() => {
     void loadOrders();
@@ -99,6 +104,42 @@ export default function MarketOrdersTab() {
       toast.error(err instanceof Error ? err.message : 'Lỗi tạo vận đơn GHN');
     } finally {
       setDispatchingId(null);
+    }
+  };
+
+  const [refundModalOrder, setRefundModalOrder] = useState<AdminOrder | null>(null);
+  const [refundTransCode, setRefundTransCode] = useState('');
+  const [refundNote, setRefundNote] = useState('');
+  const [isSubmittingRefund, setIsSubmittingRefund] = useState(false);
+
+  const openRefundModal = (order: AdminOrder) => {
+    setRefundModalOrder(order);
+    setRefundTransCode(`MOMO-REF-${Date.now().toString().slice(-6)}`);
+    setRefundNote('Đã hoàn trả 100% tiền đơn hàng');
+  };
+
+  const handleConfirmRefundModal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!refundModalOrder) return;
+    setIsSubmittingRefund(true);
+    try {
+      const res = await apiJson<{ success: boolean; message: string }>(
+        `/api/admin/marketplace/orders/${refundModalOrder.id}/refund-confirm`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            transaction_code: refundTransCode.trim(),
+            note: refundNote.trim(),
+          }),
+        }
+      );
+      toast.success(res.message || 'Đã duyệt hoàn tiền và hoàn kho thành công!');
+      setRefundModalOrder(null);
+      void loadOrders();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi duyệt hoàn tiền');
+    } finally {
+      setIsSubmittingRefund(false);
     }
   };
 
@@ -239,7 +280,7 @@ export default function MarketOrdersTab() {
                       {/* Mã đơn */}
                       <td className="px-5 py-4">
                         <span className="font-mono font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">
-                          {o.order_code || `CAM-${String(o.id).padStart(6, '0')}`}
+                          {o.order_code || `KC-${String(o.id).padStart(6, '0')}`}
                         </span>
                         <p className="text-[10px] text-slate-400 mt-1">
                           {new Date(o.created_at).toLocaleString('vi-VN')}
@@ -251,6 +292,11 @@ export default function MarketOrdersTab() {
                         <p className="font-bold text-slate-800 dark:text-white">{o.shipping_name || 'Khách hàng'}</p>
                         {o.shipping_phone && <p className="text-xs text-slate-500 font-mono">{o.shipping_phone}</p>}
                         {o.shipping_address && <p className="text-[11px] text-slate-400 truncate mt-0.5" title={o.shipping_address}>{o.shipping_address}</p>}
+                        {o.refund_reason && (
+                          <div className="mt-1 px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 text-[11px] text-amber-700 dark:text-amber-300 font-medium">
+                            Lý do hoàn: {o.refund_reason}
+                          </div>
+                        )}
                       </td>
 
                       {/* Thanh toán */}
@@ -307,15 +353,37 @@ export default function MarketOrdersTab() {
 
                       {/* Thao tác */}
                       <td className="px-5 py-4 text-right">
-                        <select 
-                          value={o.status} 
-                          onChange={e => void onUpdateStatus(o.id, e.target.value)}
-                          className="text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 px-2.5 py-1.5 outline-none focus:border-slate-900 dark:focus:border-white"
-                        >
-                          {ORDER_STATUSES.map(s => (
-                            <option key={s.value} value={s.value}>{s.label}</option>
-                          ))}
-                        </select>
+                        {o.status === 'refund_pending' ? (
+                          <div className="flex flex-col items-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openRefundModal(o)}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all hover:scale-105 active:scale-95 flex items-center gap-1 cursor-pointer"
+                              title="Duyệt hoàn tiền cho khách và tự động hoàn hàng về kho"
+                            >
+                              ✓ Duyệt hoàn tiền
+                            </button>
+                            <select 
+                              value={o.status} 
+                              onChange={e => void onUpdateStatus(o.id, e.target.value)}
+                              className="text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 px-2 py-1 outline-none"
+                            >
+                              {ORDER_STATUSES.map(s => (
+                                <option key={s.value} value={s.value}>{s.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <select 
+                            value={o.status} 
+                            onChange={e => void onUpdateStatus(o.id, e.target.value)}
+                            className="text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 px-2.5 py-1.5 outline-none focus:border-slate-900 dark:focus:border-white"
+                          >
+                            {ORDER_STATUSES.map(s => (
+                              <option key={s.value} value={s.value}>{s.label}</option>
+                            ))}
+                          </select>
+                        )}
                       </td>
                     </tr>
                   );
@@ -345,6 +413,108 @@ export default function MarketOrdersTab() {
           </div>
         )}
       </div>
+
+      {/* Modal Duyệt Hoàn Tiền & Đối Soát */}
+      {refundModalOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                  ✓
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">Duyệt Hoàn Tiền & Hoàn Kho</h3>
+                  <p className="text-xs text-slate-500">Đối soát giao dịch hoàn tiền cho khách hàng</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRefundModalOrder(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmRefundModal} className="p-6 space-y-4">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Mã đơn hàng:</span>
+                  <strong className="font-mono text-slate-900 dark:text-white">{refundModalOrder.order_code || `#${refundModalOrder.id}`}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Khách hàng:</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">{refundModalOrder.shipping_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Số tiền hoàn:</span>
+                  <strong className="text-emerald-600 dark:text-emerald-400 text-sm font-black">{formatPrice(refundModalOrder.total_amount)}</strong>
+                </div>
+                {refundModalOrder.refund_reason && (
+                  <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex flex-col gap-1">
+                    <span className="text-slate-500">Lý do khách hủy:</span>
+                    <span className="italic text-slate-700 dark:text-slate-300 font-medium">"{refundModalOrder.refund_reason}"</span>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Mã giao dịch đối soát (MoMo / Ngân hàng / VNPay) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={refundTransCode}
+                  onChange={e => setRefundTransCode(e.target.value)}
+                  placeholder="Ví dụ: MOMO-REF-892341 hoặc FT2409..."
+                  className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">Mã này sẽ hiển thị minh bạch trong chi tiết đơn của khách hàng làm bằng chứng đối soát.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Ghi chú hoàn tiền (Tùy chọn)
+                </label>
+                <textarea
+                  rows={2}
+                  value={refundNote}
+                  onChange={e => setRefundNote(e.target.value)}
+                  placeholder="Ví dụ: Đã chuyển khoản qua STK MBBank của khách..."
+                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setRefundModalOrder(null)}
+                  disabled={isSubmittingRefund}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingRefund}
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                >
+                  {isSubmittingRefund ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Đang xử lý hoàn tiền...</span>
+                    </>
+                  ) : (
+                    'Xác nhận duyệt & Hoàn kho'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

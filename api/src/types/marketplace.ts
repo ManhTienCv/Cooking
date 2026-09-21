@@ -9,6 +9,7 @@ export type OrderStatus =
   | 'shipping'
   | 'delivered'
   | 'completed'
+  | 'refund_pending'
   | 'cancelled';
 
 export interface ProductCategory {
@@ -64,8 +65,33 @@ export interface Product {
   total_sold: number;
   recipe_id: number | null;
   status: ProductStatus;
+  variants?: ProductVariant[];
   created_at: Date;
   updated_at: Date;
+}
+
+export interface ProductVariant {
+  id: number;
+  product_id: number;
+  sku: string | null;
+  variant_name: string;
+  price: number;
+  sale_price: number | null;
+  stock: number;
+  image_url: string | null;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+export interface InventoryMovement {
+  id: number;
+  product_id: number;
+  variant_id: number | null;
+  type: 'import' | 'order_deduct' | 'order_restock' | 'adjustment';
+  quantity_delta: number;
+  reason: string | null;
+  order_id: number | null;
+  created_at?: Date;
 }
 
 export interface ProductWithSeller extends Product {
@@ -80,6 +106,8 @@ export interface CartItem {
   id: number;
   user_id: number;
   product_id: number;
+  variant_id?: number | null;
+  variant_name?: string | null;
   quantity: number;
   created_at: Date;
   /* joined fields */
@@ -102,9 +130,17 @@ export interface Order {
   shipping_phone: string | null;
   shipping_address: string | null;
   payment_method: string;
+  payment_status?: string | null;
+  paid_amount?: number | null;
+  paid_via?: string | null;
+  is_paid?: boolean;
+  order_code?: string | null;
+  ghn_order_code?: string | null;
   note: string | null;
   cancel_reason?: string | null;
   cancelled_reason?: string | null;
+  refund_reason?: string | null;
+  refunded_at?: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -117,6 +153,8 @@ export interface OrderItem {
   id: number;
   order_id: number;
   product_id: number;
+  variant_id?: number | null;
+  variant_name?: string | null;
   seller_id: number;
   product_name: string;
   product_slug?: string | null;

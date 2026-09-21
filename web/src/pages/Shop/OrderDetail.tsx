@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Phone, User, CreditCard, Package, CheckCircle, Star, MessageCircle, Truck, Calendar, AlertTriangle, Clock, Camera, X, Video, Building2, Copy } from 'lucide-react';
+import { MapPin, Phone, User, CreditCard, Package, CheckCircle, Star, MessageCircle, Truck, Calendar, AlertTriangle, Clock, Camera, X, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
@@ -57,6 +57,7 @@ export default function OrderDetail() {
   const [loading, setLoading] = useState(true);
   const [reviewForms, setReviewForms] = useState<Record<number, ReviewFormState>>({});
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [transitData, setTransitData] = useState<{
     status: string;
@@ -109,10 +110,11 @@ export default function OrderDetail() {
   const canReview = order ? ['delivered', 'completed'].includes(order.status) : false;
   const isPaid = order?.payment_status === 'paid';
   const isCancelled = order?.status === 'cancelled';
+  const isRefundPending = order?.status === 'refund_pending';
   const canCancel = useMemo(() => {
-    if (!order || isCancelled || order.status === 'completed') return false;
+    if (!order || isCancelled || isRefundPending || order.status === 'completed') return false;
     return ['pending', 'confirmed', 'preparing'].includes(order.status);
-  }, [order, isCancelled]);
+  }, [order, isCancelled, isRefundPending]);
   const getPaidViaLabel = (via: string | null | undefined) => {
     if (!via) return 'Ví Cook';
     if (via === 'cookpay') return 'Ví Cook';
@@ -216,14 +218,6 @@ export default function OrderDetail() {
     }
   };
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      toast.success(`Đã sao chép ${label}!`);
-    }).catch(() => {
-      toast.error('Không thể sao chép');
-    });
-  };
-
   useEffect(() => {
     if (!order || !canReview) return;
     let active = true;
@@ -306,6 +300,8 @@ export default function OrderDetail() {
   };
 
   const handleConfirmComplete = async () => {
+    if (!order || isCompleting) return;
+    setIsCompleting(true);
     try {
       const response = await apiFetch(`/api/marketplace/orders/${order.id}/complete`, {
         method: 'PUT',
@@ -316,8 +312,11 @@ export default function OrderDetail() {
       }
       toast.success('Đã xác nhận hoàn thành đơn hàng');
       setOrder(prev => prev ? { ...prev, status: 'completed' } : null);
+      setShowCompleteModal(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Đã có lỗi xảy ra');
+    } finally {
+      setIsCompleting(false);
     }
   };
 
@@ -345,7 +344,7 @@ export default function OrderDetail() {
           </h1>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-gray-500 dark:text-gray-400 mt-2 font-medium">
             <span className="inline-flex items-center gap-1 font-mono font-bold bg-stone-100 text-stone-800 dark:bg-slate-800 dark:text-stone-300 px-2.5 py-1 rounded-md border border-stone-200 dark:border-slate-700">
-              Mã đơn: {order.order_code || `CAM-${String(order.id).padStart(6, '0')}`}
+              Mã đơn: {order.order_code || `KC-${String(order.id).padStart(6, '0')}`}
             </span>
             <span>·</span>
             <span>{new Date(order.created_at).toLocaleString('vi-VN')}</span>
@@ -386,47 +385,75 @@ export default function OrderDetail() {
           </Reveal>
         )}
 
-        {/* Banner thông báo chờ thanh toán VietQR nếu chưa thanh toán */}
-        {!isPaid && !isCancelled && order.payment_method === 'bank_transfer' && (
-          <Reveal y={12}>
-            <div className="rounded-2xl border border-blue-200 bg-blue-50/80 dark:border-blue-900/40 dark:bg-blue-950/30 p-4 md:p-5 shadow-sm">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-md shrink-0">
-                    🏦
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm md:text-base text-blue-950 dark:text-blue-100">
-                      Đơn hàng đã tạo thành công — Vui lòng quét mã VietQR để thanh toán
-                    </h3>
-                    <p className="text-xs text-blue-800/80 dark:text-blue-300 mt-0.5">
-                      Vui lòng mở ứng dụng ngân hàng và chuyển khoản theo mã VietQR để đơn hàng được chuẩn bị và giao sớm nhất.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    document.getElementById('vietqr-payment-box')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="shrink-0 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-sm"
-                >
-                  Xem mã QR ngay ↓
-                </button>
-              </div>
-            </div>
-          </Reveal>
-        )}
-
         {/* Status Tracker */}
         <Reveal y={12}>
           <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-gray-100 dark:border-slate-700/50 p-6">
-            {isCancelled ? (
+            {isRefundPending ? (
+              <div className="text-center py-6 bg-amber-50/70 dark:bg-amber-950/30 rounded-2xl p-6 border border-amber-200 dark:border-amber-800/50">
+                <div className="text-4xl mb-3">⏳</div>
+                <p className="text-lg font-bold text-amber-700 dark:text-amber-300">Đơn hàng đang chờ xử lý hoàn tiền (refund_pending)</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 max-w-lg mx-auto leading-relaxed">
+                  Đơn hàng đã thanh toán trực tuyến và ghi nhận yêu cầu hủy. Ban quản trị KitchenCook đang đối soát giao dịch để xử lý hoàn tiền cho bạn.
+                </p>
+                {(order.refund_reason || order.cancel_reason || order.cancelled_reason) && (
+                  <div className="mt-3 inline-block px-3.5 py-1.5 bg-white dark:bg-slate-800 rounded-lg text-xs text-gray-600 dark:text-gray-300 border border-amber-200/60 dark:border-slate-700 font-medium">
+                    Lý do hủy: {order.refund_reason || order.cancel_reason || order.cancelled_reason}
+                  </div>
+                )}
+              </div>
+            ) : isCancelled ? (
               <div className="text-center py-4">
-                <div className="text-4xl mb-2">❌</div>
-                <p className="text-lg font-bold text-red-600 dark:text-red-400">Đơn hàng đã bị hủy</p>
-                {(order.cancel_reason || order.cancelled_reason) && (
-                  <p className="text-sm text-gray-500 mt-1">Lý do: {order.cancel_reason || order.cancelled_reason}</p>
+                <div className="text-4xl mb-2">{order.payment_status === 'refunded' ? '💸' : '❌'}</div>
+                <p className={`text-lg font-bold ${order.payment_status === 'refunded' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {order.payment_status === 'refunded' ? 'Đơn hàng đã hủy & Hoàn tiền thành công' : 'Đơn hàng đã bị hủy'}
+                </p>
+                {(order.cancel_reason || order.cancelled_reason || order.refund_reason) && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Lý do: {order.refund_reason || order.cancel_reason || order.cancelled_reason}
+                  </p>
+                )}
+
+                {/* Thẻ Đối Soát Hoàn Tiền Minh Bạch */}
+                {order.payment_status === 'refunded' && (
+                  <div className="mt-5 p-4 sm:p-5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-left max-w-lg mx-auto shadow-sm space-y-2.5">
+                    <div className="flex items-center justify-between pb-2 border-b border-emerald-200/60 dark:border-emerald-800/60">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+                        <CheckCircle className="w-4 h-4 text-emerald-600" /> Biên nhận hoàn tiền
+                      </span>
+                      <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">
+                        {formatPrice(order.total_amount)}
+                      </span>
+                    </div>
+
+                    {order.refund_transaction_code && (
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1">
+                        <span className="text-stone-500 dark:text-stone-400">Mã giao dịch đối soát:</span>
+                        <span className="font-mono font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-700/50">
+                          {order.refund_transaction_code}
+                        </span>
+                      </div>
+                    )}
+
+                    {order.refunded_at && (
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1">
+                        <span className="text-stone-500 dark:text-stone-400">Thời gian hoàn tất:</span>
+                        <span className="text-stone-700 dark:text-stone-300 font-medium">
+                          {new Date(order.refunded_at).toLocaleString('vi-VN')}
+                        </span>
+                      </div>
+                    )}
+
+                    {order.refund_note && (
+                      <div className="pt-1 text-xs text-stone-600 dark:text-stone-300 bg-white/70 dark:bg-slate-800/70 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-800/40">
+                        <span className="font-semibold text-stone-700 dark:text-stone-200">Ghi chú từ KitchenCook: </span>
+                        {order.refund_note}
+                      </div>
+                    )}
+
+                    <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 text-center pt-1 italic">
+                      Nếu cần hỗ trợ thêm về giao dịch hoàn tiền, vui lòng liên hệ trực tiếp với hỗ trợ viên.
+                    </p>
+                  </div>
                 )}
               </div>
             ) : (
@@ -457,31 +484,46 @@ export default function OrderDetail() {
               </div>
             )}
             
-            {!isCancelled && order.status === 'delivered' && (
+            {!isCancelled && !isRefundPending && order.status === 'delivered' && (
               <div className="mt-8 text-center border-t border-gray-100 dark:border-slate-700/50 pt-6">
                 <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">Vui lòng xác nhận khi bạn đã nhận được hàng.</p>
                 <button
                   type="button"
                   onClick={completeOrder}
-                  className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded-full font-bold transition-all transform hover:scale-105 shadow-md hover:shadow-lg shadow-amber-500/30"
+                  className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded-full font-bold transition-all transform hover:scale-105 shadow-md hover:shadow-lg shadow-amber-500/30 cursor-pointer"
                 >
                   Xác nhận đã nhận hàng
                 </button>
               </div>
             )}
 
-            {canCancel && (
+            {canCancel ? (
               <div className="mt-6 text-center border-t border-gray-100 dark:border-slate-700/50 pt-6">
-                <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">Bạn có thể yêu cầu hủy đơn hàng này nếu không muốn tiếp tục mua nữa.</p>
+                <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
+                  {order.status === 'preparing'
+                    ? 'Đơn hàng đang chuẩn bị / đóng gói. Bạn vẫn có thể yêu cầu hủy đơn trước khi đơn được bàn giao vận chuyển.'
+                    : 'Bạn có thể yêu cầu hủy đơn hàng này nếu không muốn tiếp tục mua nữa.'}
+                </p>
                 <button
                   type="button"
                   onClick={() => setShowCancelModal(true)}
-                  className="bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-full font-bold transition-all transform hover:scale-105 shadow-md hover:shadow-lg shadow-red-500/30"
+                  className="bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-full font-bold transition-all transform hover:scale-105 shadow-md hover:shadow-lg shadow-red-500/30 cursor-pointer"
                 >
                   Hủy đơn hàng
                 </button>
               </div>
-            )}
+            ) : ['shipping', 'delivering'].includes(order.status) ? (
+              <div className="mt-6 text-center border-t border-gray-100 dark:border-slate-700/50 pt-6">
+                <button
+                  type="button"
+                  disabled
+                  className="inline-flex items-center gap-2 bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-500 px-6 py-2.5 rounded-full font-bold text-sm cursor-not-allowed border border-gray-200 dark:border-slate-700"
+                >
+                  <span>🔒</span> Đơn hàng đang vận chuyển (Không thể hủy)
+                </button>
+                <p className="text-xs text-gray-400 mt-2">Kiện hàng đã được bàn giao cho đối tác vận chuyển GHN Express.</p>
+              </div>
+            ) : null}
           </div>
         </Reveal>
 
@@ -743,108 +785,7 @@ export default function OrderDetail() {
                     </div>
                   )}
 
-                  {!isPaid && !isCancelled && order.payment_method === 'bank_transfer' && (
-                    <div id="vietqr-payment-box" className="mt-5 pt-5 border-t border-blue-100 dark:border-blue-900/40 scroll-mt-24">
-                      <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-5 dark:border-blue-900/40 dark:bg-blue-950/20 space-y-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
-                              <Building2 className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-sm text-blue-950 dark:text-blue-200">
-                                Chuyển khoản VietQR 24/7 (Miễn phí)
-                              </h4>
-                              <p className="text-xs text-blue-800/80 dark:text-blue-300">
-                                Mở app ngân hàng bất kỳ để quét mã QR thanh toán tức thì
-                              </p>
-                            </div>
-                          </div>
-                          <span className="shrink-0 px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 text-xs font-bold uppercase">
-                            Napas 247
-                          </span>
-                        </div>
 
-                        <div className="grid md:grid-cols-2 gap-4 items-center bg-white dark:bg-slate-800/90 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
-                          {/* QR Code */}
-                          <div className="flex flex-col items-center justify-center text-center p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
-                            <img
-                              src={`https://img.vietqr.io/image/MB-888868689999-compact2.png?amount=${Math.round(Number(order.total_amount) || 0)}&addInfo=${encodeURIComponent(`KC${order.order_code || order.id}`)}&accountName=KITCHENCOOK%20STORE`}
-                              alt="VietQR Chuyển khoản"
-                              className="w-52 max-w-full h-auto object-contain rounded-lg"
-                              loading="lazy"
-                            />
-                            <p className="text-[11px] font-semibold text-gray-500 mt-2">
-                              Quét bằng App Ngân hàng bất kỳ hoặc MoMo, ZaloPay
-                            </p>
-                          </div>
-
-                          {/* Bank details with copy */}
-                          <div className="space-y-2.5 text-xs">
-                            <div>
-                              <span className="text-gray-500 dark:text-slate-400 block mb-0.5">Ngân hàng thụ hưởng:</span>
-                              <span className="font-bold text-blue-900 dark:text-blue-200 text-sm">
-                                MB Bank (Ngân hàng TMCP Quân Đội)
-                              </span>
-                            </div>
-
-                            <div>
-                              <span className="text-gray-500 dark:text-slate-400 block mb-0.5">Số tài khoản:</span>
-                              <div className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 px-3 py-2 rounded-lg font-mono font-bold text-gray-900 dark:text-white">
-                                <span>8888 6868 9999</span>
-                                <button
-                                  type="button"
-                                  onClick={() => copyToClipboard('888868689999', 'Số tài khoản')}
-                                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-sans font-medium flex items-center gap-1 text-[11px]"
-                                >
-                                  <Copy className="w-3.5 h-3.5" /> Sao chép
-                                </button>
-                              </div>
-                            </div>
-
-                            <div>
-                              <span className="text-gray-500 dark:text-slate-400 block mb-0.5">Tên chủ tài khoản:</span>
-                              <span className="font-bold text-gray-900 dark:text-white uppercase">
-                                KITCHENCOOK STORE
-                              </span>
-                            </div>
-
-                            <div>
-                              <span className="text-gray-500 dark:text-slate-400 block mb-0.5">Số tiền chuyển khoản:</span>
-                              <div className="flex items-center justify-between gap-2 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 rounded-lg font-bold text-amber-600 dark:text-amber-400">
-                                <span>{formatPrice(order.total_amount)}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => copyToClipboard(String(Math.round(Number(order.total_amount) || 0)), 'Số tiền')}
-                                  className="text-amber-700 hover:text-amber-800 dark:text-amber-300 font-sans font-medium flex items-center gap-1 text-[11px]"
-                                >
-                                  <Copy className="w-3.5 h-3.5" /> Sao chép
-                                </button>
-                              </div>
-                            </div>
-
-                            <div>
-                              <span className="text-gray-500 dark:text-slate-400 block mb-0.5">Nội dung chuyển khoản (bắt buộc):</span>
-                              <div className="flex items-center justify-between gap-2 bg-blue-50/80 dark:bg-blue-900/30 px-3 py-2 rounded-lg font-mono font-bold text-blue-700 dark:text-blue-300">
-                                <span>KC{order.order_code || order.id}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => copyToClipboard(`KC${order.order_code || order.id}`, 'Nội dung chuyển khoản')}
-                                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-sans font-medium flex items-center gap-1 text-[11px]"
-                                >
-                                  <Copy className="w-3.5 h-3.5" /> Sao chép
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <p className="text-[11px] text-gray-500 dark:text-slate-400 italic text-center sm:text-left">
-                          💡 Hệ thống sẽ tự động xác nhận đơn hàng sau khi nhận được chuyển khoản (thường trong 1-3 phút).
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </>
               )}
             </div>
@@ -965,13 +906,13 @@ export default function OrderDetail() {
                     Hủy
                   </button>
                   <button
+                    disabled={isCompleting}
                     onClick={async () => {
-                      setShowCompleteModal(false);
                       await handleConfirmComplete();
                     }}
-                    className="flex-1 bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 transition-colors cursor-pointer"
+                    className="flex-1 bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
                   >
-                    Xác nhận
+                    {isCompleting ? 'Đang lưu...' : 'Xác nhận'}
                   </button>
                 </div>
               </motion.div>
@@ -985,8 +926,11 @@ export default function OrderDetail() {
         open={showCancelModal}
         orderId={order ? order.id : null}
         onClose={() => setShowCancelModal(false)}
-        onSuccess={() => {
-          setOrder(prev => prev ? { ...prev, status: 'cancelled' } : null);
+        onSuccess={(refundPending) => {
+          setOrder(prev => prev ? {
+            ...prev,
+            status: refundPending ? 'refund_pending' : 'cancelled'
+          } : null);
         }}
         role="buyer"
       />

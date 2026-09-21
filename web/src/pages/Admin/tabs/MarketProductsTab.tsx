@@ -33,7 +33,7 @@ interface AdminProduct {
   unit?: string;
   image_url: string | null;
   images?: string[] | string;
-  specs?: Record<string, any> | string;
+  specs?: Record<string, unknown> | string;
   description?: string | null;
   is_featured?: boolean;
   is_available?: boolean;
@@ -145,6 +145,7 @@ export default function MarketProductsTab() {
   useEffect(() => {
     void loadProducts(status);
     void loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   const handleCreateProduct = () => {
@@ -153,7 +154,7 @@ export default function MarketProductsTab() {
   };
 
   const handleEditProduct = (p: AdminProduct) => {
-    let parsedSpecs: Record<string, any> = {};
+    let parsedSpecs: Record<string, unknown> = {};
     if (typeof p.specs === 'string') {
       try {
         parsedSpecs = JSON.parse(p.specs);
@@ -161,7 +162,7 @@ export default function MarketProductsTab() {
         parsedSpecs = {};
       }
     } else if (p.specs && typeof p.specs === 'object') {
-      parsedSpecs = p.specs;
+      parsedSpecs = p.specs as Record<string, unknown>;
     }
 
     let parsedImages: string[] = [];

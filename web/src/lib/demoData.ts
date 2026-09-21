@@ -580,8 +580,8 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
     }
 
     if (method === 'POST') {
-      let body: any = {};
-      try { body = typeof init.body === 'string' ? JSON.parse(init.body) : init.body; } catch {}
+      let body: Record<string, unknown> = {};
+      try { body = typeof init.body === 'string' ? JSON.parse(init.body) : ((init.body as unknown as Record<string, unknown>) || {}); } catch { /* ignore */ }
       const pId = Number(body?.product_id || 101);
       const qty = Number(body?.quantity || 1);
       const product = DEMO_PRODUCTS.find(p => p.id === pId) || DEMO_PRODUCTS[0];
@@ -625,10 +625,10 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
   if (path.startsWith('/api/marketplace/orders')) {
     // 6a. Create order (POST)
     if (method === 'POST') {
-      let body: any = {};
-      try { body = typeof init.body === 'string' ? JSON.parse(init.body) : init.body; } catch {}
+      let body: Record<string, unknown> = {};
+      try { body = typeof init.body === 'string' ? JSON.parse(init.body) : ((init.body as unknown as Record<string, unknown>) || {}); } catch { /* ignore */ }
       const orderId = 1000 + Math.floor(Math.random() * 9000);
-      const randomCode = `CAM-${Math.floor(100000 + Math.random() * 900000)}`;
+      const randomCode = `KC-${Math.floor(100000 + Math.random() * 900000)}`;
       const cartItems = getLocalDemoCart();
       const demoOrder: Order = {
         id: orderId,
@@ -636,10 +636,10 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
         buyer_id: 1,
         total_amount: cartItems.reduce((s, i) => s + (i.product_sale_price ?? i.product_price) * i.quantity, 0) || 1250000,
         status: 'pending',
-        shipping_name: body?.shipping_name || 'Khách Hàng Tuyển Dụng Demo',
-        shipping_phone: body?.shipping_phone || '0901234567',
-        shipping_address: body?.shipping_address || 'Tòa Landmark 81, TP.HCM',
-        payment_method: body?.payment_method || 'bank_transfer',
+        shipping_name: String(body?.shipping_name || 'Khách Hàng Tuyển Dụng Demo'),
+        shipping_phone: String(body?.shipping_phone || '0901234567'),
+        shipping_address: String(body?.shipping_address || 'Tòa Landmark 81, TP.HCM'),
+        payment_method: String(body?.payment_method || 'bank_transfer'),
         payment_status: 'unpaid',
         note: null,
         shipping_partner: 'GHN Express',
@@ -676,7 +676,7 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
         const list = JSON.parse(listRaw);
         list.unshift(orderId);
         localStorage.setItem('demo_user_order_ids', JSON.stringify(list));
-      } catch {}
+      } catch { /* ignore */ }
 
       saveLocalDemoCart([]); // Clear cart
       return { success: true, order_id: orderId, order: demoOrder } as unknown as T;
@@ -725,7 +725,7 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
       try {
         const saved = localStorage.getItem(`demo_order_${oId}`);
         if (saved) orderObj = JSON.parse(saved);
-      } catch {}
+      } catch { /* ignore */ }
       if (!orderObj) {
         orderObj = DEMO_ADMIN_ORDERS.find(o => o.id === oId) || DEMO_ADMIN_ORDERS[0];
       }
@@ -733,7 +733,7 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
     }
 
     // 6e. Orders list (GET /api/marketplace/orders)
-    let userOrders: Order[] = [];
+    const userOrders: Order[] = [];
     try {
       const listRaw = localStorage.getItem('demo_user_order_ids') || '[]';
       const list: number[] = JSON.parse(listRaw);
@@ -741,7 +741,7 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
         const saved = localStorage.getItem(`demo_order_${id}`);
         if (saved) userOrders.push(JSON.parse(saved));
       }
-    } catch {}
+    } catch { /* ignore */ }
     return {
       orders: userOrders,
       total: userOrders.length,
@@ -763,8 +763,8 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
   }
 
   if (path === '/api/admin/login') {
-    let body: any = {};
-    try { body = typeof init.body === 'string' ? JSON.parse(init.body) : init.body; } catch {}
+    let body: Record<string, unknown> = {};
+    try { body = typeof init.body === 'string' ? JSON.parse(init.body) : ((init.body as unknown as Record<string, unknown>) || {}); } catch { /* ignore */ }
     const email = String(body?.email || '').trim().toLowerCase();
     const pass = String(body?.password || '');
     if (email === 'admin@cook.local' && (pass === '123456678' || pass === '12345678')) {
@@ -784,7 +784,7 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
   }
 
   if (path === '/api/admin/dashboard') {
-    let sessionOrders: Order[] = [];
+    const sessionOrders: Order[] = [];
     try {
       const listRaw = localStorage.getItem('demo_user_order_ids') || '[]';
       const list: number[] = JSON.parse(listRaw);
@@ -792,7 +792,7 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
         const saved = localStorage.getItem(`demo_order_${id}`);
         if (saved) sessionOrders.push(JSON.parse(saved));
       }
-    } catch {}
+    } catch { /* ignore */ }
     const rev = sessionOrders.reduce((s, o) => s + (o.total_amount || 0), 0);
     return {
       revenue: rev,
@@ -816,7 +816,7 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
   }
 
   if (path === '/api/admin/marketplace/stats') {
-    let sessionOrders: Order[] = [];
+    const sessionOrders: Order[] = [];
     try {
       const listRaw = localStorage.getItem('demo_user_order_ids') || '[]';
       const list: number[] = JSON.parse(listRaw);
@@ -824,7 +824,7 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
         const saved = localStorage.getItem(`demo_order_${id}`);
         if (saved) sessionOrders.push(JSON.parse(saved));
       }
-    } catch {}
+    } catch { /* ignore */ }
     const rev = sessionOrders.reduce((s, o) => s + (o.total_amount || 0), 0);
     return {
       totalProducts: DEMO_PRODUCTS.length,
@@ -835,7 +835,7 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
   }
 
   if (path === '/api/admin/marketplace/orders') {
-    let sessionOrders: Order[] = [];
+    const sessionOrders: Order[] = [];
     try {
       const listRaw = localStorage.getItem('demo_user_order_ids') || '[]';
       const list: number[] = JSON.parse(listRaw);
@@ -843,7 +843,7 @@ export function handleDemoFallback<T>(path: string, init: RequestInit = {}): T |
         const saved = localStorage.getItem(`demo_order_${id}`);
         if (saved) sessionOrders.push(JSON.parse(saved));
       }
-    } catch {}
+    } catch { /* ignore */ }
     return {
       orders: sessionOrders,
       total: sessionOrders.length,

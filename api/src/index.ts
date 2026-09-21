@@ -28,12 +28,13 @@ void (async () => {
   }
 
   try {
-    console.log("[db] Ensuring google_id and nullable password_hash on users table...");
+    console.log("[db] Ensuring google_id and nullable password_hash on users table, and views on blog_posts...");
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(100) UNIQUE`);
     await pool.query(`ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`);
-    console.log("[db] Ensured google_id column and nullable password_hash successfully!");
+    await pool.query(`ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS views INT DEFAULT 0`);
+    console.log("[db] Ensured columns successfully!");
   } catch (err) {
-    console.error("[db] Failed to ensure google_id on users table:", err);
+    console.error("[db] Failed to ensure columns on users/blog_posts:", err);
   }
 
   try {

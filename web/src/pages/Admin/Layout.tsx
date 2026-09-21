@@ -15,7 +15,9 @@ export default function AdminLayout() {
       const isDemoAdmin = localStorage.getItem('demo_admin_logged_in') === 'true';
       try {
         const me = await apiJson<{ authenticated: boolean }>('/api/admin/me');
-        if (!me.authenticated && !isDemoAdmin) {
+        if (!me.authenticated) {
+          localStorage.removeItem('demo_admin_logged_in');
+          localStorage.removeItem('admin_token');
           navigate('/admin/login');
           return;
         }

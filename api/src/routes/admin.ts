@@ -13,10 +13,20 @@ import * as ghnService from '../services/ghnService.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { emitToUsers } from '../lib/messageStream.js';
 
+import { createAdminToken, verifyAdminToken } from '../lib/adminToken.js';
+
 export const adminRouter = Router();
 
 adminRouter.get('/me', asyncHandler(async (req, res) => {
-  const adminId = req.session.adminId;
+  let adminId = req.session.adminId;
+  if (!adminId) {
+    const authHeader = req.headers['authorization'] || req.headers['x-admin-token'];
+    const raw = typeof authHeader === 'string' ? authHeader : Array.isArray(authHeader) ? authHeader[0] : '';
+    const token = raw.replace(/^Bearer\s+/i, '').trim();
+    if (token) {
+      adminId = verifyAdminToken(token) ?? undefined;
+    }
+  }
   if (!adminId) {
     res.json({ authenticated: false });
     return;
@@ -30,16 +40,19 @@ adminRouter.get('/me', asyncHandler(async (req, res) => {
 
 adminRouter.post('/login', adminLoginRateLimit, requireCsrf, asyncHandler(async (req, res) => {
   const { adminId, admin } = await adminService.login(req);
+  const token = createAdminToken(adminId);
 
   const oldCsrfToken = req.session.csrfToken;
   req.session.regenerate((regenErr) => {
     if (regenErr) {
-      res.status(500).json({ success: false, message: 'Login failed.' });
+      req.session.csrfToken = oldCsrfToken;
+      req.session.adminId = adminId;
+      res.json({ success: true, admin, token });
       return;
     }
     req.session.csrfToken = oldCsrfToken;
     req.session.adminId = adminId;
-    res.json({ success: true, admin });
+    res.json({ success: true, admin, token });
   });
 }));
 

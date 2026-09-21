@@ -31,14 +31,18 @@ export default function ApprovalsTab() {
   const loadApprovals = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [r, b] = await Promise.all([
+      const [rRes, bRes] = await Promise.allSettled([
         apiJson<{ recipes: Record<string, unknown>[] }>('/api/admin/recipes?status=pending'),
         apiJson<{ blogs: Record<string, unknown>[] }>('/api/admin/blogs?status=pending'),
       ]);
-      setRecipes(r.recipes ?? []);
-      setBlogs(b.blogs ?? []);
+      if (rRes.status === 'fulfilled') {
+        setRecipes(rRes.value.recipes ?? []);
+      }
+      if (bRes.status === 'fulfilled') {
+        setBlogs(bRes.value.blogs ?? []);
+      }
     } catch (err) {
-      console.error(err);
+      console.error('Error loading approvals:', err);
     } finally {
       setLoading(false);
     }

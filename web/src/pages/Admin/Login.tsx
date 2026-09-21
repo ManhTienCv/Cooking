@@ -33,6 +33,7 @@ export default function AdminLogin() {
         success?: boolean;
         message?: string;
         captchaRequired?: boolean;
+        token?: string;
       };
       if (!r.ok) {
         setError(data.message ?? 'Email hoặc mật khẩu không chính xác.');
@@ -40,6 +41,9 @@ export default function AdminLogin() {
       }
       resetCsrfCache();
       localStorage.setItem('demo_admin_logged_in', 'true');
+      if (data.token) {
+        localStorage.setItem('admin_token', data.token);
+      }
       toast.success('Đăng nhập Quản trị viên thành công!');
       navigate('/admin/dashboard', { replace: true });
     } catch (err) {

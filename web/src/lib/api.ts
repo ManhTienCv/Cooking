@@ -51,6 +51,11 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
     ) {
       headers.set('Content-Type', 'application/json');
     }
+    const adminToken = localStorage.getItem('admin_token');
+    if (adminToken && !headers.has('Authorization')) {
+      headers.set('X-Admin-Token', adminToken);
+      headers.set('Authorization', `Bearer ${adminToken}`);
+    }
     return headers;
   };
 

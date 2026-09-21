@@ -66,9 +66,15 @@ export default function AdminLayout() {
 
   return (
     <NotificationProvider role="admin">
-      <div className="w-screen h-screen overflow-hidden bg-slate-50 dark:bg-slate-900">
+      <div 
+        className="w-screen h-screen overflow-hidden bg-slate-50 dark:bg-slate-900 notranslate"
+        translate="no"
+        data-gramm="false"
+        data-enable-grammarly="false"
+      >
         <div 
-          className="bg-slate-50 text-slate-900 flex overflow-hidden dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300"
+          className="bg-slate-50 text-slate-900 flex overflow-hidden dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300 notranslate"
+          translate="no"
           style={{
             zoom: 0.9,
             width: 'calc(100vw / 0.9)',

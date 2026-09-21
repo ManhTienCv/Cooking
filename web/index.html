@@ -27,6 +27,42 @@
       html { scroll-behavior: auto; }
     </style>
 
+    <!-- Early Browser Extension Protection Guard -->
+    <script>
+      (function() {
+        try {
+          if (typeof KeyboardEvent !== 'undefined' && KeyboardEvent.prototype) {
+            var kProp = Object.getOwnPropertyDescriptor(KeyboardEvent.prototype, 'key');
+            if (kProp && kProp.get) {
+              var origKey = kProp.get;
+              Object.defineProperty(KeyboardEvent.prototype, 'key', {
+                get: function() {
+                  try {
+                    var v = origKey.call(this);
+                    return typeof v === 'string' ? v : '';
+                  } catch (e) { return ''; }
+                },
+                configurable: true,
+                enumerable: true
+              });
+            }
+          }
+          window.addEventListener('error', function(e) {
+            var src = (e.filename || '') + ' ' + (e.error && e.error.stack ? e.error.stack : '') + ' ' + (e.message || '');
+            src = src.toLowerCase();
+            if (src.indexOf('chrome-extension://') !== -1 || 
+                src.indexOf('moz-extension://') !== -1 || 
+                src.indexOf('content_main.js') !== -1 || 
+                src.indexOf('content-script') !== -1) {
+              if (e.preventDefault) e.preventDefault();
+              if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+              return true;
+            }
+          }, true);
+        } catch (err) {}
+      })();
+    </script>
+
     <!-- Google Identity Services (Sign in with Google) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 

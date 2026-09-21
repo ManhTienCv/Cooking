@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 
 import Layout from './components/Layout';
 import KitchenCookLayout from './components/shop/KitchenCookLayout';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import { CartProvider } from './contexts/CartContext';
 import { scrollWindowToTop } from './lib/scroll';
 import { useTheme } from './hooks/useTheme';
@@ -85,7 +86,7 @@ export default function App() {
   // 1. Không gian Quản Trị Hệ Thống (Admin Portal)
   if (isAdminRoute) {
     return (
-      <>
+      <ErrorBoundary>
         <Toaster position="top-right" toastOptions={TOAST_OPTIONS} containerStyle={TOASTER_CONTAINER_STYLE} />
         <Suspense fallback={<PageFallback />}>
           <Routes location={location}>
@@ -106,7 +107,7 @@ export default function App() {
             </Route>
           </Routes>
         </Suspense>
-      </>
+      </ErrorBoundary>
     );
   }
 
@@ -116,9 +117,10 @@ export default function App() {
   // 2. Không gian Cửa Hàng Độc Lập KitchenCook (European Cookware Store)
   if (isKitchenCookRoute) {
     return (
-      <CartProvider>
-        <Toaster position="top-right" toastOptions={TOAST_OPTIONS} containerStyle={TOASTER_CONTAINER_STYLE} />
-        <KitchenCookLayout>
+      <ErrorBoundary>
+        <CartProvider>
+          <Toaster position="top-right" toastOptions={TOAST_OPTIONS} containerStyle={TOASTER_CONTAINER_STYLE} />
+          <KitchenCookLayout>
           <div className="grid [&>*]:col-start-1 [&>*]:row-start-1 [&>*]:col-end-2 [&>*]:w-full isolate">
             <AnimatePresence mode="sync" initial={false}>
               <motion.div
@@ -171,13 +173,15 @@ export default function App() {
           </div>
         </KitchenCookLayout>
       </CartProvider>
-    );
-  }
+    </ErrorBoundary>
+  );
+}
 
   // 3. Không gian Cổng Công Thức & Cộng Đồng CookingBoy
   return (
-    <CartProvider>
-      <Layout>
+    <ErrorBoundary>
+      <CartProvider>
+        <Layout>
         <Toaster position="top-right" toastOptions={TOAST_OPTIONS} containerStyle={TOASTER_CONTAINER_STYLE} />
         <div className="grid [&>*]:col-start-1 [&>*]:row-start-1 [&>*]:col-end-2 [&>*]:w-full isolate">
           <AnimatePresence mode="sync" initial={false}>
@@ -236,5 +240,6 @@ export default function App() {
         </div>
       </Layout>
     </CartProvider>
+  </ErrorBoundary>
   );
 }

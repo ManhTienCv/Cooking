@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   ChefHat,
   LayoutDashboard,
@@ -29,6 +29,7 @@ export default function AdminSidebar({
 }) {
   const location = useLocation();
   const path = location.pathname;
+  const reduceMotion = useReducedMotion();
 
   // Lưu trạng thái đóng / mở vào localStorage để khi chuyển trang không bị reset
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -73,26 +74,44 @@ export default function AdminSidebar({
     label: string,
     badge?: number | null
   ) => {
-    const isActive = path === to;
+    const isActive =
+      to === '/admin/dashboard'
+        ? path === '/admin/dashboard' || path === '/admin'
+        : path === to || path.startsWith(`${to}/`);
+
     return (
       <Link
         key={to}
         to={to}
         title={isCollapsed ? label : undefined}
-        className={`relative flex items-center h-11 w-full rounded-xl select-none overflow-hidden transition-colors duration-200 group ${
+        className={`relative flex items-center h-11 w-full rounded-xl select-none transition-colors duration-200 group ${
           isActive
-            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 hover:text-slate-900 dark:hover:text-slate-100'
+            ? 'text-white'
+            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-100'
         }`}
       >
-        {/* Icon neo cố định tại vị trí chính giữa khi thu gọn hoặc cạnh trái khi mở rộng, tuyệt đối không bị nhảy */}
-        <div className="w-11 h-11 shrink-0 flex items-center justify-center">
+        {/* Viên thuốc lướt trượt dọc chuẩn Raycast / Linear */}
+        {isActive && (
+          <motion.div
+            layoutId="admin-sidebar-active-pill"
+            className="absolute inset-0 rounded-xl bg-blue-600 shadow-md shadow-blue-500/25"
+            transition={
+              reduceMotion
+                ? { duration: 0.1 }
+                : { type: 'spring', stiffness: 450, damping: 35 }
+            }
+            style={{ zIndex: 0 }}
+          />
+        )}
+
+        {/* Icon neo cố định tại vị trí chính giữa khi thu gọn hoặc cạnh trái khi mở rộng */}
+        <div className="relative z-10 w-11 h-11 shrink-0 flex items-center justify-center">
           <Icon className="w-5 h-5 transition-transform duration-200 group-hover:scale-105" />
         </div>
 
         {/* Text và badge trượt mượt mà không làm giật icon */}
         <div
-          className="flex-1 flex items-center justify-between pr-3 min-w-0 transition-all duration-200 ease-out"
+          className="relative z-10 flex-1 flex items-center justify-between pr-3 min-w-0 transition-all duration-200 ease-out"
           style={{
             opacity: isCollapsed ? 0 : 1,
             transform: isCollapsed ? 'translateX(-10px)' : 'translateX(0)',
@@ -110,7 +129,7 @@ export default function AdminSidebar({
         {/* Điểm đỏ thông báo khi đang ở chế độ thu gọn */}
         {typeof badge === 'number' && badge > 0 && (
           <span
-            className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white dark:ring-slate-800 transition-opacity duration-200"
+            className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white dark:ring-slate-800 transition-opacity duration-200 z-20"
             style={{ opacity: isCollapsed ? 1 : 0 }}
           />
         )}
